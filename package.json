@@ -1,0 +1,29 @@
+{
+  "name": "pralaad-fd-crm",
+  "version": "1.0.0",
+  "description": "Internal Fixed Deposit Management CRM & Wealth Portal",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm install && npm run build"
+  },
+  "keywords": [
+    "fixed-deposit",
+    "crm",
+    "finance",
+    "nbfc",
+    "wealth"
+  ],
+  "author": "Pralaad Ji",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.1.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
