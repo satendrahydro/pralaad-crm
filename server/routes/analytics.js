@@ -59,7 +59,21 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     GROUP BY compounding_frequency
   `).all();
 
-  // 5. Recent FDs
+  // 5. Monthly Timeline & Maturity Projection
+  const monthlyProjection = db.prepare(`
+    SELECT 
+      strftime('%Y-%m', maturity_date) as month,
+      COUNT(*) as count,
+      SUM(maturity_amount) as projected_payout,
+      SUM(principal_amount) as principal
+    FROM fixed_deposits
+    WHERE status = 'ACTIVE'
+    GROUP BY strftime('%Y-%m', maturity_date)
+    ORDER BY month ASC
+    LIMIT 12
+  `).all();
+
+  // 6. Recent FDs
   const recentFds = db.prepare(`
     SELECT fd.*, c.full_name as customer_name
     FROM fixed_deposits fd
@@ -68,7 +82,7 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     LIMIT 5
   `).all();
 
-  // 6. Current Subscription status
+  // 7. Current Subscription status
   const subscription = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
 
   res.json({
@@ -87,6 +101,7 @@ router.get('/dashboard', authenticateToken, (req, res) => {
       upcomingMaturities,
       pendingPayouts,
       frequencyBreakdown,
+      monthlyProjection,
       recentFds,
       subscription
     }
