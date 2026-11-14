@@ -1,8 +1,20 @@
 export const getDefaultServerUrl = () => {
   const saved = localStorage.getItem('pralaad_server_url');
-  if (saved) return saved.replace(/\/$/, '');
-  // Global Live Cloud Tunnel (Works everywhere on Mobile Data & Wi-Fi)
-  return 'https://reduces-newspapers-works-percent.trycloudflare.com';
+  if (saved && !saved.includes('trycloudflare.com') && !saved.includes('loca.lt')) {
+    return saved.replace(/\/$/, '');
+  }
+  // Clear any old obsolete tunnel URL from previous session
+  if (saved) {
+    localStorage.removeItem('pralaad_server_url');
+  }
+
+  // If running inside Native Android App (Capacitor WebView)
+  if (window.Capacitor || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
+    return 'https://pralaad-fd-crm.onrender.com';
+  }
+
+  // In regular web browser (localhost or onrender.com) use relative /api
+  return '';
 };
 
 export const getApiBase = () => {
