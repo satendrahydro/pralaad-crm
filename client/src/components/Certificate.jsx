@@ -91,7 +91,7 @@ export default function Certificate({ fdId, isOpen, onClose }) {
                 <Award className="w-7 h-7" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-indigo-950 uppercase">
-                {companySettings.company_name || 'PRALAAD WEALTH & FINANCIAL SERVICES'}
+                {companySettings.company_name || 'FIXED DEPOSIT & WEALTH MANAGEMENT SERVICES'}
               </h1>
               <p className="text-xs font-semibold text-slate-600 tracking-wider uppercase mt-1">
                 {companySettings.company_tagline || 'Fixed Deposit & Investment Management'}

@@ -271,7 +271,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
             <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-600/30 mb-3">
               <TrendingUp className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-black text-slate-900">Pralaad Wealth App</h1>
+            <h1 className="text-2xl font-black text-slate-900">FD Wealth App</h1>
             <p className="text-xs text-slate-500 mt-1">अपने सभी Fixed Deposits और पेआउट्स की स्थिति लाइव देखें</p>
           </div>
 

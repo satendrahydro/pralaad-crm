@@ -75,7 +75,7 @@ function getDueReminders(daysAhead = 3) {
       .replace(/{BANK_NAME}/g, item.bank_name || 'Bank')
       .replace(/{ACCOUNT_NO}/g, item.account_no || 'N/A')
       .replace(/{COMPANY_PHONE}/g, settings.phone || '')
-      .replace(/{COMPANY_NAME}/g, settings.company_name || 'Pralaad Wealth');
+      .replace(/{COMPANY_NAME}/g, settings.company_name || 'FD Wealth Desk');
 
     const cleanPhone = cleanPhoneNumber(item.customer_phone);
     const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -135,7 +135,7 @@ function getDueReminders(daysAhead = 3) {
       .replace(/{BANK_NAME}/g, item.bank_name || 'Bank')
       .replace(/{ACCOUNT_NO}/g, item.account_no || 'N/A')
       .replace(/{COMPANY_PHONE}/g, settings.phone || '')
-      .replace(/{COMPANY_NAME}/g, settings.company_name || 'Pralaad Wealth');
+      .replace(/{COMPANY_NAME}/g, settings.company_name || 'FD Wealth Desk');
 
     const cleanPhone = cleanPhoneNumber(item.customer_phone);
     const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;

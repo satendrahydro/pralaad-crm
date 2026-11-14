@@ -177,7 +177,7 @@ export default function Dashboard({
     let phone = fd.customer_phone ? fd.customer_phone.replace(/[^0-9]/g, '') : '';
     if (phone.length === 10) phone = '91' + phone;
 
-    const msg = `नमस्ते ${fd.customer_name} जी! 🙏\n\nआपकी Fixed Deposit (A/c No: *${fd.fd_number}*) की परिपक्वता (Maturity) तारीख *${formatDate(fd.maturity_date)}* आ रही है।\n\n💰 परिपक्वता राशि: *${formatINR(fd.maturity_amount)}*\n\nक्या आप इसे अगले टर्म के लिए रीन्यू (Re-invest) करना चाहते हैं या बैंक खाते में ट्रांसफर चाहते हैं?\n\nकृपया हमें सूचित करें।\n\nसादर,\nPralaad Wealth & Financial Services`;
+    const msg = `नमस्ते ${fd.customer_name} जी! 🙏\n\nआपकी Fixed Deposit (A/c No: *${fd.fd_number}*) की परिपक्वता (Maturity) तारीख *${formatDate(fd.maturity_date)}* आ रही है।\n\n💰 परिपक्वता राशि: *${formatINR(fd.maturity_amount)}*\n\nक्या आप इसे अगले टर्म के लिए रीन्यू (Re-invest) करना चाहते हैं या बैंक खाते में ट्रांसफर चाहते हैं?\n\nकृपया हमें सूचित करें।\n\nसादर,\nFixed Deposit & Wealth Management Desk`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 

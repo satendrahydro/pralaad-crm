@@ -84,7 +84,7 @@ export default function FDList({
     let phone = fd.customer_phone ? fd.customer_phone.replace(/[^0-9]/g, '') : '';
     if (phone.length === 10) phone = '91' + phone;
 
-    const msg = `नमस्ते ${fd.customer_name} जी! 🙏\n\nआपकी Fixed Deposit (A/c No: *${fd.fd_number}*) का विवरण:\n\n💰 मूलधन (Principal): *${formatINR(fd.principal_amount)}*\n📈 ब्याज दर: *${fd.annual_rate}%*\n📅 परिपक्वता (Maturity): *${formatDate(fd.maturity_date)}*\n💵 परिपक्वता राशि: *${formatINR(fd.maturity_amount)}*\n\nकिसी भी सहायता या नवीनीकरण (Renewal) के लिए हमसे संपर्क करें।\n\nसादर,\nPralaad Wealth & Financial Services`;
+    const msg = `नमस्ते ${fd.customer_name} जी! 🙏\n\nआपकी Fixed Deposit (A/c No: *${fd.fd_number}*) का विवरण:\n\n💰 मूलधन (Principal): *${formatINR(fd.principal_amount)}*\n📈 ब्याज दर: *${fd.annual_rate}%*\n📅 परिपक्वता (Maturity): *${formatDate(fd.maturity_date)}*\n💵 परिपक्वता राशि: *${formatINR(fd.maturity_amount)}*\n\nकिसी भी सहायता या नवीनीकरण (Renewal) के लिए हमसे संपर्क करें।\n\nसादर,\nFixed Deposit & Wealth Management Desk`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 

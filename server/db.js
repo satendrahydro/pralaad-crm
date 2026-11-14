@@ -152,7 +152,7 @@ function initDB() {
     db.prepare(`
       INSERT INTO users (username, password_hash, full_name, role)
       VALUES (?, ?, ?, ?)
-    `).run('admin', hash, 'Pralaad CRM Admin', 'admin');
+    `).run('admin', hash, 'System Administrator', 'admin');
     console.log('Default admin created: admin / admin123');
   }
 
@@ -180,10 +180,10 @@ function initDB() {
   const settingsCount = db.prepare('SELECT count(*) as count FROM settings').get();
   if (settingsCount.count === 0) {
     const defaultSettings = [
-      ['company_name', 'Pralaad Financial & Wealth Services'],
+      ['company_name', 'Fixed Deposit & Wealth Services'],
       ['company_tagline', 'Fixed Deposit & Wealth Management Portal'],
       ['phone', '+91 98765 43210'],
-      ['email', 'contact@pralaadwealth.com'],
+      ['email', 'support@fdwealthdesk.com'],
       ['address', 'Office 402, Financial District, Sector 18, Commercial Hub'],
       ['license_no', 'NBFC-FD/REG/2026/894'],
       ['senior_bonus_rate', '0.50'],

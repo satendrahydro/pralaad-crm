@@ -1,6 +1,6 @@
 {
   "appId": "com.pralaad.wealthapp",
-  "appName": "Pralaad Wealth",
+  "appName": "FD Wealth",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

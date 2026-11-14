@@ -215,10 +215,10 @@ export default function App() {
               </div>
               <div>
                 <span className="font-black text-base tracking-tight text-white block group-hover:text-indigo-300 transition">
-                  Pralaad FD Portal
+                  FD Portal
                 </span>
                 <span className="text-[10px] text-indigo-300/80 -mt-0.5 block font-medium">
-                  Internal Fixed Deposit CRM
+                  Fixed Deposit & Wealth CRM
                 </span>
               </div>
             </div>

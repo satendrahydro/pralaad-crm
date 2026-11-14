@@ -87,7 +87,7 @@ export default function Customers({ onSelectCustomerForFD }) {
       ? '⚠️ ध्यान दें: आपका ऐप एक्सेस वर्तमान में अस्थायी रूप से निष्क्रिय है।'
       : '✅ आपका मोबाइल ऐप एक्सेस सक्रिय है।';
 
-    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nआपके Pralaad Wealth Fixed Deposit मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Login ID: ${cust.login_id || cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FDs और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nPralaad Wealth & Financial Services`;
+    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nआपके Fixed Deposit मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Login ID: ${cust.login_id || cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FDs और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nFixed Deposit & Wealth Management Desk`;
 
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };

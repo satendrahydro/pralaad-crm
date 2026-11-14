@@ -35,7 +35,7 @@ app.use('/api/customer-portal', customerPortalRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    system: 'Pralaad FD CRM System',
+    system: 'FD Management CRM System',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });

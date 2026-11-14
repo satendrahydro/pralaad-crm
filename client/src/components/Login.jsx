@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 mb-4">
             <TrendingUp className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Pralaad FD Portal</h1>
+          <h1 className="text-2xl font-bold text-slate-900">FD Portal</h1>
           <p className="text-sm text-slate-500 mt-1">Fixed Deposit & Wealth CRM System</p>
         </div>
 
