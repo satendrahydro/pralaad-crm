@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Internal Fixed Deposit Management CRM & Wealth Portal",
   "main": "server/server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server/server.js",
     "server": "node server/server.js",

@@ -59,7 +59,7 @@ app.use((req, res, next) => {
 
 const { startReminderScheduler } = require('./services/whatsappCron');
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`=========================================`);
   console.log(`🚀 FD CRM Backend Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
