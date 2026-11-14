@@ -27,6 +27,10 @@ function initDB() {
     CREATE TABLE IF NOT EXISTS customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_code TEXT UNIQUE NOT NULL,
+      login_id TEXT,
+      login_password TEXT DEFAULT 'client123',
+      app_access_enabled INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'ACTIVE',
       full_name TEXT NOT NULL,
       phone TEXT NOT NULL,
       email TEXT,
@@ -39,9 +43,17 @@ function initDB() {
       nominee_name TEXT,
       nominee_relation TEXT,
       is_senior_citizen INTEGER DEFAULT 0,
+      pin TEXT DEFAULT '1234',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Safe migrations for columns in case table was created previously without them
+  try { db.exec("ALTER TABLE customers ADD COLUMN login_id TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN login_password TEXT DEFAULT 'client123';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN status TEXT DEFAULT 'ACTIVE';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN pin TEXT DEFAULT '1234';"); } catch(e){}
 
   // 3. Fixed Deposits table
   db.exec(`

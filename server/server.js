@@ -57,6 +57,16 @@ app.use((req, res, next) => {
   });
 });
 
+// Global API error handler (ensures JSON responses always)
+app.use((err, req, res, next) => {
+  console.error('Express Server Error:', err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error'
+  });
+});
+
 const { startReminderScheduler } = require('./services/whatsappCron');
 
 app.listen(PORT, '0.0.0.0', () => {

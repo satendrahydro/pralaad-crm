@@ -45,61 +45,67 @@ router.get('/:id', authenticateToken, (req, res) => {
 
 // POST /api/customers - Create new customer
 router.post('/', authenticateToken, (req, res) => {
-  const {
-    full_name,
-    phone,
-    email,
-    pan_card,
-    aadhaar_no,
-    address,
-    bank_name,
-    account_no,
-    ifsc_code,
-    nominee_name,
-    nominee_relation,
-    is_senior_citizen,
-    login_id,
-    login_password
-  } = req.body;
+  try {
+    const {
+      full_name,
+      phone,
+      email,
+      pan_card,
+      aadhaar_no,
+      address,
+      bank_name,
+      account_no,
+      ifsc_code,
+      nominee_name,
+      nominee_relation,
+      is_senior_citizen,
+      login_id,
+      login_password,
+      app_access_enabled
+    } = req.body;
 
-  if (!full_name || !phone) {
-    return res.status(400).json({ success: false, message: 'Full name and phone are required' });
+    if (!full_name || !phone) {
+      return res.status(400).json({ success: false, message: 'Full name and phone are required' });
+    }
+
+    // Generate unique customer code
+    const lastCustomer = db.prepare('SELECT id FROM customers ORDER BY id DESC LIMIT 1').get();
+    const nextId = (lastCustomer ? lastCustomer.id + 1 : 1);
+    const customer_code = `CUST-${1000 + nextId}`;
+
+    const stmt = db.prepare(`
+      INSERT INTO customers (
+        customer_code, login_id, login_password, app_access_enabled, status, full_name, phone, email, pan_card, aadhaar_no,
+        address, bank_name, account_no, ifsc_code, nominee_name, nominee_relation, is_senior_citizen
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(
+      customer_code,
+      login_id ? login_id.trim() : customer_code,
+      login_password ? login_password.trim() : 'client123',
+      app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : 1,
+      'ACTIVE',
+      full_name.trim(),
+      phone.trim(),
+      email ? email.trim() : null,
+      pan_card ? pan_card.trim().toUpperCase() : null,
+      aadhaar_no ? aadhaar_no.trim() : null,
+      address || null,
+      bank_name || null,
+      account_no || null,
+      ifsc_code ? ifsc_code.trim().toUpperCase() : null,
+      nominee_name || null,
+      nominee_relation || null,
+      is_senior_citizen ? 1 : 0
+    );
+
+    const newCust = db.prepare('SELECT * FROM customers WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({ success: true, message: 'Customer created successfully', customer: newCust });
+  } catch (err) {
+    console.error('Error creating customer:', err);
+    res.status(500).json({ success: false, message: err.message || 'Error creating customer' });
   }
-
-  // Generate unique customer code
-  const lastCustomer = db.prepare('SELECT id FROM customers ORDER BY id DESC LIMIT 1').get();
-  const nextId = (lastCustomer ? lastCustomer.id + 1 : 1);
-  const customer_code = `CUST-${1000 + nextId}`;
-
-  const stmt = db.prepare(`
-    INSERT INTO customers (
-      customer_code, login_id, login_password, app_access_enabled, status, full_name, phone, email, pan_card, aadhaar_no,
-      address, bank_name, account_no, ifsc_code, nominee_name, nominee_relation, is_senior_citizen
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const result = stmt.run(
-    customer_code,
-    login_id ? login_id.trim() : customer_code,
-    login_password ? login_password.trim() : 'client123',
-    app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : 1,
-    'ACTIVE',
-    full_name.trim(),
-    phone.trim(),
-    email ? email.trim() : null,
-    pan_card ? pan_card.trim().toUpperCase() : null,
-    aadhaar_no ? aadhaar_no.trim() : null,
-    address || null,
-    bank_name || null,
-    account_no || null,
-    ifsc_code ? ifsc_code.trim().toUpperCase() : null,
-    nominee_name || null,
-    nominee_relation || null,
-    is_senior_citizen ? 1 : 0
-  );
-
-  const newCust = db.prepare('SELECT * FROM customers WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ success: true, message: 'Customer created successfully', customer: newCust });
 });
 
 // PUT /api/customers/:id - Update customer (including Login ID, Password, and App Access)
