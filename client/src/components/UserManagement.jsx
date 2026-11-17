@@ -954,7 +954,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
                   type="text"
                   value={customLoginId}
                   onChange={(e) => setCustomLoginId(e.target.value.trim())}
-                  placeholder="Defaults to Customer ID (e.g. CUST-1001)"
+                  placeholder="Defaults to Member ID (e.g. M00001)"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:bg-white focus:ring-2 focus:ring-emerald-600"
                 />
                 <p className="text-[10px] text-slate-400 mt-0.5">Depositor can log in with this ID or their registered mobile number.</p>

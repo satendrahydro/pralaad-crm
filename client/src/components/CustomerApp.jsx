@@ -66,8 +66,8 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
   });
 
   // Login state
-  const [identifier, setIdentifier] = useState('CUST-1001');
-  const [pin, setPin] = useState('client123');
+  const [identifier, setIdentifier] = useState('M00001');
+  const [pin, setPin] = useState('M00001@123');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [serverUrl, setServerUrl] = useState(() => getDefaultServerUrl());
@@ -601,7 +601,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-600"
-                placeholder="e.g. CUST-1001 or 9811122334"
+                placeholder="e.g. M00001 or 9897463367"
               />
             </div>
 
@@ -652,29 +652,29 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
           {/* Quick Demo Customer Profiles */}
           <div className="mt-6 pt-5 border-t border-slate-100">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2 text-center">
-              Quick 1-Click Demo Client Accounts
+              Quick 1-Click Client Accounts (Production)
             </span>
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('CUST-1001')}
+                onClick={() => handleQuickDemoLogin('M00001')}
                 className="w-full p-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-xs flex justify-between items-center transition cursor-pointer"
               >
                 <div className="text-left">
-                  <div className="font-bold text-slate-800">Rajesh Sharma (CUST-1001)</div>
-                  <div className="text-[10px] text-slate-500">ID: CUST-1001 • Pass: client123</div>
+                  <div className="font-bold text-slate-800">PRAHLAD SINGH HIRANWAL (M00001)</div>
+                  <div className="text-[10px] text-slate-500">Member ID: M00001 • Pass: M00001@123</div>
                 </div>
                 <span className="font-bold text-indigo-600 text-xs">Login &rarr;</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('CUST-1002')}
+                onClick={() => handleQuickDemoLogin('M00012')}
                 className="w-full p-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-xs flex justify-between items-center transition cursor-pointer"
               >
                 <div className="text-left">
-                  <div className="font-bold text-slate-800">Mahendra Patel (CUST-1002)</div>
-                  <div className="text-[10px] text-slate-500">ID: CUST-1002 • Pass: client123</div>
+                  <div className="font-bold text-slate-800">NARPAT SINGH (M00012)</div>
+                  <div className="text-[10px] text-slate-500">Member ID: M00012 • Pass: M00012@123</div>
                 </div>
                 <span className="font-bold text-indigo-600 text-xs">Login &rarr;</span>
               </button>
@@ -793,7 +793,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                       required
                       value={custForgotIdentifier}
                       onChange={(e) => setCustForgotIdentifier(e.target.value)}
-                      placeholder="e.g. CUST-1001 or 9811122334"
+                      placeholder="e.g. M00001 or 9897463367"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-indigo-600"
                     />
                   </div>

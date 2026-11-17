@@ -20,72 +20,70 @@ export default function TransactionsLedger() {
   const [filterType, setFilterType] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Sample verified transactions for double-entry ledger presentation
+  // Real verified transactions for double-entry ledger presentation (Taranganjali Production)
   const [transactions] = useState([
     {
       id: 1,
-      transaction_number: 'TXN-2026-001',
+      transaction_number: 'TXN-TARPL-001',
       transaction_type: 'FD_BOOKING',
-      fd_number: 'FD-2026-001',
-      customer_name: 'Rajesh Sharma',
-      amount: 500000,
-      transaction_date: '2026-04-01',
+      fd_number: 'FD00633',
+      customer_name: 'MUKESH KUMAR SUWAHEDI',
+      amount: 100000,
+      transaction_date: '2023-05-08',
       payment_mode: 'BANK_TRANSFER',
-      reference_number: 'UTR998877665',
+      reference_number: 'TARPL/UTR/20230508',
       is_reversed: 0,
       entries: [
-        { account: 'BANK_ACCOUNT', type: 'DEBIT', amount: 500000, note: 'Deposit received from client' },
-        { account: 'FD_PRINCIPAL_LIABILITY', type: 'CREDIT', amount: 500000, note: 'Principal liability created' }
+        { account: 'BANK_ACCOUNT', type: 'DEBIT', amount: 100000, note: 'Deposit received into Main Branch' },
+        { account: 'FD_PRINCIPAL_LIABILITY', type: 'CREDIT', amount: 100000, note: 'TARPL FD 2019 DOUBLE principal created' }
       ]
     },
     {
       id: 2,
-      transaction_number: 'TXN-2026-002',
+      transaction_number: 'TXN-TARPL-002',
       transaction_type: 'FD_BOOKING',
-      fd_number: 'FD-2026-002',
-      customer_name: 'Mahendra Patel Sr.',
-      amount: 1000000,
-      transaction_date: '2026-04-05',
+      fd_number: 'MIS00192',
+      customer_name: 'YADRAM SINGH PAL',
+      amount: 1500000,
+      transaction_date: '2023-04-06',
       payment_mode: 'NEFT_RTGS',
-      reference_number: 'NEFT44332211',
+      reference_number: 'RTGS/TARPL/889922',
       is_reversed: 0,
       entries: [
-        { account: 'BANK_ACCOUNT', type: 'DEBIT', amount: 1000000, note: 'Senior Citizen deposit received' },
-        { account: 'FD_PRINCIPAL_LIABILITY', type: 'CREDIT', amount: 1000000, note: 'Principal liability created' }
+        { account: 'BANK_ACCOUNT', type: 'DEBIT', amount: 1500000, note: 'MIS deposit received in Vedic Vihar' },
+        { account: 'FD_PRINCIPAL_LIABILITY', type: 'CREDIT', amount: 1500000, note: 'TARPL MIS 3 liability created' }
       ]
     },
     {
       id: 3,
-      transaction_number: 'TXN-2026-003',
+      transaction_number: 'TXN-TARPL-003',
       transaction_type: 'INTEREST_PAYOUT',
-      fd_number: 'FD-2026-003',
-      customer_name: 'Priya Verma',
-      amount: 5312.50,
-      transaction_date: '2026-05-01',
+      fd_number: 'MIS00203',
+      customer_name: 'NARPAT SINGH',
+      amount: 5500.00,
+      transaction_date: '2023-07-11',
       payment_mode: 'BANK_TRANSFER',
-      reference_number: 'PAYOUT-SCH-01',
+      reference_number: 'SCH-MIS-00203-M1',
       is_reversed: 0,
       entries: [
-        { account: 'INTEREST_EXPENSE', type: 'DEBIT', amount: 5312.50, note: 'Monthly interest expense recognized' },
-        { account: 'BANK_ACCOUNT', type: 'CREDIT', amount: 5312.50, note: 'Payout transferred to client bank account' }
+        { account: 'INTEREST_EXPENSE', type: 'DEBIT', amount: 5500.00, note: 'Monthly MIS interest expense @ 16.5%' },
+        { account: 'BANK_ACCOUNT', type: 'CREDIT', amount: 5500.00, note: 'Transferred to Narpat Singh bank account' }
       ]
     },
     {
       id: 4,
-      transaction_number: 'TXN-2026-004',
-      transaction_type: 'PREMATURE_CLOSURE',
-      fd_number: 'FD-2026-PREM-TEST',
-      customer_name: 'Demonstration Account',
-      amount: 106000,
-      transaction_date: '2026-05-10',
+      transaction_number: 'TXN-TARPL-004',
+      transaction_type: 'FD_BOOKING',
+      fd_number: 'FD00642',
+      customer_name: 'JITENDRA KUMAR CHOUDHARY',
+      amount: 30500,
+      transaction_date: '2023-05-19',
       payment_mode: 'BANK_TRANSFER',
-      reference_number: 'SETTLE-PREM-99',
+      reference_number: 'TARPL/DEP/00642',
       is_reversed: 0,
       entries: [
-        { account: 'FD_PRINCIPAL_LIABILITY', type: 'DEBIT', amount: 100000, note: 'Clear principal liability' },
-        { account: 'INTEREST_EXPENSE', type: 'DEBIT', amount: 8000, note: 'Accrued interest expense' },
-        { account: 'PENALTY_INCOME', type: 'CREDIT', amount: 2000, note: 'Premature penalty assessed' },
-        { account: 'BANK_ACCOUNT', type: 'CREDIT', amount: 106000, note: 'Net settlement payout' }
+        { account: 'BANK_ACCOUNT', type: 'DEBIT', amount: 30500, note: 'Deposit received in Main Branch' },
+        { account: 'FD_PRINCIPAL_LIABILITY', type: 'CREDIT', amount: 30500, note: 'TARPL FD 2019 DOUBLE booked' }
       ]
     }
   ]);

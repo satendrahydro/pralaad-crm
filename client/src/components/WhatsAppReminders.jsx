@@ -36,8 +36,8 @@ export default function WhatsAppReminders({ onViewFD }) {
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
-  const [testPhone, setTestPhone] = useState('9811122334');
-  const [testName, setTestName] = useState('Rajesh Sharma');
+  const [testPhone, setTestPhone] = useState('9897463367');
+  const [testName, setTestName] = useState('PRAHLAD SINGH HIRANWAL');
   const [testMessagePreview, setTestMessagePreview] = useState('');
 
   const handleSendTestWhatsApp = () => {
@@ -511,7 +511,7 @@ export default function WhatsAppReminders({ onViewFD }) {
                     id="test-wa-name"
                     value={testName}
                     onChange={(e) => setTestName(e.target.value)}
-                    placeholder="Rajesh Sharma"
+                    placeholder="PRAHLAD SINGH HIRANWAL"
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
                   />
                 </div>
