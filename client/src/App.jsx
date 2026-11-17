@@ -136,6 +136,25 @@ export default function App() {
   // Top Bar Dropdowns & Filters
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const [branchesList, setBranchesList] = useState([
+    'All Branches',
+    'MAIN BRANCH (BHR001 - Bijnor)',
+    'TARPL SAVING (BRH003 - Bijnor)',
+    'SHEKHUPURA BRANCH (Bijnor)',
+    'TARPL0002 (BHR002 - Bijnor)'
+  ]);
+
+  useEffect(() => {
+    fetch('/api/branches')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && Array.isArray(data.branches) && data.branches.length > 0) {
+          const list = ['All Branches', ...data.branches.map(b => `${b.branch_name} (${b.branch_code} - ${b.city})`)];
+          setBranchesList(list);
+        }
+      })
+      .catch(() => {});
+  }, []);
   
   const [fyDropdownOpen, setFyDropdownOpen] = useState(false);
   const [selectedFY, setSelectedFY] = useState('FY 2026-27');
@@ -416,13 +435,7 @@ export default function App() {
     }
   ];
 
-  const branches = [
-    'All Branches',
-    'MAIN BRANCH (BHR001 - Bijnor)',
-    'TARPL SAVING (BRH003 - Bijnor)',
-    'SHEKHUPURA BRANCH (Bijnor)',
-    'TARPL0002 (BHR002 - Bijnor)'
-  ];
+  const branches = branchesList;
 
   const fiscalYears = [
     'FY 2026-27',
@@ -655,7 +668,7 @@ export default function App() {
               </button>
 
               {branchDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
                   <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Select Branch
                   </div>

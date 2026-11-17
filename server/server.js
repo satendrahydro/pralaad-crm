@@ -71,15 +71,49 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Live Branches List endpoint
+app.get('/api/branches', (req, res) => {
+  try {
+    const db = require('./db');
+    const branches = db.prepare('SELECT id, branch_code, branch_name, city, state, pincode, address, contact_phone, contact_email, is_active FROM branches ORDER BY id ASC').all();
+    res.json({ success: true, branches });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Serve frontend in production build if client/dist exists
 const clientDistPath = path.join(__dirname, '../client/dist');
-app.use(express.static(clientDistPath));
+
+// Disable caching for HTML entry point so updates are seen instantly
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+  next();
+});
+
+app.use(express.static(clientDistPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, message: 'API route not found' });
   }
   const indexPath = path.join(clientDistPath, 'index.html');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(indexPath, err => {
     if (err) {
       res.status(200).send('API Server is running. Frontend dev server is at http://localhost:3000');
