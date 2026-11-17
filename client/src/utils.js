@@ -63,6 +63,11 @@ export async function apiRequest(endpoint, options = {}) {
     throw new Error('Session expired. Please login again.');
   }
 
+  if (response.status === 423) {
+    window.dispatchEvent(new CustomEvent('commercial_lock_triggered', { detail: data }));
+    throw new Error(data.message || 'System access suspended due to pending commercial settlement.');
+  }
+
   let data;
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {

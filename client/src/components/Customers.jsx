@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
-export default function Customers({ onSelectCustomerForFD }) {
+export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -179,18 +179,24 @@ export default function Customers({ onSelectCustomerForFD }) {
   // Handle Add Submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.phone) {
-      setFormError('Name and phone are required');
+    if (!formData.full_name?.trim() || !formData.phone?.trim()) {
+      setFormError('Name and phone are required (ग्राहक का नाम और 10-अंकों का मोबाइल नंबर अनिवार्य है)');
+      alert('⚠️ कृपया ग्राहक का पूरा नाम (Full Name) और मोबाइल नंबर (Phone) अवश्य भरें!');
       return;
     }
 
     try {
       setSubmitting(true);
       setFormError('');
-      await apiRequest('/customers', {
+      const res = await apiRequest('/customers', {
         method: 'POST',
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          full_name: formData.full_name.trim(),
+          phone: formData.phone.trim()
+        })
       });
+      alert(`✅ नया ग्राहक सफलतापूर्वक जुड़ गया!\n\n👤 नाम: ${res.customer?.full_name || formData.full_name}\n🆔 Customer Code: ${res.customer?.customer_code || 'N/A'}\n📱 Mobile: ${res.customer?.phone || formData.phone}`);
       setModalOpen(false);
       setFormData({
         full_name: '',
@@ -211,7 +217,9 @@ export default function Customers({ onSelectCustomerForFD }) {
       });
       fetchCustomers();
     } catch (err) {
-      setFormError(err.message || 'Error saving customer');
+      const errMsg = err.message || 'Error saving customer';
+      setFormError(errMsg);
+      alert(`❌ त्रुटि: ${errMsg}`);
     } finally {
       setSubmitting(false);
     }
@@ -423,12 +431,24 @@ export default function Customers({ onSelectCustomerForFD }) {
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => onSelectCustomerForFD(c.id)}
-                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition cursor-pointer"
-                  >
-                    + Book FD
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {onViewPortfolio && (
+                      <button
+                        onClick={() => onViewPortfolio(c.id)}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition cursor-pointer flex items-center gap-1"
+                        title="View Full Multi-Product Portfolio (FD, RD, MIS, Savings)"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                        360° Portfolio
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onSelectCustomerForFD && onSelectCustomerForFD(c.id)}
+                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                    >
+                      + Book FD
+                    </button>
+                  </div>
                 </div>
               </div>
             );

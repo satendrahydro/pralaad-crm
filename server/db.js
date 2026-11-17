@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, 'fd_crm.sqlite');
+const dbPath = process.env.DB_FILE || path.join(__dirname, 'fd_crm.sqlite');
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for high performance
@@ -54,6 +54,19 @@ function initDB() {
   try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN status TEXT DEFAULT 'ACTIVE';"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN pin TEXT DEFAULT '1234';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN password_hash TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN last_login_at TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN must_change_password INTEGER DEFAULT 0;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN app_access_status TEXT DEFAULT 'NOT_CREATED';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN access_type TEXT DEFAULT 'PERMANENT';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN first_login_at TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN expires_at TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN temp_access_hours INTEGER DEFAULT 48;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN phone TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0;"); } catch(e){}
 
   // 3. Fixed Deposits table
   db.exec(`

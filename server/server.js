@@ -14,6 +14,13 @@ const subscriptionRoutes = require('./routes/subscription');
 const settingsRoutes = require('./routes/settings');
 const whatsappRoutes = require('./routes/whatsapp');
 const customerPortalRoutes = require('./routes/customerPortal');
+const approvalsRoutes = require('./routes/approvals');
+const rdRoutes = require('./routes/rd');
+const misRoutes = require('./routes/mis');
+const savingsRoutes = require('./routes/savings');
+const userRoutes = require('./routes/users');
+const permissionsRoutes = require('./routes/permissions');
+const { router: licenseRoutes, getLockState } = require('./routes/license');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,15 +28,38 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// License & Commercial Payment Kill-Switch
+app.use('/api/license', licenseRoutes);
+
+// Commercial Payment Lock Guard Middleware
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') && !req.path.startsWith('/api/license') && req.path !== '/api/health') {
+    if (getLockState() === 'LOCKED') {
+      return res.status(423).json({
+        success: false,
+        locked: true,
+        message: 'System access suspended due to pending commercial settlement. Please contact software vendor.'
+      });
+    }
+  }
+  next();
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/fds', fdRoutes);
+app.use('/api/rd', rdRoutes);
+app.use('/api/mis', misRoutes);
+app.use('/api/savings', savingsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/customer-portal', customerPortalRoutes);
+app.use('/api/approvals', approvalsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/permissions', permissionsRoutes);
 
 // Health check / API status endpoint
 app.get('/api/health', (req, res) => {

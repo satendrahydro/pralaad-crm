@@ -33,12 +33,35 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
   if (!isOpen || !fd) return null;
 
   const handleExecuteClose = async () => {
-    if (!confirm('Are you sure you want to prematurely liquidate this Fixed Deposit? This action cannot be undone.')) {
-      return;
-    }
-
     try {
       setSubmitting(true);
+      const user = JSON.parse(localStorage.getItem('pralaad_fd_user') || '{}');
+      if (user.role === 'employee') {
+        const res = await apiRequest('/approvals', {
+          method: 'POST',
+          body: JSON.stringify({
+            request_type: 'PREMATURE_CLOSURE',
+            customer_id: fd.customer_id,
+            fd_id: fd.id,
+            proposed_amount: preview?.netPayable || fd.principal_amount,
+            request_data: {
+              fdId: fd.id,
+              closeDate: withdrawalDate,
+              penaltyRate,
+              remarks
+            },
+            remarks: `Staff Proposal: Premature Closure of ${fd.fd_number} (Net Payout: ₹${preview?.netPayable || 0})`
+          })
+        });
+        alert(`Premature closure proposal submitted (${res.request_number}). Awaiting Admin Checker verification.`);
+        onClose();
+        return;
+      }
+
+      if (!confirm('Are you sure you want to prematurely liquidate this Fixed Deposit? This action cannot be undone.')) {
+        return;
+      }
+
       await apiRequest(`/fds/${fd.id}/premature-close`, {
         method: 'POST',
         body: JSON.stringify({ withdrawalDate, penaltyRate, remarks })

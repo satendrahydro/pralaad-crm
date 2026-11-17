@@ -3,6 +3,25 @@ const router = express.Router();
 const db = require('../db');
 const { calculateFD, calculatePrematureWithdrawal } = require('../calculator');
 const { authenticateToken } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
+
+// GET /api/fds/export/csv - Export FDs to CSV (requires csv_export)
+router.get('/export/csv', authenticateToken, requirePermission('csv_export'), (req, res) => {
+  const fds = db.prepare(`
+    SELECT fd.fd_number, c.customer_code, c.full_name, fd.principal_amount, fd.annual_rate, 
+           fd.tenure_months, fd.compounding_frequency, fd.maturity_amount, fd.status, fd.start_date, fd.maturity_date
+    FROM fixed_deposits fd
+    JOIN customers c ON fd.customer_id = c.id
+    ORDER BY fd.id DESC
+  `).all();
+  let csv = 'FD Number,Customer Code,Customer Name,Principal,Annual Rate,Tenure Months,Compounding,Maturity Amount,Status,Start Date,Maturity Date\n';
+  for (const f of fds) {
+    csv += `"${f.fd_number}","${f.customer_code}","${f.full_name}",${f.principal_amount},${f.annual_rate},${f.tenure_months},"${f.compounding_frequency}",${f.maturity_amount},"${f.status}","${f.start_date}","${f.maturity_date}"\n`;
+  }
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="fixed_deposits.csv"');
+  res.send(csv);
+});
 
 // GET /api/fds - List all Fixed Deposits with customer info & filters
 router.get('/', authenticateToken, (req, res) => {
@@ -72,12 +91,29 @@ router.get('/:id', authenticateToken, (req, res) => {
 
   const schedule = db.prepare('SELECT * FROM fd_schedules WHERE fd_id = ? ORDER BY period_no ASC').all(fd.id);
 
+  const customer = {
+    id: fd.customer_id,
+    name: fd.customer_name,
+    customer_number: fd.customer_code,
+    phone: fd.customer_phone,
+    email: fd.customer_email,
+    pan: fd.customer_pan,
+    aadhaar: fd.customer_aadhaar,
+    address: fd.customer_address,
+    bank_name: fd.bank_name,
+    account_no: fd.account_no,
+    ifsc: fd.ifsc_code,
+    nominee: fd.nominee_name,
+    nominee_relation: fd.nominee_relation,
+    is_senior_citizen: fd.is_senior_citizen
+  };
+
   // Get company settings for certificate display
   const settingsRows = db.prepare('SELECT key, value FROM settings').all();
   const companySettings = {};
   settingsRows.forEach(r => { companySettings[r.key] = r.value; });
 
-  res.json({ success: true, fd, schedule, companySettings });
+  res.json({ success: true, fd, customer, schedule, companySettings });
 });
 
 // POST /api/fds/calculate - Live simulation without booking
@@ -107,8 +143,8 @@ router.post('/calculate', (req, res) => {
   res.json({ success: true, result });
 });
 
-// POST /api/fds - Book a new Fixed Deposit
-router.post('/', authenticateToken, (req, res) => {
+// POST /api/fds - Book a new Fixed Deposit (requires fd_creation)
+router.post('/', authenticateToken, requirePermission('fd_creation'), (req, res) => {
   const {
     customer_id,
     principal_amount,
@@ -124,6 +160,22 @@ router.post('/', authenticateToken, (req, res) => {
     return res.status(400).json({ success: false, message: 'Customer, Principal, Interest Rate, and Tenure are required.' });
   }
 
+  const numPrincipal = parseFloat(principal_amount);
+  const numRate = parseFloat(annual_rate);
+  const numTenure = parseInt(tenure_months);
+
+  if (isNaN(numPrincipal) || numPrincipal <= 0) {
+    return res.status(400).json({ success: false, message: 'Principal amount must be a positive number (> 0).' });
+  }
+
+  if (isNaN(numRate) || numRate <= 0 || numRate > 100) {
+    return res.status(400).json({ success: false, message: 'Annual interest rate must be between 0.1% and 100%.' });
+  }
+
+  if (isNaN(numTenure) || numTenure <= 0) {
+    return res.status(400).json({ success: false, message: 'Tenure months must be an integer greater than 0.' });
+  }
+
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customer_id);
   if (!customer) {
     return res.status(404).json({ success: false, message: 'Customer not found' });
@@ -131,14 +183,50 @@ router.post('/', authenticateToken, (req, res) => {
 
   // Calculate FD figures
   const calculation = calculateFD({
-    principal: principal_amount,
-    annualRate: annual_rate,
-    tenureMonths: tenure_months,
+    principal: numPrincipal,
+    annualRate: numRate,
+    tenureMonths: numTenure,
     tenureDays: tenure_days,
     compoundingFrequency: compounding_frequency,
     startDate: start_date,
     isSeniorCitizen: !!customer.is_senior_citizen
   });
+
+  const isEmployee = req.user.role === 'employee';
+
+  if (isEmployee) {
+    const reqNumber = `REQ-FD-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const insReq = db.prepare(`
+      INSERT INTO approval_requests (
+        request_number, request_type, maker_id, customer_id, proposed_amount, request_data, status, decision_remarks
+      ) VALUES (?, 'NEW_FD', ?, ?, ?, ?, 'PENDING_APPROVAL', ?)
+    `).run(
+      reqNumber,
+      req.user.id,
+      customer_id,
+      calculation.principal,
+      JSON.stringify({
+        customerId: customer_id,
+        principal: calculation.principal,
+        annualRate: numRate,
+        tenureMonths: calculation.tenureMonths,
+        tenureDays: calculation.tenureDays || 0,
+        compoundingFrequency: calculation.compoundingFrequency,
+        startDate: calculation.startDate,
+        paymentMode: req.body.payment_mode || 'BANK_TRANSFER',
+        paymentReference: req.body.reference_number || `NEFT-${Date.now().toString().slice(-6)}`,
+        remarks: remarks || 'FD booking submitted by staff'
+      }),
+      remarks || 'New FD booking awaiting Checker approval'
+    );
+
+    return res.status(201).json({
+      success: true,
+      makerApprovalRequired: true,
+      requestId: insReq.lastInsertRowid,
+      message: 'FD proposal submitted successfully. Pending Admin Checker authorization.'
+    });
+  }
 
   // Generate unique FD Number: FD-YYYY-XXXX
   const currentYear = new Date().getFullYear();
@@ -241,6 +329,38 @@ router.post('/:id/premature-close', authenticateToken, (req, res) => {
   }
 
   const { withdrawalDate = new Date().toISOString().split('T')[0], penaltyRate = 1.0, remarks } = req.body;
+
+  // Maker-Checker dual custody: Employee must submit as approval request
+  if (req.user.role === 'employee') {
+    const requestNumber = `REQ-PREM-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const insReq = db.prepare(`
+      INSERT INTO approval_requests (
+        request_number, request_type, maker_id, customer_id, proposed_amount, request_data, status, decision_remarks
+      ) VALUES (?, 'PREMATURE_CLOSURE', ?, ?, ?, ?, 'PENDING_APPROVAL', ?)
+    `).run(
+      requestNumber,
+      req.user.id,
+      fd.customer_id,
+      fd.principal_amount,
+      JSON.stringify({
+        fdId: fd.id,
+        fdNumber: fd.fd_number,
+        customerId: fd.customer_id,
+        withdrawalDate,
+        penaltyRate: parseFloat(penaltyRate) || 1.0,
+        remarks: remarks || `Premature closure proposed by ${req.user.name || req.user.username}`
+      }),
+      remarks || 'FD premature closure submitted for Admin approval'
+    );
+
+    return res.json({
+      success: true,
+      makerApprovalRequired: true,
+      requestId: insReq.lastInsertRowid,
+      requestNumber,
+      message: 'Premature closure proposed. Pending Admin Checker authorization.'
+    });
+  }
 
   const paidInterestRow = db.prepare(`
     SELECT COALESCE(SUM(payout_amount), 0) as paid
@@ -352,6 +472,54 @@ router.post('/schedule/:scheduleId/mark-paid', authenticateToken, (req, res) => 
   `).run(paid_date, payment_reference, req.params.scheduleId);
 
   res.json({ success: true, message: 'Interest payout recorded as PAID' });
+});
+
+// GET /api/fds/:id/receipt - Receipt Printing View (requires receipt_print)
+router.get('/:id/receipt', authenticateToken, requirePermission('receipt_print'), (req, res) => {
+  const fd = db.prepare(`
+    SELECT fd.*, c.full_name as customer_name, c.customer_code, c.phone, c.pan_card
+    FROM fixed_deposits fd
+    JOIN customers c ON fd.customer_id = c.id
+    WHERE fd.id = ?
+  `).get(req.params.id);
+  if (!fd) return res.status(404).json({ success: false, message: 'FD not found' });
+
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+  const companySettings = {};
+  settingsRows.forEach(r => { companySettings[r.key] = r.value; });
+
+  res.json({
+    success: true,
+    printable: true,
+    documentType: 'PAYMENT_RECEIPT',
+    fd,
+    companySettings
+  });
+});
+
+// GET /api/fds/:id/certificate - Certificate Printing View (requires cert_print)
+router.get('/:id/certificate', authenticateToken, requirePermission('cert_print'), (req, res) => {
+  const fd = db.prepare(`
+    SELECT fd.*, c.full_name as customer_name, c.customer_code, c.phone, c.pan_card, c.address
+    FROM fixed_deposits fd
+    JOIN customers c ON fd.customer_id = c.id
+    WHERE fd.id = ?
+  `).get(req.params.id);
+  if (!fd) return res.status(404).json({ success: false, message: 'FD not found' });
+
+  const schedule = db.prepare('SELECT * FROM fd_schedules WHERE fd_id = ? ORDER BY period_no ASC').all(fd.id);
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+  const companySettings = {};
+  settingsRows.forEach(r => { companySettings[r.key] = r.value; });
+
+  res.json({
+    success: true,
+    printable: true,
+    documentType: 'DEPOSIT_CERTIFICATE',
+    fd,
+    schedule,
+    companySettings
+  });
 });
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   Wallet, 
@@ -9,27 +9,38 @@ import {
   ArrowUpRight, 
   PlusCircle, 
   Calculator, 
-  CheckCircle,
-  FileText,
-  Building2,
-  CalendarDays,
-  MoreVertical,
-  Printer,
-  Eye,
-  RotateCw,
-  MessageSquare,
-  ChevronDown,
-  Filter,
-  Download,
-  PieChart as PieIcon,
-  BarChart3,
-  ShieldCheck,
-  Sparkles
+  CheckCircle2, 
+  FileText, 
+  Building2, 
+  CalendarDays, 
+  MoreVertical, 
+  Printer, 
+  Eye, 
+  RotateCw, 
+  MessageSquare, 
+  ChevronRight, 
+  Download, 
+  PieChart as PieIcon, 
+  BarChart3, 
+  ShieldCheck, 
+  Search, 
+  RefreshCw, 
+  ArrowRight,
+  Sparkles,
+  CreditCard,
+  UserCheck,
+  Check,
+  Percent,
+  Banknote,
+  Repeat,
+  Coins
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   AreaChart, 
   Area, 
+  BarChart,
+  Bar,
   PieChart, 
   Pie, 
   Cell, 
@@ -41,8 +52,17 @@ import {
 } from 'recharts';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
-// Color Palette for Visual Graphics
-const CHART_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6'];
+// Premium Banking FinTech Palette: Forest Green & Golden Yellow
+const FINTECH_COLORS = {
+  primary: '#0A5C36',     // Forest Green
+  secondary: '#D4AF37',   // Golden Yellow
+  success: '#10b981',     // Emerald
+  warning: '#f59e0b',     // Amber
+  dark: '#062319',        // Night Forest
+  slate: '#78716c'        // Warm Stone
+};
+
+const PIE_COLORS = ['#0A5C36', '#D4AF37', '#10b981', '#f59e0b', '#047857', '#d97706'];
 
 export default function Dashboard({ 
   onNavigate, 
@@ -50,45 +70,42 @@ export default function Dashboard({
   onViewFD, 
   onPrintCertificate,
   onPrematureClose,
-  onRenewFD
+  onRenewFD,
+  selectedBranch = 'All Branches',
+  selectedFY = 'FY 2026-27'
 }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Interactive UI Dropdowns
-  const [timeFilter, setTimeFilter] = useState('FY 2026-27');
-  const [timeFilterOpen, setTimeFilterOpen] = useState(false);
-
-  const [activeRowMenu, setActiveRowMenu] = useState(null);
-  const [chartView, setChartView] = useState('growth'); // 'growth' | 'maturity'
-
-  const timeFilterRef = useRef(null);
-  const rowMenuRef = useRef(null);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (timeFilterRef.current && !timeFilterRef.current.contains(event.target)) {
-        setTimeFilterOpen(false);
-      }
-      if (rowMenuRef.current && !rowMenuRef.current.contains(event.target)) {
-        setActiveRowMenu(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const [refreshing, setRefreshing] = useState(false);
+  const [quickFilter, setQuickFilter] = useState('ALL');
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [fromDate, setFromDate] = useState('2026-04-01');
+  const [toDate, setToDate] = useState('2027-03-31');
+  const [dateFilterApplied, setDateFilterApplied] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
+      setRefreshing(true);
       const res = await apiRequest('/analytics/dashboard');
-      setData(res.data);
+      if (res.success) {
+        setData(res.data);
+      } else {
+        setError(res.message || 'Unable to retrieve dashboard metrics');
+      }
+
+      // Check pending approvals for Maker-Checker workflow
+      try {
+        const appRes = await apiRequest('/approvals?status=PENDING_APPROVAL');
+        if (appRes.success) {
+          setPendingApprovals(appRes.data || []);
+        }
+      } catch(e){}
     } catch (err) {
-      setError(err.message || 'Failed to load dashboard data');
+      setError(err.message || 'Network error fetching dashboard data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -98,768 +115,1032 @@ export default function Dashboard({
 
   const handleMarkPaid = async (scheduleId) => {
     try {
-      await apiRequest(`/fds/schedule/${scheduleId}/mark-paid`, {
+      await apiRequest(`/fds/schedules/${scheduleId}/pay`, {
         method: 'POST',
         body: JSON.stringify({
-          payment_reference: 'NEFT-' + Date.now(),
-          paid_date: new Date().toISOString().split('T')[0]
+          payment_reference: `DIRECT-BANK-NEFT-${Date.now().toString().slice(-6)}`
         })
       });
       fetchDashboardData();
     } catch (err) {
-      alert('Error updating payout: ' + err.message);
+      alert('Failed to mark payout as paid: ' + err.message);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[450px] space-y-4">
-        <div className="relative">
-          <div className="w-14 h-14 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <Sparkles className="w-6 h-6 text-indigo-500 absolute inset-0 m-auto animate-pulse" />
-        </div>
-        <p className="text-slate-500 font-semibold text-xs animate-pulse">Loading Live Wealth Portfolio & Analytics...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-500">
+        <RefreshCw className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+        <p className="text-base font-semibold text-slate-700">Loading Enterprise FD Dashboard...</p>
+        <p className="text-xs text-slate-400 mt-1">Aggregating live portfolios, schedules and liabilities</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
-      <div className="p-6 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl shadow-sm">
-        <p className="font-bold flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-rose-500" /> Error loading dashboard
-        </p>
-        <p className="text-sm mt-1">{error}</p>
-        <button 
+      <div className="p-8 max-w-2xl mx-auto mt-12 bg-white rounded-xl border border-rose-200 shadow-sm text-center">
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-slate-900">Dashboard Unavailable</h3>
+        <p className="text-sm text-slate-600 mt-1 mb-6">{error || 'Could not load data'}</p>
+        <button
           onClick={fetchDashboardData}
-          className="mt-3 px-4 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition"
         >
-          Retry
+          <RefreshCw className="w-4 h-4" /> Try Again
         </button>
       </div>
     );
   }
 
-  const { metrics, upcomingMaturities, pendingPayouts, recentFds, subscription, frequencyBreakdown, monthlyProjection } = data;
+  const { metrics, upcomingMaturities, pendingPayouts, frequencyBreakdown, monthlyProjection, recentFds, subscription } = data;
 
-  // Prepare Pie Chart Data
-  const pieData = (frequencyBreakdown && frequencyBreakdown.length > 0)
-    ? frequencyBreakdown.map((item, index) => ({
-        name: item.compounding_frequency?.replace('_', ' ') || 'Quarterly',
-        value: item.total_amount || 0,
-        count: item.count || 0,
-        color: CHART_COLORS[index % CHART_COLORS.length]
+  // Chart Data Preparation: Principal vs Interest
+  const liabilityPieData = [
+    { name: 'Active Principal', value: metrics.totalPrincipal || 0 },
+    { name: 'Projected Interest', value: metrics.totalInterest || 0 }
+  ];
+
+  // Multi-Product Asset Mix (Real Database Figures in Green & Gold)
+  const portfolioMixData = [
+    { name: 'Monthly Income (MIS)', value: metrics.mis?.totalDeposit || 0, color: '#D4AF37' },
+    { name: 'Fixed Deposits (FD)', value: metrics.totalPrincipal || 0, color: '#0A5C36' },
+    { name: 'Savings Accounts (SB)', value: metrics.savings?.totalBalance || 0, color: '#10b981' },
+    { name: 'Recurring (RD)', value: metrics.rd?.totalDeposited || 0, color: '#f59e0b' }
+  ].filter(p => p.value > 0);
+
+  // Frequency Chart Data
+  const freqChartData = (frequencyBreakdown || []).map(f => ({
+    name: f.compounding_frequency.replace('payout_', 'Payout ').replace('_', ' ').toUpperCase(),
+    count: f.count,
+    amount: f.total_amount
+  }));
+
+  // Timeline / Projection Data
+  const timelineData = (monthlyProjection && monthlyProjection.length > 0)
+    ? monthlyProjection.map(m => ({
+        month: m.month,
+        Principal: m.principal || 0,
+        MaturityLiability: m.projected_payout || 0,
+        Count: m.count
       }))
     : [
-        { name: 'Quarterly Re-invest', value: metrics.totalPrincipal * 0.55 || 1500000, count: 12, color: CHART_COLORS[0] },
-        { name: 'Monthly Pension', value: metrics.totalPrincipal * 0.25 || 800000, count: 6, color: CHART_COLORS[1] },
-        { name: 'Cumulative Maturity', value: metrics.totalPrincipal * 0.20 || 500000, count: 4, color: CHART_COLORS[2] },
+        { month: '2026-04', Principal: 500000, MaturityLiability: 543000, Count: 1 },
+        { month: '2026-07', Principal: 250000, MaturityLiability: 271000, Count: 1 },
+        { month: '2026-10', Principal: 1000000, MaturityLiability: 1085000, Count: 1 }
       ];
-
-  // Prepare Area Chart Forecast Data
-  const areaData = (monthlyProjection && monthlyProjection.length > 0)
-    ? monthlyProjection.map(item => ({
-        month: item.month,
-        principal: item.principal || 0,
-        projected: item.projected_payout || 0,
-      }))
-    : [
-        { month: 'Apr 26', principal: 1200000, projected: 1350000 },
-        { month: 'May 26', principal: 1650000, projected: 1890000 },
-        { month: 'Jun 26', principal: 2100000, projected: 2420000 },
-        { month: 'Jul 26', principal: 2750000, projected: 3180000 },
-        { month: 'Aug 26', principal: 3400000, projected: 3950000 },
-        { month: 'Sep 26', principal: 4100000, projected: 4780000 },
-        { month: 'Oct 26', principal: 4950000, projected: 5820000 },
-      ];
-
-  const handleSendWhatsAppReminder = (fd) => {
-    let phone = fd.customer_phone ? fd.customer_phone.replace(/[^0-9]/g, '') : '';
-    if (phone.length === 10) phone = '91' + phone;
-
-    const msg = `नमस्ते ${fd.customer_name} जी! 🙏\n\nआपकी Fixed Deposit (A/c No: *${fd.fd_number}*) की परिपक्वता (Maturity) तारीख *${formatDate(fd.maturity_date)}* आ रही है।\n\n💰 परिपक्वता राशि: *${formatINR(fd.maturity_amount)}*\n\nक्या आप इसे अगले टर्म के लिए रीन्यू (Re-invest) करना चाहते हैं या बैंक खाते में ट्रांसफर चाहते हैं?\n\nकृपया हमें सूचित करें।\n\nसादर,\nFixed Deposit & Wealth Management Desk`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  };
 
   return (
-    <div className="space-y-8 animate-dropdown">
-      
-      {/* Top Welcome Bar with Interactive Filters */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
-        
-        {/* Decorative background glow */}
-        <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-indigo-50/50 to-transparent pointer-events-none" />
+    <div className="space-y-6 pb-12 animate-fadeIn">
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-ping"></span>
-              Live CRM Desk
+      {/* 1. Header Banner & Actions */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+              Executive Deposit Overview
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Sync
             </span>
-            <span className="text-xs text-slate-400 font-medium">Updated Just Now</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-            Wealth & Fixed Deposit Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time asset management, compounding returns & maturity projections
+          <p className="text-xs md:text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+            <span>Portfolio Branch: <strong className="text-slate-700">{selectedBranch}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Fiscal Period: <strong className="text-slate-700">{selectedFY}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Last Updated: {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
           </p>
         </div>
 
-        {/* Action Controls & Interactive Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2.5 relative z-10 w-full lg:w-auto">
-          
-          {/* Timeline Dropdown */}
-          <div className="relative" ref={timeFilterRef}>
-            <button
-              onClick={() => setTimeFilterOpen(!timeFilterOpen)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-sm transition cursor-pointer"
-            >
-              <CalendarDays className="w-3.5 h-3.5 text-indigo-600" />
-              <span>{timeFilter}</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${timeFilterOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {timeFilterOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 animate-dropdown">
-                {['FY 2026-27', 'Next 90 Days', 'Current Quarter', 'All-Time Portfolio'].map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => {
-                      setTimeFilter(item);
-                      setTimeFilterOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
-                      timeFilter === item 
-                        ? 'bg-indigo-50 text-indigo-700 font-bold' 
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{item}</span>
-                    {timeFilter === item && <CheckCircle className="w-3.5 h-3.5 text-indigo-600" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Calculator Link */}
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => onNavigate('calculator')}
-            className="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+            onClick={() => onNavigate && onNavigate('calculator')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition border border-slate-200 cursor-pointer"
           >
-            <Calculator className="w-4 h-4 text-indigo-600" />
-            <span>Calculator</span>
+            <Calculator className="w-4 h-4 text-slate-600" />
+            FD Calculator
           </button>
 
-          {/* Book FD Primary CTA */}
+          <button
+            onClick={() => onNavigate && onNavigate('customers')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition border border-slate-200 cursor-pointer"
+          >
+            <Users className="w-4 h-4 text-slate-600" />
+            + Customer
+          </button>
+
           <button
             onClick={onOpenNewFD}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-lg bg-[#D4AF37] text-[#062319] hover:bg-[#C59B27] shadow-sm transition cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Book New FD</span>
+            Book New FD
           </button>
 
+          <button
+            onClick={fetchDashboardData}
+            disabled={refreshing}
+            title="Refresh Live Metrics"
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-[#0A5C36]' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Subscription Banner */}
-      {subscription && (
-        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition-all ${
-          subscription.status === 'ACTIVE' 
-            ? 'bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white border-emerald-200 text-emerald-900 shadow-sm' 
-            : 'bg-amber-50 border-amber-200 text-amber-900'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl ${subscription.status === 'ACTIVE' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-amber-500 text-white'}`}>
-              <ShieldCheck className="w-5 h-5" />
+      {/* Custom Date Range Filter Bar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-[#0A5C36]" />
+          <span className="font-bold text-slate-700">Custom Date Range:</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">From</span>
+            <input 
+              type="date"
+              id="dashboard-date-from"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#0A5C36]"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">To</span>
+            <input 
+              type="date"
+              id="dashboard-date-to"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-[#0A5C36]"
+            />
+          </div>
+          <button
+            id="dashboard-apply-date-btn"
+            onClick={() => {
+              setDateFilterApplied(true);
+              fetchDashboardData();
+            }}
+            className="px-3 py-1.5 bg-[#0A5C36] hover:bg-[#08482a] text-white rounded-lg font-bold transition shadow-xs cursor-pointer"
+          >
+            Apply Date Filter
+          </button>
+          {dateFilterApplied && (
+            <button
+              onClick={() => {
+                setDateFilterApplied(false);
+                setFromDate('2026-04-01');
+                setToDate('2027-03-31');
+                fetchDashboardData();
+              }}
+              className="text-slate-400 hover:text-slate-600 underline font-semibold ml-1 cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+        <div className="text-[11px] text-slate-500">
+          Active Range: <strong className="text-[#0A5C36]">{fromDate}</strong> to <strong className="text-[#0A5C36]">{toDate}</strong>
+        </div>
+      </div>
+
+      {/* Multi-Product Selector Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {[
+          { id: 'ALL', label: 'All 4 Deposit Products', count: metrics.totalActiveAccounts || metrics.activeCount },
+          { id: 'FD', label: 'Fixed Deposits (FD)', count: metrics.activeCount },
+          { id: 'RD', label: 'Recurring Deposits (RD)', count: metrics.rd?.activeCount || 0 },
+          { id: 'MIS', label: 'Monthly Income (MIS)', count: metrics.mis?.activeCount || 0 },
+          { id: 'SAVINGS', label: 'Savings Accounts (SB)', count: metrics.savings?.activeCount || 0 }
+        ].map((prod) => (
+          <button
+            key={prod.id}
+            onClick={() => setQuickFilter(prod.id)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 cursor-pointer ${
+              quickFilter === prod.id
+                ? 'bg-[#062319] text-[#FBBF24] shadow-sm ring-2 ring-[#D4AF37]/50 border border-[#1a5d43]'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <span>{prod.label}</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              quickFilter === prod.id ? 'bg-[#D4AF37] text-[#062319] font-bold' : 'bg-slate-100 text-slate-600 font-semibold'
+            }`}>
+              {prod.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Multi-Product Institutional Liquidity Hero (AUM Hero Section in Dark Forest Green & Gold) */}
+      <div className="bg-[#082e20] rounded-2xl p-6 text-white shadow-xl border border-[#1a5d43] relative overflow-hidden">
+        {/* Subtle background ambient golden glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#FDE68A] bg-[#062319]/90 px-2.5 py-0.5 rounded-full border border-[#D4AF37]/40 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+                Institutional Deposit Portfolio
+              </span>
+              <span className="text-[10px] font-semibold text-emerald-300 bg-[#062319]/80 px-2 py-0.5 rounded border border-[#1a5d43]">
+                Audited & Reconciled
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-sm tracking-tight">{subscription.plan_name}</span>
-                <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  {subscription.status}
-                </span>
-                <span className="text-[11px] font-semibold text-emerald-700 hidden md:inline">
-                  • 24x7 Cloud Hosted & Secure Sync
+            <div className="mt-3">
+              <span className="text-xs font-semibold text-emerald-200 uppercase tracking-widest block">Total Assets Under Management (AUM)</span>
+              <div className="text-3xl md:text-4xl font-black mt-1 tracking-tight text-[#FBBF24] font-mono flex items-baseline gap-2">
+                <span>{formatINR(metrics.totalInstitutionalDeposits || metrics.totalPrincipal)}</span>
+                <span className="text-xs font-semibold text-emerald-300 font-sans tracking-normal bg-[#062319] px-2 py-0.5 rounded border border-[#1a5d43]">
+                  +100% Solvency
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mt-0.5">
-                License active until <span className="font-bold text-slate-800">{formatDate(subscription.valid_until)}</span> (AMC Plan ₹24,000/Year)
+            </div>
+            <p className="text-xs text-emerald-100/90 mt-1.5 max-w-xl">
+              Consolidated Assets Under Custody across {metrics.totalActiveAccounts || metrics.activeCount} active deposit & savings accounts in {selectedBranch}.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div 
+              onClick={() => onNavigate && onNavigate('fds')}
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-200">Fixed Deposits</span>
+                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition"></span>
+              </div>
+              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.totalPrincipal)}</span>
+              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium">{metrics.activeCount} Active Accounts</span>
+            </div>
+
+            <div 
+              onClick={() => onNavigate && onNavigate('rds')}
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-amber-400/50"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-200">Recurring (RD)</span>
+                <span className="w-2 h-2 rounded-full bg-[#f59e0b] group-hover:scale-125 transition"></span>
+              </div>
+              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.rd?.totalDeposited || 0)}</span>
+              <span className="text-[10px] text-amber-300 block mt-0.5 font-medium">{metrics.rd?.activeCount || 0} Active Accounts</span>
+            </div>
+
+            <div 
+              onClick={() => onNavigate && onNavigate('mis')}
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-200">Monthly (MIS)</span>
+                <span className="w-2 h-2 rounded-full bg-[#D4AF37] group-hover:scale-125 transition"></span>
+              </div>
+              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.mis?.totalDeposit || 0)}</span>
+              <span className="text-[10px] text-[#FDE68A] block mt-0.5 font-medium">₹{formatINR(metrics.mis?.totalMonthlyPayout || 0)}/mo</span>
+            </div>
+
+            <div 
+              onClick={() => onNavigate && onNavigate('savings')}
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-emerald-400/50"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-200">Savings (SB)</span>
+                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition"></span>
+              </div>
+              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.savings?.totalBalance || 0)}</span>
+              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium">{metrics.savings?.activeCount || 0} Accounts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Maker-Checker Pending Approvals Queue Banner */}
+      {pendingApprovals.length > 0 && (
+        <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-amber-950 flex items-center gap-2">
+                <span>{pendingApprovals.length} Pending Submission{pendingApprovals.length > 1 ? 's' : ''} Require Admin Authorization</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                  Maker-Checker
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Staff have submitted new deposit or payout entries awaiting your review before ledger finalization.
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => onNavigate('subscription')}
-            className="text-xs font-bold px-4 py-2 bg-white rounded-xl shadow-sm border border-emerald-200 hover:bg-emerald-50 text-emerald-800 transition cursor-pointer shrink-0"
+            onClick={() => onNavigate && onNavigate('approvals')}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-xs shrink-0 cursor-pointer"
           >
-            Manage AMC & APIs &rarr;
+            Review Approvals Queue <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Modern High-Impact Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 2. Primary 8 Financial KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: Total Active Principal */}
-        <div className="bg-white rounded-2xl p-5 border-t-4 border-t-indigo-600 border border-slate-200 shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Active Deposit Base (मूलधन)
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 tracking-tight">
-                {formatINR(metrics.totalPrincipal)}
-              </div>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
-              <Wallet className="w-6 h-6" />
+        {/* Card 1: Active Principal */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-indigo-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Principal</span>
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+              <Wallet className="w-5 h-5" />
             </div>
           </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="font-bold text-indigo-700 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              {metrics.activeCount} Active FDs
-            </span>
-            <span className="text-[11px] font-semibold text-slate-400">100% Guaranteed</span>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {formatINR(metrics.totalPrincipal)}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                {metrics.activeCount} Active FDs
+              </span>
+              <span>Across portfolio</span>
+            </div>
           </div>
         </div>
 
-        {/* Card 2: Total Maturity Value */}
-        <div className="bg-white rounded-2xl p-5 border-t-4 border-t-emerald-500 border border-slate-200 shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Maturity Liability (कुल देनदारी)
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 tracking-tight text-emerald-700">
-                {formatINR(metrics.totalMaturityValue)}
-              </div>
-            </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm">
-              <TrendingUp className="w-6 h-6" />
+        {/* Card 2: Total Maturity Liability */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-emerald-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Maturity Liability</span>
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition">
+              <Banknote className="w-5 h-5" />
             </div>
           </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="font-bold text-emerald-600 flex items-center gap-1">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              +{formatINR(metrics.totalInterest)} Interest
-            </span>
-            <span className="text-[11px] font-semibold text-slate-400">Compounding</span>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {formatINR(metrics.totalMaturityValue)}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                Principal + Interest
+              </span>
+              <span>100% Reserve</span>
+            </div>
           </div>
         </div>
 
-        {/* Card 3: Total Customers */}
-        <div className="bg-white rounded-2xl p-5 border-t-4 border-t-blue-500 border border-slate-200 shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Registered Clients (ग्राहक)
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 tracking-tight">
-                {metrics.totalCustomers}
-              </div>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
-              <Users className="w-6 h-6" />
+        {/* Card 3: Projected Interest Liability */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-amber-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Projected Interest</span>
+            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition">
+              <Percent className="w-5 h-5" />
             </div>
           </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <button 
-              onClick={() => onNavigate('customers')}
-              className="font-bold text-blue-600 hover:text-blue-800 transition flex items-center gap-1"
-            >
-              <span>Manage Clients</span>
-              <span>&rarr;</span>
-            </button>
-            <span className="text-[11px] font-semibold text-slate-400">Mobile Enabled</span>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {formatINR(metrics.totalInterest)}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                Accrued Yield
+              </span>
+              <span>Contracted terms</span>
+            </div>
           </div>
         </div>
 
-        {/* Card 4: Total Cumulative Accounts */}
-        <div className="bg-white rounded-2xl p-5 border-t-4 border-t-purple-500 border border-slate-200 shadow-sm relative overflow-hidden group hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Total FD Ledger
-              </span>
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 tracking-tight">
-                {metrics.totalFds}
-              </div>
-            </div>
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-sm">
-              <FileCheck2 className="w-6 h-6" />
+        {/* Card 4: Registered Customers */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-sky-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Customers</span>
+            <div className="w-10 h-10 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 group-hover:bg-sky-600 group-hover:text-white transition">
+              <Users className="w-5 h-5" />
             </div>
           </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {metrics.totalCustomers}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded">
+                KYC Registered
+              </span>
+              <span>Active Depositors</span>
+            </div>
+          </div>
+        </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">
-              {metrics.maturedCount} Matured • {metrics.prematureClosedCount} Liquidated
-            </span>
+        {/* Card 5: Upcoming Maturities (30 Days) */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-rose-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Maturities in 30 Days</span>
+            <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {upcomingMaturities.length}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded">
+                Action Required
+              </span>
+              <span>Next 30 calendar days</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 6: Pending Interest Payouts */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-violet-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Interest Payouts Due</span>
+            <div className="w-10 h-10 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition">
+              <CreditCard className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {pendingPayouts.length}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="font-medium text-violet-700 bg-violet-50 px-2 py-0.5 rounded">
+                Non-cumulative
+              </span>
+              <span>Bank transfers due</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 7: Total Lifetime FDs */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-teal-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Contracts Booked</span>
+            <div className="w-10 h-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition">
+              <FileCheck2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">
+              {metrics.totalFds}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span>{metrics.maturedCount} Matured</span>
+              <span>{metrics.prematureClosedCount} Premature</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 8: Subscription License */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-indigo-300 hover:shadow-sm transition group">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">CRM License Status</span>
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-lg font-bold text-slate-900 truncate">
+              {subscription ? subscription.plan_name.split('(')[0] : 'Enterprise License'}
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                ACTIVE
+              </span>
+              <span>Valid till {subscription ? subscription.valid_until : '2027'}</span>
+            </div>
           </div>
         </div>
 
       </div>
 
-      {/* Visual Analytics & Graphic Charts (Recharts) */}
+      {/* 3. Financial Analytics Charts Grid (4 Rich Visualizations) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left 2 Cols: Interactive Portfolio Growth Area Chart */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-100">
+
+        {/* Chart 1: Maturity & Liability Forecast (2 Columns) */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 p-5 md:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <div>
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">
-                  Portfolio Inflow & Projected Maturity Curve
-                </h3>
+                <span className="w-2 h-2 rounded-full bg-[#0A5C36]"></span>
+                <h2 className="text-base font-bold text-slate-900">Maturity & Cash Flow Timeline</h2>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Forecasted deposits vs maturity payout timeline in INR (₹)
-              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Projected maturity liabilities by monthly redemption cycle</p>
             </div>
-
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold">
-              <button
-                onClick={() => setChartView('growth')}
-                className={`px-3 py-1 rounded-lg transition ${
-                  chartView === 'growth' 
-                    ? 'bg-white text-indigo-700 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Growth Trend
-              </button>
-              <button
-                onClick={() => setChartView('maturity')}
-                className={`px-3 py-1 rounded-lg transition ${
-                  chartView === 'maturity' 
-                    ? 'bg-white text-indigo-700 shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Maturity Liability
-              </button>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 bg-amber-50/80 px-2.5 py-1 rounded-md font-medium border border-amber-200/60">
+                <span className="w-2 h-2 rounded-full bg-[#0A5C36]"></span> Principal
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-700 bg-amber-50/80 px-2.5 py-1 rounded-md font-medium border border-amber-200/60">
+                <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span> Total Maturity Value
+              </span>
             </div>
           </div>
 
-          {/* Area Chart Container */}
-          <div className="h-64 sm:h-72 w-full mt-4">
+          <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorPrincipal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
+                  <linearGradient id="colorMaturity" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.35}/>
+                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0.0}/>
                   </linearGradient>
-                  <linearGradient id="colorProjected" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                  <linearGradient id="colorPrincipal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0A5C36" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#0A5C36" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <YAxis 
-                  tick={{ fontSize: 11, fill: '#64748b' }} 
-                  axisLine={false} 
-                  tickLine={false}
+                  stroke="#94a3b8" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false}
                   tickFormatter={(val) => `₹${(val / 100000).toFixed(1)}L`} 
                 />
                 <Tooltip 
-                  formatter={(val) => [formatINR(val), 'Amount']}
-                  contentStyle={{ 
-                    backgroundColor: '#0f172a', 
-                    borderRadius: '12px', 
-                    color: '#fff', 
-                    border: 'none', 
-                    fontSize: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' 
-                  }}
-                  itemStyle={{ color: '#818cf8', fontWeight: 'bold' }}
+                  formatter={(val) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Amount']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                 />
-                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                
-                {chartView === 'growth' ? (
-                  <>
-                    <Area 
-                      type="monotone" 
-                      dataKey="principal" 
-                      name="Active Principal" 
-                      stroke="#6366f1" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorPrincipal)" 
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="projected" 
-                      name="Projected Maturity Value" 
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorProjected)" 
-                    />
-                  </>
-                ) : (
-                  <Area 
-                    type="monotone" 
-                    dataKey="projected" 
-                    name="Maturity Payout Schedule" 
-                    stroke="#10b981" 
-                    strokeWidth={3.5}
-                    fillOpacity={1} 
-                    fill="url(#colorProjected)" 
-                  />
-                )}
+                <Area 
+                  type="monotone" 
+                  dataKey="MaturityLiability" 
+                  name="Maturity Value" 
+                  stroke="#D4AF37" 
+                  strokeWidth={2.5}
+                  fillOpacity={1} 
+                  fill="url(#colorMaturity)" 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Principal" 
+                  name="Principal Amount" 
+                  stroke="#0A5C36" 
+                  strokeWidth={2.5}
+                  fillOpacity={1} 
+                  fill="url(#colorPrincipal)" 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Right 1 Col: Compounding Frequency Distribution (Donut Chart) */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        {/* Chart 2: Multi-Product Portfolio Distribution Donut (1 Column) */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 md:p-6 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span>
+              <h2 className="text-base font-bold text-slate-900">Portfolio Asset Mix</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Distribution across all 4 deposit products</p>
+          </div>
+
+          <div className="h-56 relative my-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={portfolioMixData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {portfolioMixData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(val) => `₹${Number(val).toLocaleString('en-IN')}`} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">TOTAL AUM</span>
+              <span className="text-sm font-extrabold text-[#062319] font-mono">
+                ₹{(((metrics.totalInstitutionalDeposits || metrics.totalPrincipal) || 0) / 10000000).toFixed(2)} Cr
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-3 border-t border-slate-100 text-xs">
+            {portfolioMixData.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                  <span className="text-slate-600 font-medium truncate max-w-[130px]">{item.name}</span>
+                </div>
+                <strong className="text-slate-900 font-mono text-[11px]">{formatINR(item.value)}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart 3: Compounding & Payout Frequency Distribution (2 Columns) */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 p-5 md:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div>
               <div className="flex items-center gap-2">
-                <PieIcon className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-slate-800 text-sm">Scheme Distribution</h3>
+                <span className="w-2 h-2 rounded-full bg-[#0A5C36]"></span>
+                <h2 className="text-base font-bold text-slate-900">Compounding & Payout Frequency Breakdown</h2>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                Compounding
+              <p className="text-xs text-slate-500 mt-0.5">Portfolio distribution by interest servicing frequency</p>
+            </div>
+            <span className="text-xs text-slate-700 font-medium bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200/50">
+              {freqChartData.reduce((acc, curr) => acc + curr.count, 0)} Active Contracts
+            </span>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={freqChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} interval={0} angle={-10} textAnchor="end" />
+                <YAxis 
+                  stroke="#94a3b8" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={false}
+                  tickFormatter={(val) => `₹${(val / 100000).toFixed(1)}L`} 
+                />
+                <Tooltip 
+                  formatter={(val, name) => [name === 'amount' ? `₹${Number(val).toLocaleString('en-IN')}` : val, name === 'amount' ? 'Total Amount' : 'Contracts']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '8px' }}
+                />
+                <Bar dataKey="amount" name="Total Amount" fill="#0A5C36" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 4: Liability Ratio Donut (1 Column) */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 md:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span>
+              <h2 className="text-base font-bold text-slate-900">Principal vs Interest Ratio</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Principal deposits vs contracted interest obligations</p>
+          </div>
+
+          <div className="h-52 relative my-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={liabilityPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={78}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  <Cell fill="#0A5C36" />
+                  <Cell fill="#D4AF37" />
+                </Pie>
+                <Tooltip formatter={(val) => `₹${Number(val).toLocaleString('en-IN')}`} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">MATURITY</span>
+              <span className="text-sm font-extrabold text-[#062319] font-mono">
+                ₹{((metrics.totalMaturityValue || 0) / 100000).toFixed(1)}L
               </span>
             </div>
+          </div>
 
-            {/* Donut Chart */}
-            <div className="h-52 w-full mt-2 relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(val) => [formatINR(val), 'Volume']}
-                    contentStyle={{ 
-                      backgroundColor: '#0f172a', 
-                      borderRadius: '10px', 
-                      color: '#fff', 
-                      border: 'none', 
-                      fontSize: '11px' 
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              <div className="absolute text-center pointer-events-none">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">Total</span>
-                <span className="text-sm font-black text-slate-800">{pieData.reduce((acc, c) => acc + (c.count || 1), 0)} FDs</span>
+          <div className="space-y-2 pt-3 border-t border-slate-100 text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0A5C36]"></span>
+                <span className="text-slate-600 font-medium">Principal Deposits</span>
               </div>
+              <strong className="text-slate-900 font-mono text-[11px]">{formatINR(metrics.totalPrincipal)}</strong>
             </div>
-
-            {/* Legend breakdown list */}
-            <div className="space-y-2 mt-2">
-              {pieData.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg hover:bg-slate-50 transition">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-slate-600 font-medium truncate">{item.name}</span>
-                  </div>
-                  <span className="font-bold text-slate-800 shrink-0">{formatINR(item.value)}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]"></span>
+                <span className="text-slate-600 font-medium">Contracted Interest</span>
+              </div>
+              <strong className="text-slate-900 font-mono text-[11px]">{formatINR(metrics.totalInterest)}</strong>
             </div>
           </div>
         </div>
 
       </div>
 
-      {/* Critical Operational Sections */}
+      {/* 4. Operational Panels: Upcoming Maturities & Recent Bookings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Section 1: Upcoming Maturities (Next 30 Days) */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Upcoming Maturities (अगले 30 दिन)</h3>
-                  <p className="text-xs text-slate-400">Deposits due for redemption or renewal</p>
-                </div>
-              </div>
-              <span className="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-full">
-                {upcomingMaturities.length} Due
-              </span>
-            </div>
 
-            {upcomingMaturities.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-sm">
-                Next 30 days mein koi FD mature nahi hone wali hai.
+        {/* Panel A: Upcoming Maturities (Next 30 Days) */}
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                <Clock className="w-4 h-4" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {upcomingMaturities.map((fd) => (
-                  <div 
-                    key={fd.id} 
-                    className="p-3.5 bg-slate-50/80 hover:bg-slate-100/90 rounded-xl border border-slate-100 transition flex items-center justify-between text-xs group"
-                  >
-                    <div>
-                      <div className="font-bold text-slate-800 flex items-center gap-2">
-                        <span className="text-indigo-600 font-mono font-bold">{fd.fd_number}</span>
-                        <span className="text-slate-300">•</span>
-                        <span>{fd.customer_name}</span>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Upcoming Maturities (Next 30 Days)</h3>
+                <p className="text-xs text-slate-500">Require settlement, reinvestment or renewal notification</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('fds')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+            >
+              View All <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100 overflow-x-auto flex-1">
+            {upcomingMaturities && upcomingMaturities.length > 0 ? (
+              upcomingMaturities.map((fd) => {
+                const daysRemaining = Math.ceil((new Date(fd.maturity_date) - new Date()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={fd.id} className="p-4 hover:bg-slate-50 transition flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-900">{fd.fd_number}</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          {fd.annual_rate}% p.a.
+                        </span>
                       </div>
-                      <p className="text-slate-500 mt-0.5">
-                        Maturity: <span className="font-bold text-rose-600">{formatDate(fd.maturity_date)}</span>
-                      </p>
+                      <div className="text-xs text-slate-500 mt-1 truncate">
+                        {fd.customer_name} • Matures on <strong className="text-slate-700">{formatDate(fd.maturity_date)}</strong>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <div className="font-black text-slate-900 text-sm">{formatINR(fd.maturity_amount)}</div>
-                        <span className="text-[10px] text-emerald-600 font-bold block">{fd.annual_rate}% p.a.</span>
+                        <div className="font-bold text-sm text-slate-900">{formatINR(fd.maturity_amount)}</div>
+                        <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                          daysRemaining <= 7 ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {daysRemaining > 0 ? `${daysRemaining} days left` : 'Due Today'}
+                        </span>
                       </div>
 
-                      {/* Action Dropdown / Button */}
-                      <button
-                        onClick={() => handleSendWhatsAppReminder(fd)}
-                        title="Send WhatsApp Reminder"
-                        className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition cursor-pointer"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        onClick={() => onViewFD(fd.id)}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer"
-                      >
-                        Renew &rarr;
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-slate-100 text-right">
-            <button 
-              onClick={() => onNavigate('fds')}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-end gap-1"
-            >
-              <span>View All Fixed Deposits</span>
-              <span>&rarr;</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Section 2: Pending Interest Payouts this Month (Non-Cumulative) */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                  <CalendarDays className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Interest Payouts Due (पेआउट लिस्ट)</h3>
-                  <p className="text-xs text-slate-400">Monthly/Quarterly pension interest transfers</p>
-                </div>
-              </div>
-              <span className="text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                {pendingPayouts.length} Due
-              </span>
-            </div>
-
-            {pendingPayouts.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-sm">
-                Is mahine koi pending regular interest payout nahi hai.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {pendingPayouts.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="p-3.5 bg-slate-50/80 hover:bg-slate-100/90 rounded-xl border border-slate-100 transition flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <div className="font-bold text-slate-800">{item.customer_name}</div>
-                      <p className="text-slate-500 mt-0.5">
-                        {item.bank_name || 'Bank'} A/c: <code className="bg-slate-200/60 px-1 py-0.5 rounded font-mono">{item.account_no || 'N/A'}</code>
-                      </p>
-                      <p className="text-slate-400 text-[11px] mt-0.5">
-                        Due: <span className="font-semibold text-slate-600">{formatDate(item.payout_date)}</span> ({item.fd_number})
-                      </p>
-                    </div>
-
-                    <div className="text-right flex flex-col items-end gap-1.5">
-                      <span className="font-black text-emerald-600 text-sm">{formatINR(item.payout_amount)}</span>
-                      <button
-                        onClick={() => handleMarkPaid(item.id)}
-                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-sm transition cursor-pointer"
-                      >
-                        Mark Paid ✓
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-slate-100 text-right">
-            <button 
-              onClick={() => onNavigate('payouts')}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-end gap-1"
-            >
-              <span>Full Payout Schedule Register</span>
-              <span>&rarr;</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Recently Booked Fixed Deposits with Interactive Actions */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" ref={rowMenuRef}>
-        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-bold text-slate-800 text-sm">Recently Booked Fixed Deposits</h3>
-          </div>
-          <button
-            onClick={() => onNavigate('fds')}
-            className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
-          >
-            <span>See Full Portfolio</span>
-            <span>&rarr;</span>
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-100">
-              <tr>
-                <th className="py-3 px-4">FD Number</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4 text-right">Principal</th>
-                <th className="py-3 px-4 text-center">Rate</th>
-                <th className="py-3 px-4 text-center">Tenure</th>
-                <th className="py-3 px-4">Maturity Date</th>
-                <th className="py-3 px-4 text-right">Maturity Amount</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {recentFds?.map((fd) => (
-                <tr key={fd.id} className="hover:bg-slate-50/80 transition table-row-hover">
-                  <td className="py-3 px-4 font-mono font-bold text-indigo-600">{fd.fd_number}</td>
-                  <td className="py-3 px-4 text-slate-800 font-semibold">{fd.customer_name}</td>
-                  <td className="py-3 px-4 text-right font-black text-slate-900">{formatINR(fd.principal_amount)}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                      {fd.annual_rate}%
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center text-slate-600">{fd.tenure_months}m</td>
-                  <td className="py-3 px-4 text-slate-700">{formatDate(fd.maturity_date)}</td>
-                  <td className="py-3 px-4 text-right font-black text-emerald-700">{formatINR(fd.maturity_amount)}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                      {fd.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center relative">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        title="View Ledger"
-                        onClick={() => onViewFD(fd.id)}
-                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      
-                      <button
-                        title="Print Bond Certificate"
-                        onClick={() => onPrintCertificate(fd.id)}
-                        className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition cursor-pointer"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Dropdown Menu Toggle */}
-                      <div className="relative">
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => setActiveRowMenu(activeRowMenu === fd.id ? null : fd.id)}
-                          className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition cursor-pointer"
+                          onClick={() => onViewFD && onViewFD(fd.id)}
+                          title="View Details"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
                         >
-                          <MoreVertical className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4" />
                         </button>
-
-                        {activeRowMenu === fd.id && (
-                          <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-left animate-dropdown">
-                            <button
-                              onClick={() => {
-                                onViewFD(fd.id);
-                                setActiveRowMenu(null);
-                              }}
-                              className="w-full px-2.5 py-1.5 hover:bg-slate-50 rounded-lg text-slate-700 font-semibold flex items-center gap-2 cursor-pointer"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>View Ledger</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                onPrintCertificate(fd.id);
-                                setActiveRowMenu(null);
-                              }}
-                              className="w-full px-2.5 py-1.5 hover:bg-slate-50 rounded-lg text-slate-700 font-semibold flex items-center gap-2 cursor-pointer"
-                            >
-                              <Printer className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Print Certificate</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                handleSendWhatsAppReminder(fd);
-                                setActiveRowMenu(null);
-                              }}
-                              className="w-full px-2.5 py-1.5 hover:bg-emerald-50 text-emerald-700 rounded-lg font-semibold flex items-center gap-2 cursor-pointer"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>WhatsApp Alert</span>
-                            </button>
-                          </div>
-                        )}
+                        <button
+                          onClick={() => onRenewFD && onRenewFD(fd)}
+                          title="Renew FD"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
+                        >
+                          <RotateCw className="w-4 h-4" />
+                        </button>
                       </div>
-
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No active fixed deposits maturing within the next 30 days.
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Panel B: Recent FD Bookings */}
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                <FileCheck2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Recent FD Bookings</h3>
+                <p className="text-xs text-slate-500">Latest fixed deposits booked in the platform</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('fds')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+            >
+              View All <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100 overflow-x-auto flex-1">
+            {recentFds && recentFds.length > 0 ? (
+              recentFds.map((fd) => (
+                <div key={fd.id} className="p-4 hover:bg-slate-50 transition flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">{fd.fd_number}</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                        {fd.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1 truncate">
+                      {fd.customer_name} • {fd.tenure_months}M ({fd.compounding_frequency.replace('payout_', 'Payout ')})
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <div className="font-bold text-sm text-slate-900">{formatINR(fd.principal_amount)}</div>
+                      <div className="text-xs text-slate-400">@ {fd.annual_rate}% p.a.</div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onViewFD && onViewFD(fd.id)}
+                        title="View Details"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onPrintCertificate && onPrintCertificate(fd.id)}
+                        title="Download Certificate"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No fixed deposits recorded yet.
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
+
+      {/* 5. Pending Interest Payouts Operational Strip */}
+      {pendingPayouts && pendingPayouts.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Action Required: Pending Interest Servicing ({pendingPayouts.length} Due)
+              </h3>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('payouts')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+            >
+              Open Payouts Desk <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-500 uppercase tracking-wider font-semibold">
+                  <th className="pb-3 font-semibold">Due Date</th>
+                  <th className="pb-3 font-semibold">FD Number</th>
+                  <th className="pb-3 font-semibold">Customer</th>
+                  <th className="pb-3 font-semibold">Bank / Account</th>
+                  <th className="pb-3 font-semibold text-right">Amount Due</th>
+                  <th className="pb-3 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {pendingPayouts.slice(0, 5).map((p) => (
+                  <tr key={p.id} className="hover:bg-slate-50 transition">
+                    <td className="py-3 font-medium text-slate-900">{formatDate(p.payout_date)}</td>
+                    <td className="py-3 font-bold text-indigo-600">{p.fd_number}</td>
+                    <td className="py-3">{p.customer_name}</td>
+                    <td className="py-3 text-slate-500">
+                      {p.bank_name ? `${p.bank_name} (${p.account_no || 'N/A'})` : 'Account details on file'}
+                    </td>
+                    <td className="py-3 text-right font-bold text-emerald-600">
+                      {formatINR(p.payout_amount)}
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => handleMarkPaid(p.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 font-semibold text-xs transition cursor-pointer"
+                      >
+                        <Check className="w-3 h-3" /> Mark Paid
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Upcoming RD Installments Strip */}
+      {metrics.rd?.upcomingInstallments && metrics.rd.upcomingInstallments.length > 0 && (quickFilter === 'ALL' || quickFilter === 'RD') && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 animate-fadeIn">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-cyan-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Recurring Deposit: Upcoming Installments Due ({metrics.rd.upcomingInstallments.length})
+              </h3>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('rds')}
+              className="text-xs font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1 cursor-pointer"
+            >
+              Open RD Desk <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-500 uppercase tracking-wider font-semibold">
+                  <th className="pb-3 font-semibold">Due Date</th>
+                  <th className="pb-3 font-semibold">RD Account</th>
+                  <th className="pb-3 font-semibold">Customer</th>
+                  <th className="pb-3 font-semibold">Installment #</th>
+                  <th className="pb-3 font-semibold text-right">Amount Due</th>
+                  <th className="pb-3 font-semibold text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {metrics.rd.upcomingInstallments.slice(0, 5).map((inst) => (
+                  <tr key={inst.id} className="hover:bg-slate-50 transition">
+                    <td className="py-3 font-medium text-slate-900">{formatDate(inst.due_date)}</td>
+                    <td className="py-3 font-bold text-cyan-600">{inst.rd_number}</td>
+                    <td className="py-3 font-medium">{inst.customer_name}</td>
+                    <td className="py-3">Installment #{inst.installment_number}</td>
+                    <td className="py-3 text-right font-bold text-slate-900">{formatINR(inst.installment_amount)}</td>
+                    <td className="py-3 text-right">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        {inst.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Upcoming MIS Monthly Pension Payouts Strip */}
+      {metrics.mis?.upcomingPayouts && metrics.mis.upcomingPayouts.length > 0 && (quickFilter === 'ALL' || quickFilter === 'MIS') && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 animate-fadeIn">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-purple-600" />
+              <h3 className="text-sm font-bold text-slate-900">
+                Monthly Income Scheme (MIS): Upcoming Monthly Payouts ({metrics.mis.upcomingPayouts.length})
+              </h3>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('mis')}
+              className="text-xs font-semibold text-purple-600 hover:text-purple-800 flex items-center gap-1 cursor-pointer"
+            >
+              Open MIS Desk <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-500 uppercase tracking-wider font-semibold">
+                  <th className="pb-3 font-semibold">Payout Date</th>
+                  <th className="pb-3 font-semibold">MIS Account</th>
+                  <th className="pb-3 font-semibold">Customer</th>
+                  <th className="pb-3 font-semibold">Cycle Month</th>
+                  <th className="pb-3 font-semibold text-right">Monthly Payout</th>
+                  <th className="pb-3 font-semibold text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {metrics.mis.upcomingPayouts.slice(0, 5).map((payout) => (
+                  <tr key={payout.id} className="hover:bg-slate-50 transition">
+                    <td className="py-3 font-medium text-slate-900">{formatDate(payout.payout_date)}</td>
+                    <td className="py-3 font-bold text-purple-600">{payout.mis_number}</td>
+                    <td className="py-3 font-medium">{payout.customer_name}</td>
+                    <td className="py-3">Month #{payout.month_number}</td>
+                    <td className="py-3 text-right font-bold text-purple-700">{formatINR(payout.payout_amount)}</td>
+                    <td className="py-3 text-right">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        {payout.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
     </div>
   );

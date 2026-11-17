@@ -11,15 +11,29 @@ function authenticateToken(req, res, next) {
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Invalid or expired session token.' });
+    if (err || user.isCustomer || !user.role) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Invalid or unauthorized session token. Internal CRM credentials required.' 
+      });
     }
     req.user = user;
     next();
   });
 }
 
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Access denied. Administrator (Checker) authorization required for this action.' 
+    });
+  }
+  next();
+}
+
 module.exports = {
   authenticateToken,
+  requireAdmin,
   JWT_SECRET
 };

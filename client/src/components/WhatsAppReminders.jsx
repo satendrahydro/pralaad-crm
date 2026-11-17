@@ -36,6 +36,21 @@ export default function WhatsAppReminders({ onViewFD }) {
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [testPhone, setTestPhone] = useState('9811122334');
+  const [testName, setTestName] = useState('Rajesh Sharma');
+  const [testMessagePreview, setTestMessagePreview] = useState('');
+
+  const handleSendTestWhatsApp = () => {
+    const template = settingsData.whatsapp_payout_template || 'Namaste {CUSTOMER_NAME} ji, aapka FD {FD_NUMBER} interest payout of {AMOUNT} is scheduled on {DUE_DATE}.';
+    const populated = template
+      .replace('{CUSTOMER_NAME}', testName)
+      .replace('{FD_NUMBER}', 'FD-2026-033')
+      .replace('{AMOUNT}', '₹3,000')
+      .replace('{DUE_DATE}', new Date().toLocaleDateString('en-IN'))
+      .replace('{BANK_NAME}', 'HDFC Bank')
+      .replace('{COMPANY_PHONE}', '011-45678900');
+    setTestMessagePreview(populated);
+  };
 
   const fetchReminders = async () => {
     try {
@@ -463,6 +478,68 @@ export default function WhatsAppReminders({ onViewFD }) {
                 onChange={(e) => setSettingsData({ ...settingsData, whatsapp_maturity_template: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-sans text-xs leading-relaxed"
               ></textarea>
+            </div>
+
+            {/* Test WhatsApp Dispatch Sandbox */}
+            <div className="sm:col-span-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Test Message Dispatch (Safe Simulation Mode)</h4>
+                  <p className="text-[11px] text-slate-500">Preview and test template rendering without messaging actual customers</p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                  Sandbox Safe
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Test Recipient Phone</label>
+                  <input
+                    type="text"
+                    id="test-wa-phone"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="9876543210"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-mono text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Sample Customer Name</label>
+                  <input
+                    type="text"
+                    id="test-wa-name"
+                    value={testName}
+                    onChange={(e) => setTestName(e.target.value)}
+                    placeholder="Rajesh Sharma"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  id="send-test-whatsapp-btn"
+                  onClick={handleSendTestWhatsApp}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Send Test WhatsApp (Simulation)
+                </button>
+              </div>
+
+              {testMessagePreview && (
+                <div className="p-3 bg-white border border-emerald-200 rounded-xl text-xs space-y-1">
+                  <div className="font-bold text-emerald-800 flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Simulated WhatsApp Message Rendered:
+                  </div>
+                  <pre className="text-[11px] font-sans text-slate-700 whitespace-pre-wrap bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    {testMessagePreview}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
 

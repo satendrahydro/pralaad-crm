@@ -26,6 +26,7 @@ export default function NewFDModal({
   const [principal, setPrincipal] = useState(100000);
   const [annualRate, setAnnualRate] = useState(8.5);
   const [tenureMonths, setTenureMonths] = useState(12);
+  const [isCustomTenure, setIsCustomTenure] = useState(false);
   const [compoundingFrequency, setCompoundingFrequency] = useState('quarterly');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [remarks, setRemarks] = useState('');
@@ -34,13 +35,53 @@ export default function NewFDModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Quick Add Customer Inline State
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickCust, setQuickCust] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    pan_card: ''
+  });
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickError, setQuickError] = useState('');
+
+  const handleQuickAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!quickCust.full_name || !quickCust.phone) {
+      setQuickError('Name and phone are required (नाम और मोबाइल जरूरी है)');
+      return;
+    }
+    try {
+      setQuickLoading(true);
+      setQuickError('');
+      const res = await apiRequest('/customers', {
+        method: 'POST',
+        body: JSON.stringify(quickCust)
+      });
+      if (res.success && res.customer) {
+        await loadCustomers();
+        setSelectedCustomerId(res.customer.id);
+        setQuickAddOpen(false);
+        setQuickCust({ full_name: '', phone: '', email: '', pan_card: '' });
+      }
+    } catch (err) {
+      setQuickError(err.message || 'Error saving customer');
+    } finally {
+      setQuickLoading(false);
+    }
+  };
+
   // Fetch customers
   const loadCustomers = async () => {
     try {
       const res = await apiRequest('/customers');
-      setCustomers(res.customers || []);
-      if (res.customers?.length > 0 && !selectedCustomerId) {
-        setSelectedCustomerId(res.customers[0].id);
+      const list = res.customers || [];
+      setCustomers(list);
+      if (initialData?.customer_id) {
+        setSelectedCustomerId(String(initialData.customer_id));
+      } else if (initialData?.customerId) {
+        setSelectedCustomerId(String(initialData.customerId));
       }
     } catch (err) {
       console.error('Failed to load customers', err);
@@ -51,11 +92,17 @@ export default function NewFDModal({
     if (isOpen) {
       loadCustomers();
       if (initialData) {
+        if (initialData.customer_id) setSelectedCustomerId(String(initialData.customer_id));
+        if (initialData.customerId) setSelectedCustomerId(String(initialData.customerId));
         if (initialData.principal) setPrincipal(initialData.principal);
         if (initialData.annualRate) setAnnualRate(initialData.annualRate);
         if (initialData.tenureMonths) setTenureMonths(initialData.tenureMonths);
         if (initialData.compoundingFrequency) setCompoundingFrequency(initialData.compoundingFrequency);
         if (initialData.startDate) setStartDate(initialData.startDate);
+      } else {
+        // Reset when opened cleanly without initialData
+        setSelectedCustomerId('');
+        setCustomerSearch('');
       }
     }
   }, [isOpen, initialData]);
@@ -96,6 +143,35 @@ export default function NewFDModal({
     setError('');
 
     try {
+      const user = JSON.parse(localStorage.getItem('pralaad_fd_user') || '{}');
+      const isEmployee = user.role === 'employee';
+
+      if (isEmployee) {
+        const res = await apiRequest('/approvals', {
+          method: 'POST',
+          body: JSON.stringify({
+            request_type: 'NEW_FD',
+            customer_id: selectedCustomerId,
+            proposed_amount: principal,
+            request_data: {
+              customerId: selectedCustomerId,
+              principal,
+              annualRate,
+              tenureMonths,
+              compoundingFrequency,
+              startDate,
+              remarks
+            },
+            remarks: `Staff Maker Entry: Proposed FD Booking for ₹${principal}`
+          })
+        });
+
+        alert(`Submission Successful (${res.request_number})!\n\nThis entry has been queued in 'PENDING APPROVAL'. It will appear as an active FD contract after Admin Checker verification.`);
+        if (onFDCreated) onFDCreated({ status: 'PENDING_APPROVAL' });
+        onClose();
+        return;
+      }
+
       const res = await apiRequest('/fds', {
         method: 'POST',
         body: JSON.stringify({
@@ -109,7 +185,7 @@ export default function NewFDModal({
         })
       });
 
-      onFDCreated(res.fd);
+      if (onFDCreated) onFDCreated(res.fd);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to book FD');
@@ -121,11 +197,22 @@ export default function NewFDModal({
   if (!isOpen) return null;
 
   const selectedCustomer = customers.find(c => String(c.id) === String(selectedCustomerId));
-  const filteredCustomers = customers.filter(c => 
-    c.full_name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    c.phone.includes(customerSearch) ||
-    c.customer_code.toLowerCase().includes(customerSearch.toLowerCase())
-  );
+  
+  const searchLower = customerSearch.trim().toLowerCase();
+  let filteredCustomers = customers.filter(c => {
+    if (!searchLower) return true;
+    return (
+      (c.full_name && c.full_name.toLowerCase().includes(searchLower)) ||
+      (c.phone && c.phone.includes(searchLower)) ||
+      (c.customer_code && c.customer_code.toLowerCase().includes(searchLower)) ||
+      String(c.id) === searchLower
+    );
+  });
+
+  // Ensure selectedCustomer is ALWAYS in the options list so dropdown doesn't blank out
+  if (selectedCustomer && !filteredCustomers.some(c => String(c.id) === String(selectedCustomer.id))) {
+    filteredCustomers = [selectedCustomer, ...filteredCustomers];
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -162,36 +249,72 @@ export default function NewFDModal({
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Select Client / Account Holder (ग्राहक)
+                Select Client / Account Holder (ग्राहक) *
               </label>
               <button
                 type="button"
-                onClick={onOpenQuickAddCustomer}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                onClick={() => {
+                  setQuickError('');
+                  setQuickCust({ full_name: '', phone: '', email: '', pan_card: '' });
+                  setQuickAddOpen(true);
+                }}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                + Add New Client
+                + Add New Client (ग्राहक जोड़ें)
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <input
-                  type="text"
-                  placeholder="Search client by name/phone..."
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
-                />
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  🔍 Filter / Search Depositor
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search name, phone, code or ID..."
+                    value={customerSearch}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomerSearch(val);
+                      const matches = customers.filter(c => 
+                        (c.full_name && c.full_name.toLowerCase().includes(val.toLowerCase())) ||
+                        (c.phone && c.phone.includes(val)) ||
+                        (c.customer_code && c.customer_code.toLowerCase().includes(val.toLowerCase())) ||
+                        String(c.id) === val.trim()
+                      );
+                      if (matches.length === 1 && val.trim().length >= 3) {
+                        setSelectedCustomerId(String(matches[0].id));
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {customerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Choose Customer ({filteredCustomers.length} Available) *
+                </label>
                 <select
+                  required
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className={`w-full px-3 py-2 bg-white border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 cursor-pointer ${
+                    selectedCustomerId ? 'border-indigo-400 text-slate-900' : 'border-slate-300 text-slate-500'
+                  }`}
                 >
-                  <option value="">-- Choose Customer --</option>
+                  <option value="">-- Click to Select Customer --</option>
                   {filteredCustomers.map(c => (
                     <option key={c.id} value={c.id}>
                       {c.full_name} ({c.phone}) - {c.customer_code}
@@ -201,11 +324,37 @@ export default function NewFDModal({
               </div>
             </div>
 
-            {selectedCustomer && (
-              <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-4 gap-y-1 pt-1 border-t border-slate-200/60">
-                <span>PAN: <strong className="text-slate-700">{selectedCustomer.pan_card || 'N/A'}</strong></span>
-                <span>Bank: <strong className="text-slate-700">{selectedCustomer.bank_name || 'N/A'}</strong></span>
-                <span>Nominee: <strong className="text-slate-700">{selectedCustomer.nominee_name || 'N/A'}</strong></span>
+            {selectedCustomer ? (
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs transition">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">{selectedCustomer.full_name}</span>
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 font-mono text-[10px] rounded font-bold">{selectedCustomer.customer_code}</span>
+                    {selectedCustomer.is_senior_citizen ? (
+                      <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[10px] rounded font-bold">Sr. Citizen (+0.50% Rate Bonus)</span>
+                    ) : null}
+                  </div>
+                  <div className="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5 pt-0.5">
+                    <span>📱 <strong>{selectedCustomer.phone}</strong></span>
+                    <span>💳 PAN: <strong>{selectedCustomer.pan_card || 'Not Added'}</strong></span>
+                    <span>🏦 <strong>{selectedCustomer.bank_name || 'Bank N/A'}</strong> {selectedCustomer.account_no ? `(..${selectedCustomer.account_no.slice(-4)})` : ''}</span>
+                    <span>👤 Nominee: <strong>{selectedCustomer.nominee_name || 'N/A'}</strong></span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCustomerId('');
+                    setCustomerSearch('');
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:text-rose-800 bg-white hover:bg-rose-50 rounded-lg border border-slate-200 transition cursor-pointer shrink-0"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 flex items-center justify-between">
+                <span>⚠️ Please select a customer from the dropdown above, or click "+ Add New Client" to register.</span>
               </div>
             )}
           </div>
@@ -244,18 +393,54 @@ export default function NewFDModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Tenure (in Months)
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="240"
-                value={tenureMonths}
-                onChange={(e) => setTenureMonths(parseInt(e.target.value) || 1)}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-600">
+                  Tenure (अवधि)
+                </label>
+                {isCustomTenure && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                    Custom Active
+                  </span>
+                )}
+              </div>
+              <select
+                value={isCustomTenure ? 'custom' : tenureMonths}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'custom') {
+                    setIsCustomTenure(true);
+                  } else {
+                    setIsCustomTenure(false);
+                    setTenureMonths(parseInt(val) || 12);
+                  }
+                }}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="6">6 Months</option>
+                <option value="12">12 Months (1 Year)</option>
+                <option value="24">24 Months (2 Years)</option>
+                <option value="36">36 Months (3 Years)</option>
+                <option value="60">60 Months (5 Years)</option>
+                <option value="custom">Custom Tenure (कस्टम अवधि दर्ज करें)</option>
+              </select>
+
+              {isCustomTenure && (
+                <div className="mt-2 relative animate-fadeIn">
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max="360"
+                    value={tenureMonths}
+                    onChange={(e) => setTenureMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                    placeholder="Enter custom months"
+                    className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500"
+                  />
+                  <span className="absolute right-3 top-2 text-xs font-semibold text-slate-500">
+                    Months ({((parseInt(tenureMonths) || 0) / 12).toFixed(1)} Yrs)
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -357,6 +542,104 @@ export default function NewFDModal({
           </div>
 
         </form>
+
+        {/* Quick Add Customer Modal */}
+        {quickAddOpen && (
+          <div className="fixed inset-0 z-60 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
+              <button
+                type="button"
+                onClick={() => setQuickAddOpen(false)}
+                className="absolute right-4 top-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Quick Add Client (ग्राहक जोड़ें)</h3>
+                  <p className="text-[11px] text-slate-500">Save client & auto-select for this Fixed Deposit</p>
+                </div>
+              </div>
+
+              {quickError && (
+                <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
+                  {quickError}
+                </div>
+              )}
+
+              <form onSubmit={handleQuickAddSubmit} className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Full Name (पूरा नाम) *</label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="e.g. Satendra Kumar"
+                    value={quickCust.full_name}
+                    onChange={(e) => setQuickCust({ ...quickCust, full_name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Mobile Phone *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="10 digit mobile number"
+                    value={quickCust.phone}
+                    onChange={(e) => setQuickCust({ ...quickCust, phone: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Email ID (Optional)</label>
+                    <input
+                      type="email"
+                      placeholder="email@example.com"
+                      value={quickCust.email}
+                      onChange={(e) => setQuickCust({ ...quickCust, email: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">PAN Card (Optional)</label>
+                    <input
+                      type="text"
+                      maxLength="10"
+                      placeholder="ABCDE1234F"
+                      value={quickCust.pan_card}
+                      onChange={(e) => setQuickCust({ ...quickCust, pan_card: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl uppercase font-mono focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setQuickAddOpen(false)}
+                    className="px-3.5 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={quickLoading}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/30 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {quickLoading ? 'Saving...' : 'Save & Select Client'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   Settings as SettingsIcon, 
   LogOut, 
   PlusCircle, 
+  Plus,
   ShieldCheck, 
   Bell, 
   Menu, 
@@ -20,9 +21,26 @@ import {
   Smartphone,
   ChevronDown,
   Building2,
-  CheckCircle,
+  CheckCircle2,
   Clock,
-  UserCheck
+  UserCheck,
+  Search,
+  RefreshCw,
+  HelpCircle,
+  Play,
+  Layers,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Check,
+  Receipt,
+  BarChart3,
+  Globe,
+  Sliders,
+  FileText,
+  Repeat,
+  Coins,
+  Wallet
 } from 'lucide-react';
 
 import Login from './components/Login';
@@ -35,14 +53,37 @@ import Subscription from './components/Subscription';
 import Settings from './components/Settings';
 import WhatsAppReminders from './components/WhatsAppReminders';
 import CustomerApp from './components/CustomerApp';
+import UserManagement from './components/UserManagement';
+import StaffPermissions from './components/StaffPermissions';
+import TarplLogo from './components/TarplLogo';
+
+// Stage 3 New Dedicated Modules
+import FDSchemes from './components/FDSchemes';
+import TransactionsLedger from './components/TransactionsLedger';
+import MaturityCalendar from './components/MaturityCalendar';
+import Reports from './components/Reports';
+import BranchManagement from './components/BranchManagement';
+import EmployeeDashboard from './components/EmployeeDashboard';
+import ApprovalsQueue from './components/ApprovalsQueue';
+import FDCreatioDetailView from './components/FDCreatioDetailView';
+
+// Stage 4 Multi-Product Modules (RD, MIS, Savings, 360 Portfolio)
+import RDList from './components/RDList';
+import MISList from './components/MISList';
+import SavingsList from './components/SavingsList';
+import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModal';
+import NewRDModal from './components/NewRDModal';
+import NewMISModal from './components/NewMISModal';
+import NewSavingsModal from './components/NewSavingsModal';
 
 import NewFDModal from './components/NewFDModal';
 import FDDetailModal from './components/FDDetailModal';
 import Certificate from './components/Certificate';
 import PrematureCloseModal from './components/PrematureCloseModal';
 import RenewModal from './components/RenewModal';
+import CommercialLockScreen from './components/CommercialLockScreen';
 
-import { apiRequest } from './utils';
+import { apiRequest, getApiBase } from './utils';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('pralaad_fd_token'));
@@ -54,17 +95,59 @@ export default function App() {
     }
   });
 
+  const [isCommercialLocked, setIsCommercialLocked] = useState(false);
+  const [commercialLockReason, setCommercialLockReason] = useState('');
+
+  const checkLicenseStatus = async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/license/status`);
+      const data = await res.json();
+      if (data && data.locked) {
+        setIsCommercialLocked(true);
+        setCommercialLockReason(data.reason || 'Commercial settlement pending');
+      } else {
+        setIsCommercialLocked(false);
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    checkLicenseStatus();
+    const handleTrigger = (e) => {
+      setIsCommercialLocked(true);
+      if (e.detail && e.detail.message) {
+        setCommercialLockReason(e.detail.message);
+      }
+    };
+    window.addEventListener('commercial_lock_triggered', handleTrigger);
+    return () => window.removeEventListener('commercial_lock_triggered', handleTrigger);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState('staff'); // 'staff' | 'customer'
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Header Dropdowns
+  // Creatio Multi-Tab Window Dock State
+  const [openTabs, setOpenTabs] = useState([
+    { id: 'dashboard', label: 'Home Page', icon: LayoutDashboard, color: 'bg-fuchsia-600', closable: false }
+  ]);
+
+  // Top Bar Dropdowns & Filters
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
-  const [activeBranch, setActiveBranch] = useState('Main Branch - Delhi NCR');
+  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  
+  const [fyDropdownOpen, setFyDropdownOpen] = useState(false);
+  const [selectedFY, setSelectedFY] = useState('FY 2026-27');
+  const [language, setLanguage] = useState('EN'); // 'EN' | 'HI'
+
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const branchRef = useRef(null);
+  const fyRef = useRef(null);
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -84,11 +167,21 @@ export default function App() {
   const [renewFD, setRenewFD] = useState(null);
   const [renewModalOpen, setRenewModalOpen] = useState(false);
 
+  // Multi-Product Modals
+  const [newRDModalOpen, setNewRDModalOpen] = useState(false);
+  const [newMISModalOpen, setNewMISModalOpen] = useState(false);
+  const [newSavingsModalOpen, setNewSavingsModalOpen] = useState(false);
+  const [customerPortfolioModalOpen, setCustomerPortfolioModalOpen] = useState(false);
+  const [portfolioCustomerId, setPortfolioCustomerId] = useState(null);
+
   // Dropdown close on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (branchRef.current && !branchRef.current.contains(event.target)) {
         setBranchDropdownOpen(false);
+      }
+      if (fyRef.current && !fyRef.current.contains(event.target)) {
+        setFyDropdownOpen(false);
       }
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setNotificationsOpen(false);
@@ -105,13 +198,44 @@ export default function App() {
     setUser(userData);
     setToken(localStorage.getItem('pralaad_fd_token'));
     setActiveTab('dashboard');
+    refreshPermissions();
   };
+
+  const [staffPermissions, setStaffPermissions] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pralaad_staff_permissions')) || {};
+    } catch {
+      return {};
+    }
+  });
+
+  const refreshPermissions = async () => {
+    const curToken = localStorage.getItem('pralaad_fd_token');
+    if (!curToken) return;
+    try {
+      const res = await apiRequest('/permissions/my-permissions');
+      if (res.success && res.permissions) {
+        setStaffPermissions(res.permissions);
+        localStorage.setItem('pralaad_staff_permissions', JSON.stringify(res.permissions));
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      refreshPermissions();
+    }
+  }, [token, activeTab]);
 
   const handleLogout = () => {
     localStorage.removeItem('pralaad_fd_token');
     localStorage.removeItem('pralaad_fd_user');
+    localStorage.removeItem('pralaad_staff_permissions');
     setToken(null);
     setUser(null);
+    setStaffPermissions({});
   };
 
   // Quick navigation helpers
@@ -120,9 +244,46 @@ export default function App() {
     setNewFDModalOpen(true);
   };
 
+  // Switch or open a Creatio Tab
+  const handleSwitchTab = (tabId, label, icon, color) => {
+    if (!openTabs.some(t => t.id === tabId)) {
+      setOpenTabs(prev => [...prev, {
+        id: tabId,
+        label: label,
+        icon: icon || FolderLock,
+        color: color || 'bg-indigo-600',
+        closable: tabId !== 'dashboard'
+      }]);
+    }
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
+  };
+
+  // Open FD in Creatio Master-Detail View
   const handleViewFD = (id) => {
     setSelectedFDId(id);
-    setDetailModalOpen(true);
+    const tabId = `fd-${id}`;
+    if (!openTabs.some(t => t.id === tabId)) {
+      setOpenTabs(prev => [...prev, {
+        id: tabId,
+        label: `FD #${id}`,
+        icon: FolderLock,
+        color: 'bg-emerald-600',
+        closable: true,
+        entityId: id
+      }]);
+    }
+    setActiveTab(tabId);
+  };
+
+  const handleCloseTab = (e, tabId) => {
+    e.stopPropagation();
+    const remaining = openTabs.filter(t => t.id !== tabId);
+    setOpenTabs(remaining);
+    if (activeTab === tabId) {
+      const fallback = remaining[remaining.length - 1];
+      setActiveTab(fallback ? fallback.id : 'dashboard');
+    }
   };
 
   const handlePrintCertificate = (id) => {
@@ -139,6 +300,18 @@ export default function App() {
     setRenewFD(fd);
     setRenewModalOpen(true);
   };
+
+  if (isCommercialLocked) {
+    return (
+      <CommercialLockScreen 
+        reason={commercialLockReason} 
+        onUnlocked={() => {
+          setIsCommercialLocked(false);
+          window.location.reload();
+        }} 
+      />
+    );
+  }
 
   if (viewMode === 'customer') {
     return (
@@ -173,272 +346,489 @@ export default function App() {
     );
   }
 
-  const navItems = [
-    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-    { id: 'calculator', label: 'Live Calculator', icon: Calculator, badge: 'All Options' },
-    { id: 'fds', label: 'FD Portfolio', icon: FolderLock },
-    { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, badge: '3 Days' },
-    { id: 'customers', label: 'Clients / KYC', icon: Users },
-    { id: 'payouts', label: 'Interest Payouts', icon: CalendarDays },
-    { id: 'subscription', label: 'Subscription & APIs', icon: CreditCard },
-    { id: 'settings', label: 'CRM Settings', icon: SettingsIcon },
+  const isEmployee = user?.role === 'employee';
+
+  // Multi-Product Navigation Modules Mapped to Premium FinTech Color Architecture
+  const navSections = isEmployee ? [
+    {
+      title: 'MAKER OPERATIONS',
+      items: [
+        { id: 'dashboard', label: 'Maker Dashboard', icon: LayoutDashboard, color: 'bg-indigo-600' },
+        { id: 'customers', label: 'Customers & KYC', icon: Users, color: 'bg-teal-600' },
+        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' }
+      ]
+    },
+    {
+      title: 'MULTI-PRODUCT DESK',
+      items: [
+        { id: 'fds', label: 'Fixed Deposits (FD)', icon: FolderLock, color: 'bg-indigo-600' },
+        { id: 'rds', label: 'Recurring Deposits (RD)', icon: Repeat, color: 'bg-cyan-600' },
+        { id: 'mis', label: 'Monthly Income (MIS)', icon: Coins, color: 'bg-teal-600' },
+        { id: 'savings', label: 'Savings Accounts (SB)', icon: Wallet, color: 'bg-emerald-600' }
+      ]
+    },
+    {
+      title: 'CALCULATION & SCHEDULES',
+      items: [
+        { id: 'calculator', label: 'Deposit Calculator', icon: Calculator, color: 'bg-indigo-500' },
+        { id: 'maturity', label: 'Maturity Calendar', icon: CalendarDays, color: 'bg-sky-600' }
+      ]
+    }
+  ] : [
+    {
+      title: 'CORE DEPOSIT PRODUCTS',
+      items: [
+        { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, color: 'bg-indigo-600' },
+        { id: 'approvals', label: 'Approvals Queue', icon: ShieldCheck, color: 'bg-amber-600', badge: 'Checker' },
+        { id: 'fds', label: 'Fixed Deposits (FD)', icon: FolderLock, color: 'bg-indigo-600' },
+        { id: 'rds', label: 'Recurring Deposits (RD)', icon: Repeat, color: 'bg-cyan-600' },
+        { id: 'mis', label: 'Monthly Income (MIS)', icon: Coins, color: 'bg-teal-600' },
+        { id: 'savings', label: 'Savings Accounts (SB)', icon: Wallet, color: 'bg-emerald-600' },
+        { id: 'customers', label: 'Customers & KYC 360', icon: Users, color: 'bg-teal-600' },
+        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' }
+      ]
+    },
+    {
+      title: 'FINANCIAL OPERATIONS',
+      items: [
+        { id: 'payouts', label: 'Interest & Payouts', icon: CreditCard, color: 'bg-orange-600', badge: 'Due' },
+        { id: 'maturity', label: 'Maturity Calendar', icon: CalendarDays, color: 'bg-sky-600' },
+        { id: 'transactions', label: 'Transactions Ledger', icon: Receipt, color: 'bg-teal-600' },
+        { id: 'calculator', label: 'Deposit Calculator', icon: Calculator, color: 'bg-indigo-500' }
+      ]
+    },
+    {
+      title: 'INTELLIGENCE & COMMS',
+      items: [
+        { id: 'reports', label: 'Reports & Analytics', icon: BarChart3, color: 'bg-rose-600' },
+        { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, color: 'bg-emerald-600' }
+      ]
+    },
+    {
+      title: 'GOVERNANCE & SECURITY',
+      items: [
+        { id: 'users', label: 'User Management', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
+        { id: 'staff_permissions', label: 'Staff Permissions', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' },
+        { id: 'branches', label: 'Branch Management', icon: Building2, color: 'bg-slate-600' },
+        { id: 'subscription', label: 'Subscription & APIs', icon: ShieldCheck, color: 'bg-indigo-600' },
+        { id: 'settings', label: 'CRM Settings', icon: SettingsIcon, color: 'bg-slate-600' }
+      ]
+    }
   ];
 
   const branches = [
-    { name: 'Main Branch - Delhi NCR', code: 'DEL-HQ', city: 'Connaught Place' },
-    { name: 'Noida Wealth Desk', code: 'NOI-01', city: 'Sector 62' },
-    { name: 'Gurgaon Corporate Hub', code: 'GUR-02', city: 'DLF CyberCity' }
+    'All Branches',
+    'Main Branch - Delhi NCR',
+    'Noida Wealth Desk',
+    'Gurgaon Corporate Hub'
   ];
 
-  return (
-    <div className="min-h-screen bg-slate-100/70 flex flex-col font-sans">
-      
-      {/* Top Navigation Bar */}
-      <header className="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          
-          {/* Logo / Brand & Branch Switcher Dropdown */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+  const fiscalYears = [
+    'FY 2026-27',
+    'FY 2025-26',
+    'FY 2024-25'
+  ];
 
+  // Active module title for breadcrumbs
+  let activeModuleLabel = 'Executive Dashboard';
+  for (const section of navSections) {
+    const found = section.items.find(i => i.id === activeTab);
+    if (found) {
+      activeModuleLabel = found.label;
+      break;
+    }
+  }
+  if (activeTab.startsWith('fd-')) {
+    activeModuleLabel = `Fixed Deposit Record #${activeTab.replace('fd-', '')}`;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FAF8F5] text-slate-900 flex font-sans selection:bg-[#D4AF37] selection:text-[#062319]">
+      
+      {/* ======================================================== */}
+      {/* 1. ENTERPRISE FINTECH DARK FOREST GREEN SIDEBAR           */}
+      {/* ======================================================== */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 bg-[#062319] text-slate-300 border-r border-[#134e38] flex flex-col justify-between transition-all duration-300 ease-in-out
+        ${sidebarCollapsed ? 'w-20' : 'w-64'}
+        ${mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
+      `}>
+        
+        {/* Top: Logo & Collapse Button */}
+        <div>
+          <div className="h-16 flex items-center justify-between px-4 border-b border-[#134e38]">
             <div 
-              onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2.5 cursor-pointer group"
+              onClick={() => handleSwitchTab('dashboard', 'Executive Dashboard', LayoutDashboard, 'bg-emerald-700')}
+              className="flex items-center gap-3 cursor-pointer overflow-hidden"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:scale-105 transition">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="font-black text-base tracking-tight text-white block group-hover:text-indigo-300 transition">
-                  FD Portal
-                </span>
-                <span className="text-[10px] text-indigo-300/80 -mt-0.5 block font-medium">
-                  Fixed Deposit & Wealth CRM
-                </span>
-              </div>
+              <TarplLogo variant={sidebarCollapsed ? 'icon' : 'full'} />
             </div>
 
-            {/* Branch Selector Dropdown */}
-            <div className="hidden lg:relative lg:block ml-2" ref={branchRef}>
+            {/* Desktop Collapse Toggle */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#0a3d2b] transition cursor-pointer"
+              title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+
+            {/* Mobile Close Button */}
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#0a3d2b]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Navigation Links with FinTech Hierarchy */}
+          <nav className="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-140px)]">
+            {navSections.map((section, sIdx) => (
+              <div key={sIdx} className="space-y-1">
+                {!sidebarCollapsed && (
+                  <div className="px-3 text-[10px] font-bold text-emerald-400/70 uppercase tracking-wider mb-2">
+                    {section.title}
+                  </div>
+                )}
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSwitchTab(item.id, item.label, item.icon, item.color)}
+                      title={sidebarCollapsed ? item.label : undefined}
+                      className={`
+                        w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer group relative
+                        ${isActive 
+                          ? 'bg-[#0a3d2b] text-[#FBBF24] font-bold border-l-2 border-[#D4AF37] shadow-xs' 
+                          : 'text-slate-300 hover:text-white hover:bg-[#082e20]'
+                        }
+                        ${sidebarCollapsed ? 'justify-center px-0' : ''}
+                      `}
+                    >
+                      {/* Active Indicator Bar */}
+                      {isActive && (
+                        <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#D4AF37] rounded-r-full"></div>
+                      )}
+
+                      {/* Clean FinTech Square Icon Tile */}
+                      <div className={`w-7 h-7 rounded-lg ${isActive ? 'bg-[#D4AF37] text-[#062319]' : 'bg-[#082e20] text-emerald-300 group-hover:text-white'} flex items-center justify-center shrink-0 shadow-xs transition`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+
+                      {!sidebarCollapsed && (
+                        <span className="flex-1 text-left truncate font-medium">
+                          {item.label}
+                        </span>
+                      )}
+
+                      {!sidebarCollapsed && item.badge && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        {/* Bottom User / Status Strip */}
+        <div className="p-3 border-t border-[#134e38]">
+          {!sidebarCollapsed ? (
+            <div className="bg-[#082e20] rounded-xl p-2.5 border border-[#1a5d43] flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#D4AF37] text-[#062319] flex items-center justify-center font-black text-xs shrink-0 shadow-xs ring-1 ring-[#D4AF37]/50">
+                  {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : 'AD'}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white truncate">
+                    {user?.full_name || 'Administrator'}
+                  </div>
+                  <div className="text-[10px] text-amber-300 truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span>
+                    {isEmployee ? 'Staff Maker' : 'Super Admin'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Logout from CRM"
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-[#0a3d2b] rounded-lg transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-[#0a3d2b] rounded-lg transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+      </aside>
+
+      {/* ======================================================== */}
+      {/* 2. DARK FOREST GREEN TOP APPLICATION BAR                  */}
+      {/* ======================================================== */}
+      <div className={`
+        flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out
+        ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}
+      `}>
+        
+        {/* Deep Forest Green Header Bar */}
+        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs">
+          
+          {/* Left: Mobile Toggle, Quick Booking & Breadcrumb */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-lg text-slate-300 hover:bg-[#0a3d2b]"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Quick Process Action Button */}
+            <button 
+              onClick={() => {
+                setNewFDInitialData(null);
+                setNewFDModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#C59B27] text-[#062319] font-bold text-xs shadow-xs transition cursor-pointer"
+              title="Quick New Deposit Booking"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">New Booking</span>
+            </button>
+
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
+              <span className="text-emerald-300 font-semibold hidden sm:inline">TARPL CRM</span>
+              <span className="hidden sm:inline">/</span>
+              <span className="text-[#FBBF24] font-bold bg-[#062319] px-2.5 py-1 rounded-md border border-[#1a5d43]">
+                {activeModuleLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Center: Global Search Bar */}
+          <div className="hidden lg:flex items-center relative max-w-md w-full mx-4">
+            <Search className="w-4 h-4 text-emerald-400 absolute left-3.5 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              placeholder="Search contracts, depositors, PAN, mobile..."
+              className="w-full text-xs pl-10 pr-12 py-2 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
+            />
+            <span className="absolute right-3 top-2 text-[10px] font-mono text-amber-300 bg-[#082e20] px-1.5 py-0.5 rounded border border-[#1a5d43]">
+              Ctrl K
+            </span>
+          </div>
+
+          {/* Right: Branch Selector, FY Selector, Notifications, Customer App, Profile */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+
+            {/* 1. Branch Selector */}
+            <div className="relative" ref={branchRef}>
               <button
                 onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60 text-xs font-semibold transition cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
+                title="Select Operating Branch"
               >
-                <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{activeBranch}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${branchDropdownOpen ? 'rotate-180' : ''}`} />
+                <Building2 className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+                <span className="hidden sm:inline max-w-[120px] truncate">{selectedBranch}</span>
+                <ChevronDown className="w-3 h-3 text-emerald-300" />
               </button>
 
               {branchDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-slate-850 bg-slate-900 rounded-xl shadow-2xl border border-slate-700 p-2 z-50 animate-dropdown text-xs">
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 mb-1">
-                    Select Operating Branch
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Select Branch
                   </div>
-                  {branches.map((b) => (
+                  {branches.map(b => (
                     <button
-                      key={b.code}
+                      key={b}
                       onClick={() => {
-                        setActiveBranch(b.name);
+                        setSelectedBranch(b);
                         setBranchDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between transition cursor-pointer ${
-                        activeBranch === b.name ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                      className={`w-full text-left px-3 py-2 rounded-lg font-medium transition flex items-center justify-between cursor-pointer ${
+                        selectedBranch === b ? 'bg-emerald-50 text-emerald-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="font-bold">{b.name}</div>
-                        <div className="text-[10px] opacity-75">{b.city} ({b.code})</div>
-                      </div>
-                      {activeBranch === b.name && <CheckCircle className="w-4 h-4 text-white" />}
+                      <span>{b}</span>
+                      {selectedBranch === b && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-          </div>
+            {/* 2. Financial Year (FY) Filter */}
+            <div className="relative" ref={fyRef}>
+              <button
+                onClick={() => setFyDropdownOpen(!fyDropdownOpen)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
+                title="Financial Year Filter"
+              >
+                <span className="font-mono text-[#FBBF24] font-bold">{selectedFY}</span>
+                <ChevronDown className="w-3 h-3 text-emerald-300" />
+              </button>
 
-          {/* Quick Right Actions & Dropdowns */}
-          <div className="flex items-center gap-3">
-            
-            {/* Client Mobile App Toggle Pill */}
+              {fyDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Fiscal Cycle
+                  </div>
+                  {fiscalYears.map(fy => (
+                    <button
+                      key={fy}
+                      onClick={() => {
+                        setSelectedFY(fy);
+                        setFyDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg font-medium transition flex items-center justify-between cursor-pointer ${
+                        selectedFY === fy ? 'bg-emerald-50 text-emerald-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <span>{fy}</span>
+                      {selectedFY === fy && <Check className="w-3.5 h-3.5 text-emerald-700" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Language Toggle: EN / HI */}
             <button
-              onClick={() => setViewMode('customer')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-md text-xs font-bold transition cursor-pointer"
+              id="topbar-language-toggle-btn"
+              onClick={() => setLanguage(prev => prev === 'EN' ? 'HI' : 'EN')}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white transition cursor-pointer"
+              title="Toggle Language (English / Hindi)"
             >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Client Mobile App</span>
-              <span className="sm:hidden">App</span>
+              <span className={language === 'EN' ? 'text-[#FBBF24] font-black' : 'text-slate-400'}>EN</span>
+              <span className="text-slate-500">/</span>
+              <span className={language === 'HI' ? 'text-emerald-400 font-black' : 'text-slate-400'}>HI</span>
             </button>
 
-            {/* Interactive Notification Bell Dropdown */}
+            {/* 4. Notification Center */}
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
-                title="Alerts & Reminders"
+                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#0a3d2b] transition relative cursor-pointer"
+                title="Notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#D4AF37] ring-2 ring-[#082e20]"></span>
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 text-slate-800 z-50 animate-dropdown overflow-hidden">
-                  <div className="p-3 bg-slate-900 text-white flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-indigo-400" />
-                      <span className="font-bold text-xs">Maturity & Payout Alerts</span>
-                    </div>
-                    <span className="text-[10px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full">3 New</span>
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 text-xs text-slate-800 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="font-bold text-slate-900">Notifications & Alerts</span>
+                    <span className="text-[10px] bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 rounded-full border border-amber-200">
+                      2 Operational
+                    </span>
                   </div>
-
-                  <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto text-xs font-medium">
+                  <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
                     <div 
-                      onClick={() => {
-                        setActiveTab('whatsapp');
-                        setNotificationsOpen(false);
-                      }}
-                      className="p-3 hover:bg-slate-50 transition cursor-pointer flex items-start gap-2.5"
+                      onClick={() => { handleSwitchTab('payouts', 'Interest & Payouts', CreditCard, 'bg-emerald-700'); setNotificationsOpen(false); }}
+                      className="p-3 hover:bg-slate-50 cursor-pointer flex gap-3"
                     >
-                      <div className="p-2 bg-emerald-100 text-emerald-700 rounded-lg shrink-0 mt-0.5">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                      </div>
+                      <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-1.5 shrink-0"></div>
                       <div>
-                        <div className="font-bold text-slate-900">3-Day WhatsApp Reminders Due</div>
-                        <p className="text-[11px] text-slate-500">Upcoming maturities needing customer renewal consent</p>
+                        <div className="font-bold text-slate-900">Interest Payouts Scheduled</div>
+                        <p className="text-slate-500 text-[11px] mt-0.5">Non-cumulative interest schedules due for bank NEFT</p>
                       </div>
                     </div>
-
                     <div 
-                      onClick={() => {
-                        setActiveTab('payouts');
-                        setNotificationsOpen(false);
-                      }}
-                      className="p-3 hover:bg-slate-50 transition cursor-pointer flex items-start gap-2.5"
+                      onClick={() => { handleSwitchTab('maturity', 'Maturity Calendar', CalendarDays, 'bg-emerald-700'); setNotificationsOpen(false); }}
+                      className="p-3 hover:bg-slate-50 cursor-pointer flex gap-3"
                     >
-                      <div className="p-2 bg-blue-100 text-blue-700 rounded-lg shrink-0 mt-0.5">
-                        <CalendarDays className="w-3.5 h-3.5" />
-                      </div>
+                      <div className="w-2 h-2 rounded-full bg-[#F59E0B] mt-1.5 shrink-0"></div>
                       <div>
-                        <div className="font-bold text-slate-900">Monthly Pension Payouts Ready</div>
-                        <p className="text-[11px] text-slate-500">Non-cumulative interest schedules due this cycle</p>
+                        <div className="font-bold text-slate-900">30-Day Maturity Timeline</div>
+                        <p className="text-slate-500 text-[11px] mt-0.5">Deposits reaching maturity soon</p>
                       </div>
                     </div>
-
-                    <div 
-                      onClick={() => {
-                        setActiveTab('subscription');
-                        setNotificationsOpen(false);
-                      }}
-                      className="p-3 hover:bg-slate-50 transition cursor-pointer flex items-start gap-2.5"
-                    >
-                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg shrink-0 mt-0.5">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900">24x7 Cloud Sync Active</div>
-                        <p className="text-[11px] text-slate-500">Database connected to Render 24x7 service</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 bg-slate-50 text-center border-t border-slate-100">
-                    <button 
-                      onClick={() => setNotificationsOpen(false)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
-                    >
-                      Close Alerts
-                    </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Book FD Header CTA */}
+            {/* 5. Switch to Customer View-Only App Pill */}
             <button
-              onClick={() => {
-                setNewFDInitialData(null);
-                setNewFDModalOpen(true);
-              }}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition cursor-pointer"
+              onClick={() => setViewMode('customer')}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer"
+              title="Preview Customer Digital Passbook"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Book FD</span>
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Customer App</span>
             </button>
 
-            {/* User Profile Avatar & Dropdown Menu */}
-            <div className="relative pl-2 border-l border-slate-800" ref={profileRef}>
+            {/* 6. User Profile Menu */}
+            <div className="relative pl-1 sm:pl-2 border-l border-[#1e2d4d]" ref={profileRef}>
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-800/60 transition cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-xs flex items-center justify-center shadow-md">
-                  {user?.full_name ? user.full_name[0].toUpperCase() : 'A'}
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-indigo-400/30">
+                  {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : 'AD'}
                 </div>
-                <div className="text-left hidden md:block">
-                  <span className="text-xs font-bold text-white block leading-none">{user?.full_name || 'Admin'}</span>
-                  <span className="text-[9px] text-indigo-300 uppercase font-semibold">{user?.role || 'Manager'}</span>
+                <div className="hidden md:block text-left">
+                  <div className="text-xs font-bold text-white leading-tight">
+                    {user?.full_name || 'Admin'}
+                  </div>
+                  <div className="text-[10px] text-teal-400 font-semibold">{isEmployee ? 'Staff Maker' : 'Super Admin'}</div>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 hidden sm:block transition-transform ${profileDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
               </button>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 text-slate-800 p-2 z-50 animate-dropdown text-xs">
-                  <div className="p-2 border-b border-slate-100 mb-1">
-                    <div className="font-bold text-slate-900">{user?.full_name || 'Admin User'}</div>
-                    <div className="text-[11px] text-slate-500">{user?.username || 'admin'}</div>
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                  <div className="px-3 py-2 border-b border-slate-100">
+                    <div className="font-bold text-slate-900">{user?.full_name || 'Admin'}</div>
+                    <div className="text-[11px] text-slate-400">{user?.username || 'admin'}</div>
                   </div>
-
+                  {!isEmployee && (
+                    <button
+                      onClick={() => { handleSwitchTab('users', 'User Management', UserCheck, 'bg-indigo-600'); setProfileDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 cursor-pointer mt-1"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-indigo-500" /> User Management
+                    </button>
+                  )}
                   <button
-                    onClick={() => {
-                      setViewMode('customer');
-                      setProfileDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-xl font-semibold flex items-center gap-2 text-indigo-700 transition cursor-pointer"
+                    onClick={() => { handleSwitchTab('settings', 'CRM Settings', SettingsIcon, 'bg-slate-600'); setProfileDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 cursor-pointer mt-1"
                   >
-                    <Smartphone className="w-4 h-4 text-indigo-600" />
-                    <span>Client Mobile App View</span>
+                    <SettingsIcon className="w-3.5 h-3.5 text-slate-400" /> CRM Settings
                   </button>
-
                   <button
-                    onClick={() => {
-                      setActiveTab('settings');
-                      setProfileDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-xl font-semibold flex items-center gap-2 text-slate-700 transition cursor-pointer"
+                    onClick={() => { handleSwitchTab('subscription', 'Subscription & APIs', ShieldCheck, 'bg-indigo-600'); setProfileDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 cursor-pointer"
                   >
-                    <SettingsIcon className="w-4 h-4 text-slate-500" />
-                    <span>CRM Settings</span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> License & APIs
                   </button>
-
+                  <div className="border-t border-slate-100 my-1"></div>
                   <button
-                    onClick={() => {
-                      setActiveTab('subscription');
-                      setProfileDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 rounded-xl font-semibold flex items-center gap-2 text-slate-700 transition cursor-pointer"
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 font-semibold flex items-center gap-2 cursor-pointer"
                   >
-                    <CreditCard className="w-4 h-4 text-slate-500" />
-                    <span>Subscription & AMC</span>
-                  </button>
-
-                  <div className="my-1 border-t border-slate-100"></div>
-
-                  <button
-                    onClick={() => {
-                      setProfileDropdownOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-600 rounded-xl font-bold flex items-center gap-2 transition cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-500" />
-                    <span>Sign Out</span>
+                    <LogOut className="w-3.5 h-3.5" /> Logout
                   </button>
                 </div>
               )}
@@ -446,126 +836,58 @@ export default function App() {
 
           </div>
 
-        </div>
-      </header>
+        </header>
 
-      {/* Main Workspace Layout with Sidebar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 flex flex-col md:flex-row gap-6">
-        
-        {/* Desktop Sidebar Navigation */}
-        <aside className="hidden md:block w-64 shrink-0 space-y-2">
-          <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
-                    isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
-                      isActive ? 'bg-indigo-700 text-white' : 'bg-indigo-50 text-indigo-700'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Quick Help Card */}
-          <div className="bg-gradient-to-br from-indigo-950 to-slate-900 text-white rounded-2xl p-4 shadow-sm text-xs space-y-2 border border-indigo-900/50">
-            <div className="flex items-center gap-1.5 text-indigo-300 font-bold">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span>Multi-Compounding Ready</span>
-            </div>
-            <p className="text-slate-300 text-[11px] leading-relaxed">
-              Quarterly, Monthly, Half-Yearly, Simple aur Monthly Pension Payout sabhi supported hain.
-            </p>
-          </div>
-
-          {/* Client Mobile App Preview Card */}
-          <div className="bg-gradient-to-br from-violet-900 to-indigo-950 text-white rounded-2xl p-4 shadow-md text-xs space-y-2.5 border border-violet-500/30">
-            <div className="flex items-center gap-2 text-amber-300 font-bold">
-              <Smartphone className="w-4 h-4" />
-              <span>Customer Mobile App</span>
-            </div>
-            <p className="text-indigo-200 text-[11px] leading-relaxed">
-              क्लाइंट अपने फोन पर अपनी FDs, रसीदें और ब्याज पेआउट कैसे देखेगा:
-            </p>
-            <button
-              onClick={() => setViewMode('customer')}
-              className="w-full py-2 bg-white text-slate-900 hover:bg-indigo-50 font-black rounded-xl text-xs transition cursor-pointer shadow-sm"
-            >
-              Open Client App View &rarr;
-            </button>
-          </div>
-        </aside>
-
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border border-slate-200 rounded-2xl p-3 shadow-lg space-y-1 mb-4 animate-dropdown">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs transition ${
-                    isActive
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Dynamic Main Workspace Content */}
-        <main className="flex-1 min-w-0">
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              onNavigate={setActiveTab}
-              onOpenNewFD={() => {
-                setNewFDInitialData(null);
-                setNewFDModalOpen(true);
-              }}
-              onViewFD={handleViewFD}
+        {/* ======================================================== */}
+        {/* 3. DYNAMIC CONTENT AREA                                  */}
+        {/* ======================================================== */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-16">
+          
+          {/* Render Creatio Full Entity View if activeTab is an FD record */}
+          {activeTab.startsWith('fd-') && (
+            <FDCreatioDetailView 
+              fdId={activeTab.replace('fd-', '')}
+              onBack={() => setActiveTab('fds')}
               onPrintCertificate={handlePrintCertificate}
               onPrematureClose={handlePrematureClose}
               onRenewFD={handleRenewFD}
             />
           )}
 
-          {activeTab === 'calculator' && (
-            <CalculatorComponent
-              onBookFromCalc={handleBookFromCalc}
-            />
+          {activeTab === 'dashboard' && (
+            isEmployee ? (
+              <EmployeeDashboard
+                user={user}
+                permissions={staffPermissions}
+                onNavigate={setActiveTab}
+                onOpenNewFD={() => {
+                  setNewFDInitialData(null);
+                  setNewFDModalOpen(true);
+                }}
+              />
+            ) : (
+              <Dashboard 
+                onNavigate={setActiveTab}
+                onOpenNewFD={() => {
+                  setNewFDInitialData(null);
+                  setNewFDModalOpen(true);
+                }}
+                onViewFD={handleViewFD}
+                onPrintCertificate={handlePrintCertificate}
+                onPrematureClose={handlePrematureClose}
+                onRenewFD={handleRenewFD}
+                selectedBranch={selectedBranch}
+                selectedFY={selectedFY}
+              />
+            )
+          )}
+
+          {activeTab === 'approvals' && (
+            <ApprovalsQueue onApproved={() => setActiveTab('dashboard')} />
           )}
 
           {activeTab === 'fds' && (
-            <FDList
+            <FDList 
               onOpenNewFD={() => {
                 setNewFDInitialData(null);
                 setNewFDModalOpen(true);
@@ -577,16 +899,44 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'whatsapp' && (
-            <WhatsAppReminders
-              onViewFD={handleViewFD}
+          {activeTab === 'rds' && (
+            <RDList 
+              onOpenNewRD={() => setNewRDModalOpen(true)}
+              isEmployee={isEmployee}
+            />
+          )}
+
+          {activeTab === 'mis' && (
+            <MISList 
+              onOpenNewMIS={() => setNewMISModalOpen(true)}
+              isEmployee={isEmployee}
+            />
+          )}
+
+          {activeTab === 'savings' && (
+            <SavingsList 
+              onOpenNewSavings={() => setNewSavingsModalOpen(true)}
+              isEmployee={isEmployee}
             />
           )}
 
           {activeTab === 'customers' && (
-            <Customers
-              onSelectCustomerForFD={(customerId) => {
-                setNewFDInitialData({ customerId });
+            <Customers 
+              onSelectCustomerForFD={(cid) => {
+                setNewFDInitialData({ customer_id: cid });
+                setNewFDModalOpen(true);
+              }}
+              onViewPortfolio={(cid) => {
+                setPortfolioCustomerId(cid);
+                setCustomerPortfolioModalOpen(true);
+              }}
+            />
+          )}
+
+          {activeTab === 'schemes' && (
+            <FDSchemes 
+              onOpenNewFD={() => {
+                setNewFDInitialData(null);
                 setNewFDModalOpen(true);
               }}
             />
@@ -594,6 +944,47 @@ export default function App() {
 
           {activeTab === 'payouts' && (
             <Payouts />
+          )}
+
+          {activeTab === 'maturity' && (
+            <MaturityCalendar 
+              onViewFD={handleViewFD}
+              onRenewFD={handleRenewFD}
+              onPrintCertificate={handlePrintCertificate}
+            />
+          )}
+
+          {activeTab === 'transactions' && (
+            <TransactionsLedger />
+          )}
+
+          {activeTab === 'calculator' && (
+            <CalculatorComponent onBookFD={handleBookFromCalc} />
+          )}
+
+          {activeTab === 'reports' && (
+            <Reports />
+          )}
+
+          {activeTab === 'whatsapp' && (
+            <WhatsAppReminders />
+          )}
+
+          {activeTab === 'users' && (
+            <UserManagement 
+              onOpenCustomerPortfolio={(cid) => {
+                setPortfolioCustomerId(cid);
+                setCustomerPortfolioModalOpen(true);
+              }}
+            />
+          )}
+
+          {activeTab === 'staff_permissions' && (
+            <StaffPermissions />
+          )}
+
+          {activeTab === 'branches' && (
+            <BranchManagement />
           )}
 
           {activeTab === 'subscription' && (
@@ -605,20 +996,54 @@ export default function App() {
           )}
         </main>
 
+        {/* ======================================================== */}
+        {/* 4. ENTERPRISE TASKBAR DOCK                               */}
+        {/* ======================================================== */}
+        <div className="fixed bottom-0 inset-x-0 h-10 bg-[#062319] border-t border-[#134e38] px-3 flex items-center gap-1.5 z-40 shadow-lg overflow-x-auto">
+          {openTabs.map((tab) => {
+            const Icon = tab.icon || FolderLock;
+            const isActive = activeTab === tab.id;
+            return (
+              <div 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-xs font-semibold cursor-pointer border-t-2 transition shrink-0 ${
+                  isActive 
+                    ? 'bg-[#0a3d2b] text-[#FBBF24] border-[#D4AF37] shadow-sm' 
+                    : 'bg-[#082e20] text-slate-400 border-transparent hover:bg-[#0a3d2b] hover:text-slate-200'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded ${isActive ? 'bg-[#D4AF37] text-[#062319]' : 'bg-[#082e20] text-emerald-300'} flex items-center justify-center text-[9px]`}>
+                  <Icon className="w-2.5 h-2.5" />
+                </div>
+                <span className="truncate max-w-[150px]">{tab.label}</span>
+                {tab.closable && (
+                  <button 
+                    onClick={(e) => handleCloseTab(e, tab.id)}
+                    className="text-slate-500 hover:text-rose-400 hover:bg-[#062319] rounded p-0.5 ml-1 transition cursor-pointer"
+                    title="Close Tab"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
       </div>
 
-      {/* Global Modals */}
+      {/* ======================================================== */}
+      {/* 5. MODALS & POPUPS                                       */}
+      {/* ======================================================== */}
       <NewFDModal
         isOpen={newFDModalOpen}
         onClose={() => setNewFDModalOpen(false)}
-        initialData={newFDInitialData}
-        onFDCreated={(newFd) => {
-          handlePrintCertificate(newFd.id);
-        }}
-        onOpenQuickAddCustomer={() => {
+        onSuccess={() => {
           setNewFDModalOpen(false);
-          setActiveTab('customers');
+          setActiveTab('fds');
         }}
+        initialData={newFDInitialData}
       />
 
       <FDDetailModal
@@ -641,7 +1066,8 @@ export default function App() {
         isOpen={prematureModalOpen}
         onClose={() => setPrematureModalOpen(false)}
         onSuccess={() => {
-          if (activeTab === 'dashboard') window.location.reload();
+          setPrematureModalOpen(false);
+          setActiveTab('fds');
         }}
       />
 
@@ -650,8 +1076,53 @@ export default function App() {
         isOpen={renewModalOpen}
         onClose={() => setRenewModalOpen(false)}
         onSuccess={() => {
-          if (activeTab === 'dashboard') window.location.reload();
+          setRenewModalOpen(false);
+          setActiveTab('fds');
         }}
+      />
+
+      {/* Multi-Product Modals */}
+      <NewRDModal
+        isOpen={newRDModalOpen}
+        onClose={() => setNewRDModalOpen(false)}
+        onSuccess={() => {
+          setNewRDModalOpen(false);
+          setActiveTab('rds');
+        }}
+        isEmployee={isEmployee}
+      />
+
+      <NewMISModal
+        isOpen={newMISModalOpen}
+        onClose={() => setNewMISModalOpen(false)}
+        onSuccess={() => {
+          setNewMISModalOpen(false);
+          setActiveTab('mis');
+        }}
+        isEmployee={isEmployee}
+      />
+
+      <NewSavingsModal
+        isOpen={newSavingsModalOpen}
+        onClose={() => setNewSavingsModalOpen(false)}
+        onSuccess={() => {
+          setNewSavingsModalOpen(false);
+          setActiveTab('savings');
+        }}
+        isEmployee={isEmployee}
+      />
+
+      <UnifiedCustomerProfileModal
+        customerId={portfolioCustomerId}
+        isOpen={customerPortfolioModalOpen}
+        onClose={() => {
+          setCustomerPortfolioModalOpen(false);
+          setPortfolioCustomerId(null);
+        }}
+        onOpenFD={() => setNewFDModalOpen(true)}
+        onOpenRD={() => setNewRDModalOpen(true)}
+        onOpenMIS={() => setNewMISModalOpen(true)}
+        onOpenSavings={() => setNewSavingsModalOpen(true)}
       />
 
     </div>

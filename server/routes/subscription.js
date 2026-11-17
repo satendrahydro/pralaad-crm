@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // Available commercial packages
 const TIERS = {
@@ -50,8 +50,11 @@ const TIERS = {
   }
 };
 
+// Restrict subscription management to Super Admin
+router.use(authenticateToken, requireAdmin);
+
 // GET /api/subscription - Get current plan & status
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', (req, res) => {
   const sub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
   
   const now = new Date();
@@ -121,6 +124,78 @@ router.post('/renew', authenticateToken, (req, res) => {
     message: `Subscription successfully renewed until ${newValidUntil}!`,
     subscription: updatedSub
   });
+});
+
+// GET /api/subscription/history - View renewal and payment transaction records
+router.get('/history', authenticateToken, (req, res) => {
+  try {
+    const history = db.prepare(`
+      SELECT id, plan_name, monthly_price, status, valid_until, billing_cycle,
+             last_payment_date, last_payment_ref, notes
+      FROM subscription
+      ORDER BY id DESC
+    `).all();
+
+    res.json({ success: true, history });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/subscription/status - Super Admin manual override (ACTIVE, SUSPENDED, EXPIRED, PENDING)
+router.post('/status', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const validStatuses = ['ACTIVE', 'PENDING', 'EXPIRED', 'SUSPENDED'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+      });
+    }
+
+    const currentSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
+    if (!currentSub) {
+      return res.status(404).json({ success: false, message: 'No subscription record found.' });
+    }
+
+    const noteText = notes || `Status changed to ${status} by Super Admin (${req.user.username})`;
+
+    db.prepare(`
+      INSERT INTO subscription (
+        plan_name, monthly_price, status, valid_until, billing_cycle,
+        last_payment_date, last_payment_ref, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      currentSub.plan_name,
+      currentSub.monthly_price,
+      status,
+      currentSub.valid_until,
+      currentSub.billing_cycle,
+      currentSub.last_payment_date,
+      currentSub.last_payment_ref,
+      noteText
+    );
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (?, 'UPDATE_SUBSCRIPTION_STATUS', 'SUBSCRIPTION', ?, ?)
+      `).run(req.user.id, status, `Super Admin changed subscription status to ${status}. Note: Financial records remain strictly preserved.`);
+    } catch(e){}
+
+    const updatedSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
+
+    res.json({
+      success: true,
+      message: `Subscription status successfully updated to ${status}. All customer financial records remain 100% intact.`,
+      subscription: updatedSub
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 module.exports = router;

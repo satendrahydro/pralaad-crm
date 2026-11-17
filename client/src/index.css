@@ -1,52 +1,120 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --forest-night: #062319;
+    --forest-deep: #082e20;
+    --forest-card: #0a3d2b;
+    --forest-light: #0d4a35;
+    --forest-border: #134e38;
+    --gold-primary: #d4af37;
+    --gold-accent: #f59e0b;
+    --gold-light: #fbbf24;
+    --cream-bg: #fbf9f4;
+    --cream-card: #ffffff;
+    --cream-border: #e8e3d5;
+    --emerald-success: #10b981;
+    --rose-danger: #f43f5e;
+  }
+
   body {
-    @apply bg-slate-900 text-slate-800 antialiased font-sans selection:bg-indigo-500 selection:text-white;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
+    background-color: #fbf9f4;
+    color: #1c2826;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Custom Micro-Interactions & Animation Keyframes */
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.02);
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.7);
-  }
+/* ======================================================== */
+/* APPROVED BRAND DESIGN SYSTEM: FOREST GREEN & GOLDEN YELLOW*/
+/* ======================================================== */
+
+/* Dark Forest Green Surfaces */
+.bg-forest-night {
+  background-color: #062319;
 }
 
-@keyframes floatSoft {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
+.bg-forest-deep {
+  background-color: #082e20;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.bg-forest-card {
+  background-color: #0a3d2b;
 }
 
+.border-forest-border {
+  border-color: #134e38;
+}
+
+.border-forest-light {
+  border-color: #1a5d43;
+}
+
+/* Golden Yellow Accents */
+.text-gold-primary {
+  color: #d4af37;
+}
+
+.text-gold-accent {
+  color: #f59e0b;
+}
+
+.bg-gold-primary {
+  background-color: #d4af37;
+}
+
+.bg-gold-accent {
+  background-color: #f59e0b;
+}
+
+.border-gold-primary {
+  border-color: #d4af37;
+}
+
+/* Warm White / Cream Surfaces */
+.bg-cream-canvas {
+  background-color: #fbf9f4;
+}
+
+.border-cream-border {
+  border-color: #e8e3d5;
+}
+
+/* Elevation & Card Surfaces */
+.fintech-card {
+  background: #ffffff;
+  border: 1px solid #e8e3d5;
+  box-shadow: 0 1px 3px 0 rgba(6, 35, 25, 0.04), 0 1px 2px -1px rgba(6, 35, 25, 0.03);
+  border-radius: 1rem;
+}
+
+.fintech-card-dark {
+  background: #082e20;
+  border: 1px solid #134e38;
+  box-shadow: 0 10px 25px -5px rgba(6, 35, 25, 0.4);
+  border-radius: 1rem;
+}
+
+/* Custom Refined Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(13, 74, 53, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(13, 74, 53, 0.6);
+}
+
+/* Animations & Transitions */
 @keyframes dropdownFade {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.97);
+    transform: translateY(-6px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -55,45 +123,69 @@
 }
 
 .animate-dropdown {
-  animation: dropdownFade 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: dropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-float {
-  animation: floatSoft 4s ease-in-out infinite;
+@keyframes fadeInSoft {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-pulse-glow {
-  animation: pulseGlow 2.5s ease-in-out infinite;
+.animate-fadeIn {
+  animation: fadeInSoft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Premium Glass & Gradient Utilities */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+/* Modern Tab Indicator & Hover States */
+.fintech-tab-active {
+  background-color: #082e20;
+  color: #f59e0b;
+  border: 1px solid #134e38;
+  box-shadow: 0 1px 3px 0 rgba(6, 35, 25, 0.2);
 }
 
-.glass-card-dark {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.fintech-tab-inactive {
+  background-color: transparent;
+  color: #52635e;
+}
+.fintech-tab-inactive:hover {
+  background-color: #f2efe8;
+  color: #062319;
 }
 
-.shimmer-badge {
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 3s infinite;
+/* Table Row Smooth Micro-Interaction */
+.fintech-table-row {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.fintech-table-row:hover {
+  background-color: rgba(246, 244, 237, 0.9);
 }
 
-/* Smooth Interactive Table & Card Hover */
-.table-row-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Badge System */
+.badge-active {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
-.table-row-hover:hover {
-  background-color: rgba(248, 250, 252, 0.9);
-  transform: translateX(2px);
+.badge-pending {
+  background-color: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+}
+.badge-closed {
+  background-color: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+.badge-gold {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 /* Print Certificate Specific Rules */

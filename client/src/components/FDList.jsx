@@ -37,10 +37,37 @@ export default function FDList({
   const [activeRowMenu, setActiveRowMenu] = useState(null);
   const [schemeDropdownOpen, setSchemeDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   const schemeRef = useRef(null);
   const sortRef = useRef(null);
   const tableRef = useRef(null);
+
+  const handleExportCSV = () => {
+    if (!filteredAndSortedFDs.length) return alert('No records to export');
+    const headers = ['FD Number', 'Customer Name', 'Customer Code', 'Phone', 'Principal', 'Annual Rate', 'Tenure Months', 'Maturity Amount', 'Maturity Date', 'Status'];
+    const rows = filteredAndSortedFDs.map(fd => [
+      `"${fd.fd_number || ''}"`,
+      `"${fd.customer_name || ''}"`,
+      `"${fd.customer_code || ''}"`,
+      `"${fd.customer_phone || ''}"`,
+      fd.principal_amount,
+      fd.annual_rate,
+      fd.tenure_months,
+      fd.maturity_amount,
+      `"${fd.maturity_date || ''}"`,
+      `"${fd.status || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `FD_Portfolio_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -141,13 +168,25 @@ export default function FDList({
           </p>
         </div>
 
-        <button
-          onClick={onOpenNewFD}
-          className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Book New FD</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            id="fd-export-csv-btn"
+            onClick={handleExportCSV}
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-2 border border-slate-200 transition cursor-pointer"
+            title="Export to CSV"
+          >
+            <Download className="w-4 h-4 text-indigo-600" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={onOpenNewFD}
+            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Book New FD</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar with Interactive Dropdowns */}
@@ -315,7 +354,7 @@ export default function FDList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredAndSortedFDs.map((fd) => {
+                {filteredAndSortedFDs.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((fd) => {
                   const schemeObj = COMPOUNDING_OPTIONS.find(o => o.value === fd.compounding_frequency);
                   const isNearMaturity = fd.status === 'ACTIVE' && new Date(fd.maturity_date) <= new Date(Date.now() + 30 * 86400000);
 
@@ -495,6 +534,36 @@ export default function FDList({
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Table Pagination Bar */}
+        {!loading && filteredAndSortedFDs.length > 0 && (
+          <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 font-semibold">
+            <div>
+              Showing {Math.min((currentPage - 1) * pageSize + 1, filteredAndSortedFDs.length)} to {Math.min(currentPage * pageSize, filteredAndSortedFDs.length)} of {filteredAndSortedFDs.length} FDs
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                id="fd-pagination-prev"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer font-bold"
+              >
+                Previous
+              </button>
+              <span className="font-bold text-slate-800">
+                Page {currentPage} of {Math.max(1, Math.ceil(filteredAndSortedFDs.length / pageSize))}
+              </span>
+              <button
+                id="fd-pagination-next"
+                disabled={currentPage >= Math.ceil(filteredAndSortedFDs.length / pageSize)}
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredAndSortedFDs.length / pageSize), prev + 1))}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer font-bold"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

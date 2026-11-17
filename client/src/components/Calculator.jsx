@@ -132,6 +132,25 @@ export default function Calculator({ onBookFromCalc }) {
                 className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-lg transition"
               />
             </div>
+            
+            {/* Principal Drag Slider */}
+            <div className="mt-2">
+              <input
+                type="range"
+                id="calc-slider-principal"
+                min="10000"
+                max="5000000"
+                step="10000"
+                value={principal}
+                onChange={(e) => setPrincipal(parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-semibold mt-0.5">
+                <span>₹10,000</span>
+                <span>₹25,00,000</span>
+                <span>₹50,00,000</span>
+              </div>
+            </div>
 
             {/* Quick Chips */}
             <div className="flex flex-wrap gap-1.5 mt-2.5">
@@ -175,6 +194,25 @@ export default function Calculator({ onBookFromCalc }) {
               />
             </div>
 
+            {/* Rate Drag Slider */}
+            <div className="mt-2">
+              <input
+                type="range"
+                id="calc-slider-rate"
+                min="4"
+                max="15"
+                step="0.05"
+                value={annualRate}
+                onChange={(e) => setAnnualRate(parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-semibold mt-0.5">
+                <span>4.0%</span>
+                <span>9.5%</span>
+                <span>15.0%</span>
+              </div>
+            </div>
+
             {/* Senior citizen toggle */}
             <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl flex items-center justify-between">
               <div>
@@ -194,6 +232,46 @@ export default function Calculator({ onBookFromCalc }) {
           </div>
 
           {/* Tenure */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Tenure Selection (अवधि चयन)
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[
+                { label: '12M (1 Year)', months: 12 },
+                { label: '24M (2 Years)', months: 24 },
+                { label: '36M (3 Years)', months: 36 },
+                { label: '60M (5 Years)', months: 60 },
+                { label: 'Custom (कस्टम अवधि)', months: null }
+              ].map((t) => {
+                const isSelected = t.months !== null 
+                  ? (totalMonths === t.months)
+                  : (![12, 24, 36, 60].includes(totalMonths));
+                return (
+                  <button
+                    key={t.label}
+                    type="button"
+                    onClick={() => {
+                      if (t.months !== null) {
+                        setTenureYears(Math.floor(t.months / 12));
+                        setTenureMonths(t.months % 12);
+                      }
+                    }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
@@ -222,6 +300,30 @@ export default function Calculator({ onBookFromCalc }) {
               />
             </div>
           </div>
+
+          {/* Tenure Drag Slider */}
+          <div className="mt-1">
+            <input
+              type="range"
+              id="calc-slider-tenure"
+              min="1"
+              max="120"
+              step="1"
+              value={totalMonths}
+              onChange={(e) => {
+                const m = parseInt(e.target.value) || 1;
+                setTenureYears(Math.floor(m / 12));
+                setTenureMonths(m % 12);
+              }}
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400 font-semibold mt-0.5">
+              <span>1 Month</span>
+              <span>5 Years (60M)</span>
+              <span>10 Years (120M)</span>
+            </div>
+          </div>
+
           <p className="text-xs text-slate-500 -mt-2">
             कुल अवधि: <span className="font-semibold text-slate-700">{totalMonths} Months ({totalYears.toFixed(2)} Years)</span>
           </p>

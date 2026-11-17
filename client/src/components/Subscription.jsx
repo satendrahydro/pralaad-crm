@@ -12,7 +12,13 @@ import {
   Building2,
   Server,
   Headphones,
-  Database
+  Database,
+  History,
+  AlertTriangle,
+  RotateCcw,
+  FileText,
+  CheckCircle,
+  Sliders
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
@@ -24,7 +30,54 @@ export default function Subscription() {
   const [selectedPeriod, setSelectedPeriod] = useState('annual'); // 'annual' | 'half_yearly'
   const [paymentMethod, setPaymentMethod] = useState('Bank Transfer (NEFT/RTGS)');
   const [processing, setProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState('plan'); // 'plan' | 'amc' | 'api'
+  const [activeTab, setActiveTab] = useState('plan'); // 'plan' | 'amc' | 'api' | 'history'
+
+  // History & Status State
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('pralaad_fd_user'));
+    } catch {
+      return null;
+    }
+  })();
+  const isSuperAdmin = currentUser?.role === 'admin';
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await apiRequest('/subscription/history');
+      if (res.success) {
+        setHistoryList(res.history || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    if (!confirm(`Are you sure you want to change subscription status to ${newStatus}?`)) return;
+    try {
+      setUpdatingStatus(true);
+      const res = await apiRequest('/subscription/status', {
+        method: 'POST',
+        body: JSON.stringify({ status: newStatus })
+      });
+      setStatusMessage(res.message);
+      fetchSub();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to update status: ' + err.message);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const fetchSub = async () => {
     try {
@@ -41,6 +94,12 @@ export default function Subscription() {
   useEffect(() => {
     fetchSub();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchHistory();
+    }
+  }, [activeTab]);
 
   const handleRenewPayment = async () => {
     try {
@@ -167,19 +226,49 @@ export default function Subscription() {
             <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
             Mobile App & Online Payment APIs
           </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'history' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            <History className="w-3.5 h-3.5 text-purple-600" />
+            Renewal History
+          </button>
         </div>
       </div>
 
       {activeTab === 'plan' && (
         <div className="space-y-6">
           
+          {/* Status update alert banner */}
+          {statusMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span>{statusMessage}</span>
+            </div>
+          )}
+
           {/* Current Active Plan Status Banner */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-3 py-1 rounded-full border border-amber-300/30">
-                  CURRENT ACTIVATED LICENSE
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/20 px-3 py-1 rounded-full border border-amber-300/30">
+                    CURRENT ACTIVATED LICENSE
+                  </span>
+                  
+                  <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                    sub?.status === 'ACTIVE'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                      : sub?.status === 'PENDING'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                      : 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+                  }`}>
+                    ● STATUS: {sub?.status || 'ACTIVE'}
+                  </span>
+                </div>
+
                 <h2 className="text-2xl sm:text-3xl font-black mt-2">
                   {sub?.plan_name || 'FD Gold Pro Tier'}
                 </h2>
@@ -203,13 +292,62 @@ export default function Subscription() {
                 <span>Annual Maintenance Fee: <strong>₹24,000 / Year (₹2,000/mo)</strong></span>
               </div>
 
-              <button
-                onClick={() => setRenewModalOpen(true)}
-                className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
-              >
-                <Zap className="w-4 h-4" />
-                Renew Annual License
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/15 text-[10px]">
+                    <span className="text-indigo-200 px-2 font-bold">Admin Override:</span>
+                    <button
+                      type="button"
+                      disabled={updatingStatus || sub?.status === 'ACTIVE'}
+                      onClick={() => handleStatusChange('ACTIVE')}
+                      className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        sub?.status === 'ACTIVE' ? 'bg-emerald-500 text-white' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingStatus || sub?.status === 'SUSPENDED'}
+                      onClick={() => handleStatusChange('SUSPENDED')}
+                      className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        sub?.status === 'SUSPENDED' ? 'bg-rose-500 text-white' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      Suspend
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingStatus || sub?.status === 'EXPIRED'}
+                      onClick={() => handleStatusChange('EXPIRED')}
+                      className={`px-2 py-1 rounded-lg font-bold transition cursor-pointer ${
+                        sub?.status === 'EXPIRED' ? 'bg-amber-500 text-white' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      Expire
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setRenewModalOpen(true)}
+                  className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Zap className="w-4 h-4" />
+                  Renew License
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Non-Destructive Financial Records Guarantee */}
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900 text-xs">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-emerald-950">Non-Destructive Financial Data Guarantee:</div>
+              <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
+                If the software subscription expires or is temporarily suspended, <b>customer financial records, deposits (FD, RD, MIS, Savings), transaction ledgers, and payout schedules are NEVER deleted, archived, or deactivated</b>. Your financial database remains permanently intact and safely preserved.
+              </p>
             </div>
           </div>
 
@@ -407,6 +545,90 @@ export default function Subscription() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Renewal & Payment History Tab */}
+      {activeTab === 'history' && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <History className="w-5 h-5 text-indigo-600" />
+                Subscription & Renewal Payment History
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Complete historical record of license renewals, commercial packages, and status transitions
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchHistory}
+              disabled={loadingHistory}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+              Refresh Log
+            </button>
+          </div>
+
+          {loadingHistory ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              <div className="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+              <div>Loading subscription history...</div>
+            </div>
+          ) : historyList.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No renewal transactions recorded yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="pb-3 pl-2">ID</th>
+                    <th className="pb-3">Plan Name</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Valid Until</th>
+                    <th className="pb-3">Billing Cycle</th>
+                    <th className="pb-3">Monthly Eq.</th>
+                    <th className="pb-3">Payment Date / Ref</th>
+                    <th className="pb-3 pr-2">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {historyList.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition">
+                      <td className="py-3.5 pl-2 font-mono text-slate-400">#{item.id}</td>
+                      <td className="py-3.5 font-bold text-slate-900">{item.plan_name}</td>
+                      <td className="py-3.5">
+                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                          item.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : item.status === 'PENDING'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 font-mono text-slate-800">{formatDate(item.valid_until)}</td>
+                      <td className="py-3.5 font-semibold text-indigo-700">{item.billing_cycle || 'ANNUAL'}</td>
+                      <td className="py-3.5 font-mono font-bold text-slate-900">₹{item.monthly_price?.toLocaleString('en-IN') || 0}</td>
+                      <td className="py-3.5">
+                        <div className="text-slate-800">{item.last_payment_date ? formatDate(item.last_payment_date) : '—'}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{item.last_payment_ref || 'Initial Setup'}</div>
+                      </td>
+                      <td className="py-3.5 pr-2 text-slate-500 text-[11px] max-w-xs truncate">
+                        {item.notes || 'Standard License'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

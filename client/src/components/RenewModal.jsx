@@ -6,6 +6,7 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
   const [renewType, setRenewType] = useState('PRINCIPAL_PLUS_INTEREST');
   const [newRate, setNewRate] = useState(fd?.annual_rate || 8.5);
   const [newTenure, setNewTenure] = useState(fd?.tenure_months || 12);
+  const [isCustomTenure, setIsCustomTenure] = useState(![6, 12, 24, 36, 60].includes(Number(fd?.tenure_months || 12)));
   const [compoundingFreq, setCompoundingFreq] = useState(fd?.compounding_frequency || 'quarterly');
   const [submitting, setSubmitting] = useState(false);
 
@@ -16,6 +17,30 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
   const handleRenew = async () => {
     try {
       setSubmitting(true);
+      const user = JSON.parse(localStorage.getItem('pralaad_fd_user') || '{}');
+      if (user.role === 'employee') {
+        const res = await apiRequest('/approvals', {
+          method: 'POST',
+          body: JSON.stringify({
+            request_type: 'RENEWAL',
+            customer_id: fd.customer_id,
+            fd_id: fd.id,
+            proposed_amount: renewalPrincipal,
+            request_data: {
+              fdId: fd.id,
+              renewType,
+              newRate: parseFloat(newRate),
+              newTenureMonths: parseInt(newTenure),
+              compoundingFrequency: compoundingFreq
+            },
+            remarks: `Staff Renewal Proposal: ${fd.fd_number} for ${newTenure}M @ ${newRate}%`
+          })
+        });
+        alert(`Renewal proposal submitted (${res.request_number}). Awaiting Admin verification.`);
+        onClose();
+        return;
+      }
+
       const res = await apiRequest(`/fds/${fd.id}/renew`, {
         method: 'POST',
         body: JSON.stringify({
@@ -110,13 +135,51 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-600 mb-1">New Tenure (Months)</label>
-              <input
-                type="number"
-                value={newTenure}
-                onChange={(e) => setNewTenure(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-semibold text-slate-600">New Tenure (अवधि)</label>
+                {isCustomTenure && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                    Custom Active
+                  </span>
+                )}
+              </div>
+              <select
+                value={isCustomTenure ? 'custom' : newTenure}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'custom') {
+                    setIsCustomTenure(true);
+                  } else {
+                    setIsCustomTenure(false);
+                    setNewTenure(parseInt(val) || 12);
+                  }
+                }}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                <option value="6">6 Months</option>
+                <option value="12">12 Months (1 Year)</option>
+                <option value="24">24 Months (2 Years)</option>
+                <option value="36">36 Months (3 Years)</option>
+                <option value="60">60 Months (5 Years)</option>
+                <option value="custom">Custom Tenure (कस्टम अवधि)</option>
+              </select>
+
+              {isCustomTenure && (
+                <div className="mt-2 relative animate-fadeIn">
+                  <input
+                    type="number"
+                    min="1"
+                    max="360"
+                    value={newTenure}
+                    onChange={(e) => setNewTenure(Math.max(1, parseInt(e.target.value) || 1))}
+                    placeholder="Enter custom months"
+                    className="w-full px-3 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-bold text-slate-900"
+                  />
+                  <span className="absolute right-3 top-1.5 text-xs font-semibold text-slate-500">
+                    Months ({((parseInt(newTenure) || 0) / 12).toFixed(1)} Yrs)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

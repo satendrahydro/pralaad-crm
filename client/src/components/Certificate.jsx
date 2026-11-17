@@ -8,6 +8,7 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import TarplLogo from './TarplLogo';
 
 export default function Certificate({ fdId, isOpen, onClose }) {
   const [data, setData] = useState(null);
@@ -86,21 +87,21 @@ export default function Certificate({ fdId, isOpen, onClose }) {
             </div>
 
             {/* Header */}
-            <div className="text-center border-b-2 border-indigo-900/30 pb-6 mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-950 text-amber-400 mb-2">
-                <Award className="w-7 h-7" />
+            <div className="text-center border-b-2 border-emerald-900/30 pb-6 mb-6">
+              <div className="flex justify-center mb-2">
+                <TarplLogo variant="badge" size={60} />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-indigo-950 uppercase">
-                {companySettings.company_name || 'FIXED DEPOSIT & WEALTH MANAGEMENT SERVICES'}
+              <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-[#062319] uppercase mt-2">
+                TARPL ORGANIC FOODS LIMITED
               </h1>
-              <p className="text-xs font-semibold text-slate-600 tracking-wider uppercase mt-1">
-                {companySettings.company_tagline || 'Fixed Deposit & Investment Management'}
+              <p className="text-xs font-semibold text-[#0A5C36] tracking-wider uppercase mt-1">
+                Fixed Deposit & Wealth Management Division
               </p>
               <p className="text-[11px] text-slate-500 mt-1">
-                {companySettings.address} • Phone: {companySettings.phone} • Lic: {companySettings.license_no}
+                {companySettings.address || 'Head Office • Corporate Wealth Hub'} • Phone: {companySettings.phone || '+91 98111 00000'}
               </p>
 
-              <div className="mt-4 inline-block px-6 py-1.5 bg-indigo-950 text-amber-300 font-serif font-bold text-sm tracking-widest uppercase rounded shadow-sm">
+              <div className="mt-4 inline-block px-6 py-1.5 bg-[#062319] text-[#FBBF24] font-serif font-bold text-sm tracking-widest uppercase rounded shadow-sm border border-[#D4AF37]/50">
                 FIXED DEPOSIT CERTIFICATE & RECEIPT
               </div>
             </div>
