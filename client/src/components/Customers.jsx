@@ -43,6 +43,8 @@ export default function Customers({
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [selectedKYC, setSelectedKYC] = useState('ALL');
   const [viewMode, setViewMode] = useState('table'); // 'table' (Hubco 15-col default) or 'cards'
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 30; // Matches Hubco 30 rows/page
   
   // Add Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -96,12 +98,20 @@ export default function Customers({
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedBranch, selectedKYC]);
+
   // Client-side branch and KYC filter
   const filteredCustomers = customers.filter(c => {
     const branchMatch = selectedBranch === 'ALL' || (c.branch || 'MAIN BRANCH') === selectedBranch;
     const kycMatch = selectedKYC === 'ALL' || (c.kyc_status || 'PENDING') === selectedKYC;
     return branchMatch && kycMatch;
   });
+
+  const totalPages = Math.ceil(filteredCustomers.length / pageSize) || 1;
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Share Credentials on WhatsApp
   const handleShareCredentialsOnWhatsApp = (cust) => {
@@ -397,7 +407,7 @@ export default function Customers({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCustomers.map((c) => {
+                {paginatedCustomers.map((c) => {
                   const isAppActive = c.app_access_enabled !== 0;
                   return (
                     <tr key={c.id} className="hover:bg-slate-50/80 transition group">
@@ -576,7 +586,7 @@ export default function Customers({
       ) : (
         /* Modern Cards View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredCustomers.map((c) => {
+          {paginatedCustomers.map((c) => {
             const isAppActive = c.app_access_enabled !== 0;
             return (
               <div 
@@ -725,6 +735,53 @@ export default function Customers({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {filteredCustomers.length > pageSize && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+          <div className="text-xs text-slate-500 font-medium">
+            Showing <span className="font-bold text-slate-800">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+            <span className="font-bold text-slate-800">{Math.min(currentPage * pageSize, filteredCustomers.length)}</span> of{' '}
+            <span className="font-bold text-indigo-600">{filteredCustomers.length.toLocaleString('en-IN')}</span> members
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Prev
+            </button>
+            
+            <div className="px-3 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
+              Page {currentPage} of {totalPages}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Last
+            </button>
+          </div>
         </div>
       )}
 
@@ -901,6 +958,7 @@ export default function Customers({
           </div>
         </div>
       )}
+
 
       {/* Add Customer Modal */}
       {modalOpen && (
@@ -1148,6 +1206,7 @@ export default function Customers({
           </div>
         </div>
       )}
+
 
     </div>
   );

@@ -38,7 +38,7 @@ export default function FDList({
   const [schemeDropdownOpen, setSchemeDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 8;
+  const pageSize = 25;
 
   const schemeRef = useRef(null);
   const sortRef = useRef(null);

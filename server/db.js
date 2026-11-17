@@ -214,51 +214,9 @@ function initDB() {
     defaultSettings.forEach(([k, v]) => insertSetting.run(k, v));
   }
 
-  // Seed some realistic initial demo customers and FDs if empty so client can test immediately
+  // Realistic demo customers seeding disabled - production Taranganjali data is active
   const custCount = db.prepare('SELECT count(*) as count FROM customers').get();
-  if (custCount.count === 0) {
-    const insertCust = db.prepare(`
-      INSERT INTO customers (customer_code, full_name, phone, email, pan_card, aadhaar_no, address, bank_name, account_no, ifsc_code, nominee_name, nominee_relation, is_senior_citizen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    insertCust.run('CUST-1001', 'Rajesh Sharma', '9811122334', 'rajesh.sharma@example.com', 'ABCPS1234F', '876543219876', 'Flat 104, Royal Palms, Mumbai', 'HDFC Bank', '50100456789012', 'HDFC0001234', 'Sunita Sharma', 'Spouse', 0);
-    insertCust.run('CUST-1002', 'Mahendra Patel (Sr.)', '9822233445', 'mpatel.senior@example.com', 'BNMPM9876K', '987612345678', 'Plot 45, Green Park, Ahmedabad', 'State Bank of India', '30987654321', 'SBIN0004567', 'Chirag Patel', 'Son', 1);
-    insertCust.run('CUST-1003', 'Priya Verma', '9833344556', 'priya.verma@example.com', 'CPJPV5432P', '654378901234', 'B-12, Gomti Nagar, Lucknow', 'ICICI Bank', '102345678901', 'ICIC0000890', 'Ananya Verma', 'Daughter', 0);
-
-    // Add initial FDs
-    const { calculateFD } = require('./calculator');
-
-    // 1. Cumulative Quarterly Compounding FD (Rajesh Sharma)
-    const fd1Calc = calculateFD({ principal: 500000, annualRate: 8.5, tenureMonths: 24, compoundingFrequency: 'quarterly', startDate: '2026-01-15' });
-    const fd1Res = db.prepare(`
-      INSERT INTO fixed_deposits (fd_number, customer_id, principal_amount, annual_rate, tenure_months, compounding_frequency, is_cumulative, payout_amount, total_interest, maturity_amount, start_date, maturity_date, status, remarks)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('FD-2026-001', 1, 500000, 8.5, 24, 'quarterly', 1, 0, fd1Calc.totalInterest, fd1Calc.maturityAmount, '2026-01-15', fd1Calc.maturityDate, 'ACTIVE', '2 Year Growth FD Cumulative');
-
-    // 2. Non-Cumulative Monthly Payout FD (Mahendra Patel - Senior Citizen)
-    const fd2Calc = calculateFD({ principal: 1000000, annualRate: 8.5, tenureMonths: 12, compoundingFrequency: 'payout_monthly', startDate: '2026-02-01', isSeniorCitizen: true, seniorBonus: 0.5 });
-    const fd2Res = db.prepare(`
-      INSERT INTO fixed_deposits (fd_number, customer_id, principal_amount, annual_rate, tenure_months, compounding_frequency, is_cumulative, payout_amount, total_interest, maturity_amount, start_date, maturity_date, status, remarks)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('FD-2026-002', 2, 1000000, 9.0, 12, 'payout_monthly', 0, fd2Calc.periodicPayout, fd2Calc.totalInterest, fd2Calc.maturityAmount, '2026-02-01', fd2Calc.maturityDate, 'ACTIVE', 'Monthly Regular Pension Payout FD');
-
-    // Insert schedule for fd2
-    const insertSchedule = db.prepare(`
-      INSERT INTO fd_schedules (fd_id, period_no, payout_date, payout_amount, interest_accrued, cumulative_interest, balance, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    fd2Calc.schedule.forEach(s => {
-      insertSchedule.run(fd2Res.lastInsertRowid, s.periodNo, s.payoutDate, s.payoutAmount, s.interestAccrued, s.cumulativeInterest, s.balance, 'PENDING');
-    });
-
-    // 3. Short-term FD (Priya Verma)
-    const fd3Calc = calculateFD({ principal: 250000, annualRate: 7.75, tenureMonths: 6, compoundingFrequency: 'quarterly', startDate: '2026-03-01' });
-    db.prepare(`
-      INSERT INTO fixed_deposits (fd_number, customer_id, principal_amount, annual_rate, tenure_months, compounding_frequency, is_cumulative, payout_amount, total_interest, maturity_amount, start_date, maturity_date, status, remarks)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('FD-2026-003', 3, 250000, 7.75, 6, 'quarterly', 1, 0, fd3Calc.totalInterest, fd3Calc.maturityAmount, '2026-03-01', fd3Calc.maturityDate, 'ACTIVE', 'Short Term FD');
-  }
+  // No dummy records are seeded to preserve real production data integrity
   // Migrations for customer app access & status
   try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN status TEXT DEFAULT 'ACTIVE';"); } catch(e){}
