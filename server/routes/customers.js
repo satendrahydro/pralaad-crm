@@ -87,10 +87,13 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
   try {
     const {
       full_name,
+      father_name,
+      branch,
       phone,
       email,
       pan_card,
       aadhaar_no,
+      kyc_status,
       address,
       bank_name,
       account_no,
@@ -127,9 +130,9 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
 
     const stmt = db.prepare(`
       INSERT INTO customers (
-        customer_code, login_id, login_password, app_access_enabled, status, full_name, phone, email, pan_card, aadhaar_no,
+        customer_code, login_id, login_password, app_access_enabled, status, full_name, father_name, branch, kyc_status, phone, email, pan_card, aadhaar_no,
         address, bank_name, account_no, ifsc_code, nominee_name, nominee_relation, is_senior_citizen
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -139,6 +142,9 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
       app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : 1,
       'ACTIVE',
       full_name.trim(),
+      father_name ? father_name.trim() : null,
+      branch ? branch.trim() : 'MAIN BRANCH',
+      kyc_status ? kyc_status.trim() : 'PENDING',
       phone.trim(),
       email ? email.trim() : null,
       pan_card ? pan_card.trim().toUpperCase() : null,
@@ -164,6 +170,8 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
 router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res) => {
   const {
     full_name,
+    father_name,
+    branch,
     phone,
     email,
     pan_card,
@@ -184,6 +192,8 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
   const stmt = db.prepare(`
     UPDATE customers SET
       full_name = COALESCE(?, full_name),
+      father_name = COALESCE(?, father_name),
+      branch = COALESCE(?, branch),
       phone = COALESCE(?, phone),
       email = COALESCE(?, email),
       pan_card = COALESCE(?, pan_card),
@@ -203,7 +213,7 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
   `);
 
   stmt.run(
-    full_name, phone, email,
+    full_name, father_name, branch, phone, email,
     pan_card ? pan_card.toUpperCase() : null,
     aadhaar_no, address, bank_name, account_no,
     ifsc_code ? ifsc_code.toUpperCase() : null,

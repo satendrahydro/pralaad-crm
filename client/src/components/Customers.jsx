@@ -20,23 +20,41 @@ import {
   Unlock,
   ShieldAlert,
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  LayoutGrid,
+  Table as TableIcon,
+  PlusCircle,
+  ArrowRight,
+  ChevronRight,
+  Filter,
+  DollarSign
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
-export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
+export default function Customers({ 
+  onSelectCustomerForFD, 
+  onSelectCustomerForRD,
+  onSelectCustomerForMIS,
+  onViewPortfolio 
+}) {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('ALL');
+  const [selectedKYC, setSelectedKYC] = useState('ALL');
+  const [viewMode, setViewMode] = useState('table'); // 'table' (Hubco 15-col default) or 'cards'
   
   // Add Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
+    father_name: '',
+    branch: 'MAIN BRANCH',
     phone: '',
     email: '',
     pan_card: '',
     aadhaar_no: '',
+    kyc_status: 'PENDING',
     address: '',
     bank_name: '',
     account_no: '',
@@ -78,6 +96,13 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Client-side branch and KYC filter
+  const filteredCustomers = customers.filter(c => {
+    const branchMatch = selectedBranch === 'ALL' || (c.branch || 'MAIN BRANCH') === selectedBranch;
+    const kycMatch = selectedKYC === 'ALL' || (c.kyc_status || 'PENDING') === selectedKYC;
+    return branchMatch && kycMatch;
+  });
+
   // Share Credentials on WhatsApp
   const handleShareCredentialsOnWhatsApp = (cust) => {
     let cleanPhone = cust.phone ? cust.phone.replace(/[^0-9]/g, '') : '';
@@ -87,7 +112,7 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
       ? '⚠️ ध्यान दें: आपका ऐप एक्सेस वर्तमान में अस्थायी रूप से निष्क्रिय है।'
       : '✅ आपका मोबाइल ऐप एक्सेस सक्रिय है।';
 
-    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nआपके Fixed Deposit मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Login ID: ${cust.login_id || cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FDs और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nFixed Deposit & Wealth Management Desk`;
+    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nTaranganjali Realtech (TARPL) मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Member ID: ${cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FD, RD, MIS और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nTarang Anjali Real Tech Pvt. Ltd.`;
 
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -96,7 +121,7 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
   const handleToggleAppAccess = async (cust) => {
     try {
       setActionLoading(cust.id);
-      const res = await apiRequest(`/customers/${cust.id}/toggle-access`, {
+      await apiRequest(`/customers/${cust.id}/toggle-access`, {
         method: 'PATCH'
       });
       fetchCustomers();
@@ -110,7 +135,7 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
   // Delete Customer
   const handleDeleteCustomer = async (cust) => {
     const confirmDelete = window.confirm(
-      `⚠️ WARNING: क्या आप सच में ग्राहक "${cust.full_name}" (${cust.customer_code}) को CRM से डिलीट करना चाहते हैं?\n\nडिलीट करने पर इस ग्राहक का मोबाइल ऐप एक्सेस तुरंत बंद हो जाएगा और ऐप से लॉगआउट हो जाएगा!`
+      `⚠️ WARNING: क्या आप सच में ग्राहक "${cust.full_name}" (${cust.customer_code}) को CRM से डिलीट करना चाहते हैं?\n\nडिलीट करने पर इस ग्राहक का मोबाइल ऐप एक्सेस तुरंत बंद हो जाएगा!`
     );
     if (!confirmDelete) return;
 
@@ -133,10 +158,13 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
     setEditingCustomer(cust);
     setEditFormData({
       full_name: cust.full_name || '',
+      father_name: cust.father_name || '',
+      branch: cust.branch || 'MAIN BRANCH',
       phone: cust.phone || '',
       email: cust.email || '',
       pan_card: cust.pan_card || '',
       aadhaar_no: cust.aadhaar_no || '',
+      kyc_status: cust.kyc_status || 'PENDING',
       address: cust.address || '',
       bank_name: cust.bank_name || '',
       account_no: cust.account_no || '',
@@ -163,14 +191,16 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
     try {
       setEditSubmitting(true);
       setEditError('');
+
       await apiRequest(`/customers/${editingCustomer.id}`, {
         method: 'PUT',
         body: JSON.stringify(editFormData)
       });
+
       setEditModalOpen(false);
       fetchCustomers();
     } catch (err) {
-      setEditError(err.message || 'Error updating customer');
+      setEditError(err.message || 'Failed to update customer');
     } finally {
       setEditSubmitting(false);
     }
@@ -179,111 +209,374 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
   // Handle Add Submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.full_name?.trim() || !formData.phone?.trim()) {
-      setFormError('Name and phone are required (ग्राहक का नाम और 10-अंकों का मोबाइल नंबर अनिवार्य है)');
-      alert('⚠️ कृपया ग्राहक का पूरा नाम (Full Name) और मोबाइल नंबर (Phone) अवश्य भरें!');
+    if (!formData.full_name || !formData.phone) {
+      setFormError('Full name and mobile phone are required');
       return;
     }
 
     try {
       setSubmitting(true);
       setFormError('');
+
       const res = await apiRequest('/customers', {
         method: 'POST',
-        body: JSON.stringify({
-          ...formData,
-          full_name: formData.full_name.trim(),
-          phone: formData.phone.trim()
-        })
+        body: JSON.stringify(formData)
       });
-      alert(`✅ नया ग्राहक सफलतापूर्वक जुड़ गया!\n\n👤 नाम: ${res.customer?.full_name || formData.full_name}\n🆔 Customer Code: ${res.customer?.customer_code || 'N/A'}\n📱 Mobile: ${res.customer?.phone || formData.phone}`);
-      setModalOpen(false);
-      setFormData({
-        full_name: '',
-        phone: '',
-        email: '',
-        pan_card: '',
-        aadhaar_no: '',
-        address: '',
-        bank_name: '',
-        account_no: '',
-        ifsc_code: '',
-        nominee_name: '',
-        nominee_relation: '',
-        is_senior_citizen: false,
-        login_id: '',
-        login_password: 'client123',
-        app_access_enabled: true
-      });
-      fetchCustomers();
+
+      if (res.success) {
+        setModalOpen(false);
+        setFormData({
+          full_name: '',
+          father_name: '',
+          branch: 'MAIN BRANCH',
+          phone: '',
+          email: '',
+          pan_card: '',
+          aadhaar_no: '',
+          kyc_status: 'PENDING',
+          address: '',
+          bank_name: '',
+          account_no: '',
+          ifsc_code: '',
+          nominee_name: '',
+          nominee_relation: '',
+          is_senior_citizen: false,
+          login_id: '',
+          login_password: 'client123',
+          app_access_enabled: true
+        });
+        fetchCustomers();
+      }
     } catch (err) {
-      const errMsg = err.message || 'Error saving customer';
-      setFormError(errMsg);
-      alert(`❌ त्रुटि: ${errMsg}`);
+      setFormError(err.message || 'Failed to create customer');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12 animate-fadeIn">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Top Header Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Management (ग्राहक एवं मोबाइल ऐप एक्सेस)</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Manage KYC, bank accounts, portfolio, and mobile app login IDs & passwords directly from CRM
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">
+              Customer Master & Members Desk
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              {customers.length} Members Registered
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Hubco v6.1 Parity Desk
+            </span>
+          </div>
+          <p className="text-xs md:text-sm text-slate-500 mt-1">
+            प्रत्येक सदस्य के आगे सीधा 1-क्लिक एक्शन: [+ FD], [+ RD], [+ MIS], [+ Loan], 360° पासबुक व WhatsApp
           </p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition cursor-pointer"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add New Client
-        </button>
+        <div className="flex items-center gap-3">
+          {/* View Mode Switcher */}
+          <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition ${
+                viewMode === 'table' ? 'bg-white shadow-xs text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Hubco 15-Column Tabular View"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition ${
+                viewMode === 'cards' ? 'bg-white shadow-xs text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Modern Cards View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Cards
+            </button>
+          </div>
+
+          <button
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add New Member
+          </button>
+        </div>
       </div>
 
-      {/* Search & Overview Stats */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      {/* Search & Filter Toolbar */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Branch Filter */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="ALL">All Branches (4)</option>
+              <option value="MAIN BRANCH">MAIN BRANCH</option>
+              <option value="TARPL SAVING">TARPL SAVING</option>
+              <option value="TARPL0002">TARPL0002</option>
+              <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
+            </select>
+          </div>
+
+          {/* KYC Status Filter */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={selectedKYC}
+              onChange={(e) => setSelectedKYC(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="ALL">All KYC Status</option>
+              <option value="FULL_KYC">FULL KYC</option>
+              <option value="MIN_KYC">MIN KYC</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </div>
+
+          <span className="text-xs text-slate-400 font-medium">
+            Showing {filteredCustomers.length} of {customers.length}
+          </span>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full md:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
+            placeholder="Search Member No (M01704), Name, Mobile, PAN..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by client name, mobile, PAN, customer code..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
           />
-        </div>
-
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg">
-            Total: {customers.length} Clients
-          </span>
-          <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg flex items-center gap-1">
-            <Smartphone className="w-3.5 h-3.5" />
-            App Enabled: {customers.filter(c => c.app_access_enabled !== 0).length}
-          </span>
         </div>
       </div>
 
-      {/* Customer Cards Grid */}
+      {/* Main View: Hubco 15-Column Table vs Cards */}
       {loading ? (
         <div className="py-20 text-center">
           <div className="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs text-slate-500 mt-2 font-medium">Loading Members...</p>
         </div>
-      ) : customers.length === 0 ? (
+      ) : filteredCustomers.length === 0 ? (
         <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400">
           <Users className="w-12 h-12 mx-auto stroke-1 mb-2 opacity-50" />
-          <p className="font-semibold text-slate-700">No clients found</p>
-          <p className="text-xs mt-1">Click "Add New Client" to register your first depositor</p>
+          <p className="font-semibold text-slate-700">No members found</p>
+          <p className="text-xs mt-1">Try adjusting your search criteria or click "Add New Member"</p>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* Exact Hubco 15-Column Table View */
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+                  <th className="py-3 px-3">CUSTOMER NO.</th>
+                  <th className="py-3 px-3">BRANCH</th>
+                  <th className="py-3 px-3">NAME</th>
+                  <th className="py-3 px-3">F/H NAME</th>
+                  <th className="py-3 px-2 text-center">SR. CTZ</th>
+                  <th className="py-3 px-3">ENROLL DATE</th>
+                  <th className="py-3 px-3">AADHAAR / PAN</th>
+                  <th className="py-3 px-2 text-center">KYC</th>
+                  <th className="py-3 px-3">MOBILE NO</th>
+                  <th className="py-3 px-3 text-right">ACTIVE DEPOSITS</th>
+                  <th className="py-3 px-2 text-center">APP STATUS</th>
+                  <th className="py-3 px-4 text-center">⚡ QUICK ACTIONS (HUBCORDESK)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredCustomers.map((c) => {
+                  const isAppActive = c.app_access_enabled !== 0;
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition group">
+                      
+                      {/* Customer No */}
+                      <td className="py-3 px-3">
+                        <button
+                          onClick={() => onViewPortfolio && onViewPortfolio(c.id)}
+                          className="font-mono font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+                          title="Open 360° Customer Profile"
+                        >
+                          {c.customer_code}
+                          <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
+                        </button>
+                      </td>
+
+                      {/* Branch */}
+                      <td className="py-3 px-3 text-slate-600 font-semibold whitespace-nowrap">
+                        {c.branch || 'MAIN BRANCH'}
+                      </td>
+
+                      {/* Full Name */}
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-slate-900 whitespace-nowrap">{c.full_name}</div>
+                        {c.email && <div className="text-[10px] text-slate-400">{c.email}</div>}
+                      </td>
+
+                      {/* Father / Husband Name */}
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                        {c.father_name || c.nominee_name || '-'}
+                      </td>
+
+                      {/* Senior Citizen */}
+                      <td className="py-3 px-2 text-center">
+                        {c.is_senior_citizen ? (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">No</span>
+                        )}
+                      </td>
+
+                      {/* Enroll Date */}
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                        {formatDate(c.created_at)}
+                      </td>
+
+                      {/* Aadhaar / PAN */}
+                      <td className="py-3 px-3 font-mono text-[11px] whitespace-nowrap">
+                        {c.pan_card ? (
+                          <span className="text-slate-800 font-bold block">{c.pan_card}</span>
+                        ) : null}
+                        {c.aadhaar_no ? (
+                          <span className="text-slate-400 text-[10px] block">Aadhaar: ..{c.aadhaar_no.slice(-4)}</span>
+                        ) : null}
+                        {!c.pan_card && !c.aadhaar_no && <span className="text-slate-400">-</span>}
+                      </td>
+
+                      {/* KYC Status */}
+                      <td className="py-3 px-2 text-center">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                          (c.kyc_status === 'FULL_KYC' || c.pan_card)
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {c.kyc_status || (c.pan_card ? 'FULL KYC' : 'PENDING')}
+                        </span>
+                      </td>
+
+                      {/* Mobile */}
+                      <td className="py-3 px-3 font-medium text-slate-700 whitespace-nowrap">
+                        {c.phone}
+                      </td>
+
+                      {/* Active Deposits */}
+                      <td className="py-3 px-3 text-right">
+                        <div className="font-bold text-emerald-600">
+                          {formatINR(c.total_active_investment || 0)}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {c.total_fds || 0} active FDs
+                        </div>
+                      </td>
+
+                      {/* App Status */}
+                      <td className="py-3 px-2 text-center">
+                        <button
+                          onClick={() => handleToggleAppAccess(c)}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full cursor-pointer transition ${
+                            isAppActive 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                              : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                          }`}
+                          title={isAppActive ? 'Click to Block App' : 'Click to Enable App'}
+                        >
+                          {isAppActive ? 'Active' : 'Blocked'}
+                        </button>
+                      </td>
+
+                      {/* ⚡ Quick Action Desk Buttons */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+                          {/* [+ FD] */}
+                          <button
+                            onClick={() => onSelectCustomerForFD && onSelectCustomerForFD(c.id)}
+                            className="px-2 py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
+                            title="Book New Fixed Deposit"
+                          >
+                            + FD
+                          </button>
+
+                          {/* [+ RD] */}
+                          <button
+                            onClick={() => onSelectCustomerForRD && onSelectCustomerForRD(c.id)}
+                            className="px-2 py-1 bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white rounded text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
+                            title="Start New Recurring Deposit (RD)"
+                          >
+                            + RD
+                          </button>
+
+                          {/* [+ MIS] */}
+                          <button
+                            onClick={() => onSelectCustomerForMIS && onSelectCustomerForMIS(c.id)}
+                            className="px-2 py-1 bg-amber-50 hover:bg-amber-600 text-amber-800 hover:text-white rounded text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
+                            title="Start Monthly Income Scheme (MIS)"
+                          >
+                            + MIS
+                          </button>
+
+                          {/* 360° Passbook */}
+                          <button
+                            onClick={() => onViewPortfolio && onViewPortfolio(c.id)}
+                            className="p-1 hover:bg-slate-100 text-slate-600 hover:text-indigo-600 rounded transition cursor-pointer"
+                            title="360° Member Ledger & Passbook"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* WhatsApp Credentials */}
+                          <button
+                            onClick={() => handleShareCredentialsOnWhatsApp(c)}
+                            className="p-1 hover:bg-emerald-50 text-emerald-600 rounded transition cursor-pointer"
+                            title="Send App Login on WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Edit */}
+                          <button
+                            onClick={() => handleOpenEdit(c)}
+                            className="p-1 hover:bg-slate-100 text-slate-500 hover:text-indigo-600 rounded transition cursor-pointer"
+                            title="Edit Member"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => handleDeleteCustomer(c)}
+                            className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                            title="Delete Member"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
+        /* Modern Cards View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {customers.map((c) => {
+          {filteredCustomers.map((c) => {
             const isAppActive = c.app_access_enabled !== 0;
             return (
               <div 
@@ -298,6 +591,9 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
                           {c.customer_code}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          {c.branch || 'MAIN BRANCH'}
                         </span>
                         {isAppActive ? (
                           <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
@@ -320,19 +616,22 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                           </span>
                         ) : null}
                       </h3>
+                      {c.father_name && (
+                        <p className="text-[11px] text-slate-400">S/W/D of: {c.father_name}</p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleOpenEdit(c)}
-                        title="Edit Customer Details & Change Password"
+                        title="Edit Customer"
                         className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600 cursor-pointer"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteCustomer(c)}
-                        title="Delete Client from CRM & Block App"
+                        title="Delete Client"
                         className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -345,76 +644,42 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                       <Phone className="w-3.5 h-3.5 text-slate-400" />
                       <span>{c.phone}</span>
                     </p>
-                    {c.email && (
-                      <p className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="truncate">{c.email}</span>
-                      </p>
-                    )}
                     <p className="flex items-center gap-2">
                       <CreditCard className="w-3.5 h-3.5 text-slate-400" />
                       <span>PAN: <strong className="font-mono text-slate-700">{c.pan_card || 'Not Added'}</strong></span>
                     </p>
-                    <p className="text-[11px] text-slate-500">
-                      Bank: {c.bank_name || 'N/A'} {c.account_no ? `(..${c.account_no.slice(-4)})` : ''}
-                    </p>
                   </div>
 
-                  {/* Mobile App Login Credentials & Control Box */}
+                  {/* App Credentials Box */}
                   <div className={`mt-3 p-3 rounded-xl border flex flex-col gap-2 ${
                     isAppActive ? 'bg-indigo-50/70 border-indigo-100' : 'bg-rose-50 border-rose-200'
                   }`}>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-bold text-slate-800 flex items-center gap-1.5">
                         <Key className="w-3.5 h-3.5 text-indigo-600" />
-                        App Credentials:
+                        Credentials:
                       </span>
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                         isAppActive ? 'text-indigo-700 bg-indigo-100' : 'text-rose-700 bg-rose-200'
                       }`}>
-                        {isAppActive ? 'Access ON' : 'Access OFF'}
+                        ID: {c.login_id || c.customer_code} | PW: {c.login_password || 'client123'}
                       </span>
                     </div>
 
-                    <div className="font-mono text-[11px] bg-white/80 p-2 rounded-lg border border-slate-200/60 flex justify-between items-center">
-                      <div>
-                        <span className="text-slate-500 text-[10px] block">Login ID:</span>
-                        <strong className="text-slate-900">{c.login_id || c.customer_code}</strong>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-500 text-[10px] block">Password:</span>
-                        <strong className="text-indigo-900">{c.login_password || 'client123'}</strong>
-                      </div>
-                    </div>
-
-                    {/* Quick Access Control Buttons */}
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() => handleToggleAppAccess(c)}
                         disabled={actionLoading === c.id}
-                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
-                          isAppActive
-                            ? 'bg-rose-100 hover:bg-rose-200 text-rose-800'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                          isAppActive ? 'bg-rose-100 hover:bg-rose-200 text-rose-800' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         }`}
                       >
-                        {isAppActive ? (
-                          <>
-                            <Lock className="w-3 h-3" />
-                            Block App
-                          </>
-                        ) : (
-                          <>
-                            <Unlock className="w-3 h-3" />
-                            Enable App
-                          </>
-                        )}
+                        {isAppActive ? 'Block App' : 'Enable App'}
                       </button>
 
                       <button
                         onClick={() => handleShareCredentialsOnWhatsApp(c)}
-                        title="Send Login ID & Password on WhatsApp"
-                        className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                        className="py-1 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition cursor-pointer flex items-center gap-1 text-[10px] font-bold"
                       >
                         <MessageSquare className="w-3 h-3" />
                         WhatsApp
@@ -423,30 +688,37 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Total Active</span>
-                    <span className="font-black text-emerald-700 text-sm">
-                      {formatINR(c.total_active_investment)}
-                    </span>
+                {/* Card Quick Action Bar */}
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Active Investment</span>
+                    <span className="font-black text-emerald-700 text-sm">{formatINR(c.total_active_investment || 0)}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    {onViewPortfolio && (
-                      <button
-                        onClick={() => onViewPortfolio(c.id)}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition cursor-pointer flex items-center gap-1"
-                        title="View Full Multi-Product Portfolio (FD, RD, MIS, Savings)"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                        360° Portfolio
-                      </button>
-                    )}
+                  <div className="grid grid-cols-4 gap-1.5">
                     <button
                       onClick={() => onSelectCustomerForFD && onSelectCustomerForFD(c.id)}
-                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                      className="py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
                     >
-                      + Book FD
+                      + FD
+                    </button>
+                    <button
+                      onClick={() => onSelectCustomerForRD && onSelectCustomerForRD(c.id)}
+                      className="py-1 bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
+                    >
+                      + RD
+                    </button>
+                    <button
+                      onClick={() => onSelectCustomerForMIS && onSelectCustomerForMIS(c.id)}
+                      className="py-1 bg-amber-50 hover:bg-amber-600 text-amber-800 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
+                    >
+                      + MIS
+                    </button>
+                    <button
+                      onClick={() => onViewPortfolio && onViewPortfolio(c.id)}
+                      className="py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold transition text-center cursor-pointer"
+                    >
+                      360°
                     </button>
                   </div>
                 </div>
@@ -472,9 +744,9 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                 <Edit3 className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Edit Client & App Access</h2>
+                <h2 className="text-xl font-bold text-slate-900">Edit Member & App Access</h2>
                 <p className="text-xs text-slate-500">
-                  Update customer KYC, change app password, or suspend mobile login
+                  Update customer KYC, change branch, or modify mobile app credentials
                 </p>
               </div>
             </div>
@@ -486,7 +758,6 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
             )}
 
             <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block font-semibold text-slate-600 mb-1">Full Name (पूरा नाम) *</label>
@@ -497,6 +768,30 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                     onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-900"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Father / Husband Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.father_name}
+                    onChange={(e) => setEditFormData({ ...editFormData, father_name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Branch</label>
+                  <select
+                    value={editFormData.branch}
+                    onChange={(e) => setEditFormData({ ...editFormData, branch: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
+                  >
+                    <option value="MAIN BRANCH">MAIN BRANCH</option>
+                    <option value="TARPL SAVING">TARPL SAVING</option>
+                    <option value="TARPL0002">TARPL0002</option>
+                    <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
+                  </select>
                 </div>
 
                 <div>
@@ -519,14 +814,36 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
                   />
                 </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">PAN Card</label>
+                  <input
+                    type="text"
+                    maxLength="10"
+                    value={editFormData.pan_card}
+                    onChange={(e) => setEditFormData({ ...editFormData, pan_card: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl uppercase font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Aadhaar Number</label>
+                  <input
+                    type="text"
+                    maxLength="12"
+                    value={editFormData.aadhaar_no}
+                    onChange={(e) => setEditFormData({ ...editFormData, aadhaar_no: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
               </div>
 
-              {/* Dedicated Mobile App Security & Credentials Section */}
+              {/* Mobile App Credentials */}
               <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-indigo-900 flex items-center gap-1.5 text-xs">
                     <Smartphone className="w-4 h-4 text-indigo-600" />
-                    Mobile App Access & Security Settings
+                    Mobile App Access Settings
                   </span>
 
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -544,61 +861,23 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 text-[11px] mb-1">
-                      App Login ID / Username
-                    </label>
+                    <label className="block font-semibold text-slate-700 text-[11px] mb-1">App Login ID</label>
                     <input
                       type="text"
                       value={editFormData.login_id}
                       onChange={(e) => setEditFormData({ ...editFormData, login_id: e.target.value })}
-                      placeholder="e.g. CUST-1001"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold text-slate-900"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono"
                     />
                   </div>
-
                   <div>
-                    <label className="block font-semibold text-slate-700 text-[11px] mb-1">
-                      App Password (नया पासवर्ड)
-                    </label>
+                    <label className="block font-semibold text-slate-700 text-[11px] mb-1">App Password</label>
                     <input
                       type="text"
                       value={editFormData.login_password}
                       onChange={(e) => setEditFormData({ ...editFormData, login_password: e.target.value })}
-                      placeholder="Enter new password"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold text-indigo-900"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-indigo-900"
                     />
                   </div>
-                </div>
-                <p className="text-[10px] text-slate-500">
-                  💡 CRM mein yahan password change ya App Block karte hi mobile phone par turant live sync ho jata hai.
-                </p>
-              </div>
-
-              {/* Bank Details */}
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-                <span className="font-bold text-slate-700 block">Bank Account for Payouts / Redemption:</span>
-                <div className="grid grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Bank Name"
-                    value={editFormData.bank_name}
-                    onChange={(e) => setEditFormData({ ...editFormData, bank_name: e.target.value })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Account Number"
-                    value={editFormData.account_no}
-                    onChange={(e) => setEditFormData({ ...editFormData, account_no: e.target.value })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono"
-                  />
-                  <input
-                    type="text"
-                    placeholder="IFSC Code"
-                    value={editFormData.ifsc_code}
-                    onChange={(e) => setEditFormData({ ...editFormData, ifsc_code: e.target.value.toUpperCase() })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs uppercase font-mono"
-                  />
                 </div>
               </div>
 
@@ -618,7 +897,6 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                   {editSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>
@@ -640,8 +918,8 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                 <UserPlus className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Add New Client (ग्राहक जोड़ें)</h2>
-                <p className="text-xs text-slate-500">Enter personal information and assign mobile app credentials</p>
+                <h2 className="text-xl font-bold text-slate-900">Add New Member (सदस्य जोड़ें)</h2>
+                <p className="text-xs text-slate-500">Taranganjali Realtech Official Customer Onboarding</p>
               </div>
             </div>
 
@@ -652,7 +930,6 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
             )}
 
             <form onSubmit={handleAddSubmit} className="space-y-4 text-xs">
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="block font-semibold text-slate-600 mb-1">Full Name (पूरा नाम) *</label>
@@ -664,6 +941,31 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
                     placeholder="e.g. Ramesh Chandra Sharma"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Father / Husband Name</label>
+                  <input
+                    type="text"
+                    value={formData.father_name}
+                    onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                    placeholder="Father/Husband Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-600 mb-1">Branch</label>
+                  <select
+                    value={formData.branch}
+                    onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
+                  >
+                    <option value="MAIN BRANCH">MAIN BRANCH</option>
+                    <option value="TARPL SAVING">TARPL SAVING</option>
+                    <option value="TARPL0002">TARPL0002</option>
+                    <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
+                  </select>
                 </div>
 
                 <div>
@@ -735,13 +1037,13 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block font-semibold text-slate-600 text-[10px] mb-0.5">
-                      Login ID (खाली छोड़ने पर Auto-Code)
+                      Login ID (खाली छोड़ने पर Auto M-XXXX)
                     </label>
                     <input
                       type="text"
                       value={formData.login_id}
                       onChange={(e) => setFormData({ ...formData, login_id: e.target.value })}
-                      placeholder="Auto CUST-XXXX"
+                      placeholder="Auto M-XXXX"
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono text-xs"
                     />
                   </div>
@@ -839,10 +1141,9 @@ export default function Customers({ onSelectCustomerForFD, onViewPortfolio }) {
                   disabled={submitting}
                   className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? 'Saving...' : 'Register Client'}
+                  {submitting ? 'Saving...' : 'Register Member'}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

@@ -926,6 +926,12 @@ export default function App() {
                 setNewFDInitialData({ customer_id: cid });
                 setNewFDModalOpen(true);
               }}
+              onSelectCustomerForRD={(cid) => {
+                setNewRDModalOpen(true);
+              }}
+              onSelectCustomerForMIS={(cid) => {
+                setNewMISModalOpen(true);
+              }}
               onViewPortfolio={(cid) => {
                 setPortfolioCustomerId(cid);
                 setCustomerPortfolioModalOpen(true);
