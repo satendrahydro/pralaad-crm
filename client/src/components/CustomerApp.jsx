@@ -1492,7 +1492,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Main Operations Branch</span>
                     <strong className="text-slate-900 text-sm block mt-0.5">{companySettings?.company_name || 'Fixed Deposit Wealth Management Desk'}</strong>
-                    <p className="text-slate-500 text-xs mt-1">{companySettings?.address || 'Main Financial District, Connaught Place, New Delhi - 110001'}</p>
+                    <p className="text-slate-500 text-xs mt-1">{companySettings?.address || 'Vedic Vihar, Civil Line-I, Near Ayushman Hospital, Kiratpur Road, Bijnor, Uttar Pradesh - 246701'}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">

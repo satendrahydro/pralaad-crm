@@ -418,9 +418,10 @@ export default function App() {
 
   const branches = [
     'All Branches',
-    'Main Branch - Delhi NCR',
-    'Noida Wealth Desk',
-    'Gurgaon Corporate Hub'
+    'MAIN BRANCH (BHR001 - Bijnor)',
+    'TARPL SAVING (BRH003 - Bijnor)',
+    'SHEKHUPURA BRANCH (Bijnor)',
+    'TARPL0002 (BHR002 - Bijnor)'
   ];
 
   const fiscalYears = [

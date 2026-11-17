@@ -4,11 +4,13 @@ import {
   PlusCircle, 
   MapPin, 
   Phone, 
+  Mail,
   ShieldCheck, 
   CheckCircle2, 
   Users, 
   Wallet,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 import { formatINR } from '../utils';
 
@@ -16,42 +18,59 @@ export default function BranchManagement() {
   const [branches] = useState([
     {
       id: 1,
-      branch_code: 'DEL-HQ',
-      branch_name: 'Main Branch - Delhi NCR',
-      city: 'New Delhi',
-      state: 'Delhi',
-      address: 'Barakhamba Road, Connaught Place',
-      contact_phone: '+91 11 4567 8900',
-      ifsc_prefix: 'HDFC0001234',
+      branch_code: 'BHR001',
+      branch_name: 'MAIN BRANCH',
+      city: 'BIJNOR',
+      state: 'Uttar Pradesh',
+      pin: '246701',
+      address: 'Vedic Vihar, Civil Line-I, Near Ayushman Hospital Opp. Andhra Bank, Kiratpur Road, Bijnor',
+      contact_phone: '+91 98375 54433',
+      contact_email: 'prahlad121980@gmail.com',
       is_active: 1,
-      customer_count: 4,
-      total_deposits: 1750000
+      customer_count: 670,
+      opening_date: '12 June 2019'
     },
     {
       id: 2,
-      branch_code: 'NOI-01',
-      branch_name: 'Noida Wealth Desk',
-      city: 'Noida',
+      branch_code: 'BRH003',
+      branch_name: 'TARPL SAVING',
+      city: 'BIJNOR',
       state: 'Uttar Pradesh',
-      address: 'Sector 62, Electronic City',
-      contact_phone: '+91 120 4987 654',
-      ifsc_prefix: 'ICIC0005678',
+      pin: '246701',
+      address: 'TARPL Civil Line-I, Vedik Vihar, Near Rathi Medical Store, Bijnor',
+      contact_phone: '+91 92191 25557',
+      contact_email: 'pradeepnp1981@gmail.com',
       is_active: 1,
-      customer_count: 0,
-      total_deposits: 0
+      customer_count: 811,
+      opening_date: '28 January 2020'
     },
     {
       id: 3,
-      branch_code: 'GUR-02',
-      branch_name: 'Gurgaon Corporate Hub',
-      city: 'Gurugram',
-      state: 'Haryana',
-      address: 'DLF CyberCity, Phase 2',
-      contact_phone: '+91 124 4123 789',
-      ifsc_prefix: 'UTIB0009876',
+      branch_code: 'TARPL0002',
+      branch_name: 'SHEKHUPURA BRANCH',
+      city: 'BIJNOR',
+      state: 'Uttar Pradesh',
+      pin: '246721',
+      address: 'TARPL Building, Village Shekhupura Mandawar, Bijnor',
+      contact_phone: '+91 79068 75952',
+      contact_email: 'geetanjalihir@gmail.com',
       is_active: 1,
-      customer_count: 0,
-      total_deposits: 0
+      customer_count: 210,
+      opening_date: '1 March 2022'
+    },
+    {
+      id: 4,
+      branch_code: 'BHR002',
+      branch_name: 'TARPL0002',
+      city: 'BIJNOR',
+      state: 'Uttar Pradesh',
+      pin: '247601',
+      address: 'Shanti Vihar, V K Garden Road, Bijnor',
+      contact_phone: '+91 92191 25557',
+      contact_email: 'geetanjalihir@gmail.com',
+      is_active: 1,
+      customer_count: 6,
+      opening_date: '25 November 2019'
     }
   ]);
 
@@ -65,74 +84,81 @@ export default function BranchManagement() {
               Branch Network Management
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Multi-Branch Ready
+              {branches.length} Operational Branches
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Bijnor, Uttar Pradesh
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
-            Configure branch hierarchy, operational desks, IFSC prefixes and location mappings
+            Tarang Anjali Real Tech Pvt. Ltd. (TARPL) अधिकृत शाखाएं व नोडल संपर्क विवरण
           </p>
         </div>
-
-        <button 
-          onClick={() => alert('New Branch setup modal will be activated in Stage 4/Settings.')}
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" />
-          Add New Branch
-        </button>
       </div>
 
-      {/* Branch Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {branches.map(b => (
+      {/* Branches Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {branches.map((b) => (
           <div 
             key={b.id}
-            className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between hover:border-indigo-300 hover:shadow-sm transition"
+            className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 flex flex-col justify-between hover:border-emerald-300 hover:shadow-sm transition"
           >
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="font-mono text-xs font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                  {b.branch_code}
-                </span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active Desk
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-emerald-50 rounded-lg text-emerald-700">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{b.branch_name}</h3>
+                    <span className="text-xs font-mono font-semibold text-slate-500">
+                      Code: {b.branch_code}
+                    </span>
+                  </div>
+                </div>
+
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                  Active Branch
                 </span>
               </div>
 
-              <h3 className="text-base font-bold text-slate-900">{b.branch_name}</h3>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                {b.address}, {b.city}
-              </p>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                {b.contact_phone}
-              </p>
+              {/* Address Box */}
+              <div className="my-3 p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 space-y-1.5">
+                <p className="flex items-start gap-1.5">
+                  <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <span>{b.address}, {b.city}, {b.state} - {b.pin}</span>
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="font-semibold text-slate-800">{b.contact_phone}</span>
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="text-indigo-600">{b.contact_email}</span>
+                </p>
+              </div>
 
-              <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Assigned Customers</span>
-                  <span className="font-bold text-slate-800">{b.customer_count}</span>
+              {/* Key Stats */}
+              <div className="grid grid-cols-2 gap-3 text-xs pt-2">
+                <div className="p-2.5 bg-indigo-50/50 rounded-lg border border-indigo-100/60">
+                  <div className="text-[10px] font-semibold text-indigo-700 uppercase">Customers Enrolled</div>
+                  <div className="text-lg font-bold text-indigo-900">{b.customer_count} Members</div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Total FD Portfolio</span>
-                  <span className="font-bold text-indigo-600">{formatINR(b.total_deposits)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">IFSC Prefix</span>
-                  <span className="font-mono text-slate-700">{b.ifsc_prefix}</span>
+                <div className="p-2.5 bg-amber-50/50 rounded-lg border border-amber-100/60">
+                  <div className="text-[10px] font-semibold text-amber-700 uppercase flex items-center gap-1">
+                    <Calendar className="w-3 h-3" /> Opening Date
+                  </div>
+                  <div className="text-xs font-bold text-slate-800 mt-1">{b.opening_date}</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Status: Operational</span>
-              <button 
-                onClick={() => alert(`Configuring ${b.branch_name}`)}
-                className="font-semibold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
-              >
-                Configure Desk →
-              </button>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" /> Direct Branch Node
+              </span>
+              <span className="font-mono text-[11px] text-slate-400">TARPL Bijnor</span>
             </div>
           </div>
         ))}
