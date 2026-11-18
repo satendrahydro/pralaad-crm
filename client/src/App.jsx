@@ -6,6 +6,8 @@ import {
   FolderLock, 
   Users, 
   Award,
+  Building,
+  BadgePercent,
   CalendarDays, 
   CreditCard, 
   Settings as SettingsIcon, 
@@ -74,6 +76,8 @@ import MISList from './components/MISList';
 import SavingsList from './components/SavingsList';
 import AgentRanks from './components/AgentRanks';
 import AgentsList from './components/AgentsList';
+import CollectionCenters from './components/CollectionCenters';
+import LoansAgainstDeposit from './components/LoansAgainstDeposit';
 import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModal';
 import NewRDModal from './components/NewRDModal';
 import NewMISModal from './components/NewMISModal';
@@ -414,7 +418,8 @@ export default function App() {
         { id: 'mis', label: 'Monthly Income (MIS)', icon: Coins, color: 'bg-teal-600' },
         { id: 'savings', label: 'Savings Accounts (SB)', icon: Wallet, color: 'bg-emerald-600' },
         { id: 'customers', label: 'Customers & KYC 360', icon: Users, color: 'bg-teal-600' },
-        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' }
+        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' },
+        { id: 'loans', label: 'Loan Against Deposit (LAD)', icon: BadgePercent, color: 'bg-indigo-600', badge: 'Secured' }
       ]
     },
     {
@@ -437,7 +442,8 @@ export default function App() {
       title: 'AGENTS & ADVISORS',
       items: [
         { id: 'agent_ranks', label: 'Associate/ Advisor Ranks', icon: Award, color: 'bg-amber-600', badge: '6 Ranks' },
-        { id: 'agents_list', label: 'Associates / Advisors', icon: Users, color: 'bg-teal-600', badge: '16 Active' }
+        { id: 'agents_list', label: 'Associates / Advisors', icon: Users, color: 'bg-teal-600', badge: '16 Active' },
+        { id: 'centers', label: 'Coll. Centers & Groups', icon: Building, color: 'bg-emerald-600', badge: '4 Centers' }
       ]
     },
     {
@@ -1034,6 +1040,14 @@ export default function App() {
             <AgentsList 
               onBackToRanks={() => handleSwitchTab('agent_ranks', 'Associate/ Advisor Ranks', Award, 'bg-amber-600')} 
             />
+          )}
+
+          {activeTab === 'centers' && (
+            <CollectionCenters />
+          )}
+
+          {activeTab === 'loans' && (
+            <LoansAgainstDeposit />
           )}
 
           {activeTab === 'subscription' && (

@@ -13,6 +13,7 @@ function seedComplete5ClientData(db) {
       'mis_payout_schedules', 'mis_accounts',
       'fd_schedules', 'fixed_deposits',
       'approval_requests', 'transaction_entries', 'transactions',
+      'loans_against_deposit', 'collection_centers',
       'agents', 'agent_ranks',
       'customers', 'branches', 'fd_schemes'
     ];
@@ -438,6 +439,38 @@ function seedComplete5ClientData(db) {
       [16, 'ADV0016', 'Ravindra Kumar', '9837554417', 'ravindra.adv@taranganjali.com', 4, 'TARPL0002', 6, 'ADVISOR', 1, 5.0, 1050000.0, 52500.0, '2021-12-08']
     ];
     for (const a of advisors) insertAgent.run(...a);
+
+    // 13. Official Collection Centers & Field Groups
+    const insertCenter = db.prepare(`
+      INSERT INTO collection_centers (
+        id, center_code, center_name, branch_id, branch_name, advisor_id, advisor_name,
+        collection_day, meeting_time, total_members, total_collected, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+    `);
+
+    const centers = [
+      [1, 'CEN001', 'Vedik Vihar Collection Center', 2, 'TARPL SAVING', 3, 'Ramesh Chand Verma', 'DAILY', '09:30 AM', 28, 485000.0],
+      [2, 'CEN002', 'Shekhupura Mandi Center', 3, 'SHEKHUPURA BRANCH', 5, 'Arvind Tyagi', 'DAILY', '11:00 AM', 35, 620000.0],
+      [3, 'CEN003', 'Kiratpur Road Center', 1, 'MAIN BRANCH', 1, 'Rajesh Kumar Tyagi', 'DAILY', '10:30 AM', 42, 750000.0],
+      [4, 'CEN004', 'Shanti Vihar Center', 4, 'TARPL0002', 7, 'Virendra Pal', 'DAILY', '04:00 PM', 24, 390000.0]
+    ];
+    for (const c of centers) insertCenter.run(...c);
+
+    // 14. Loan Against Deposit (LAD / 80% Collateral Advances on FD)
+    const insertLAD = db.prepare(`
+      INSERT INTO loans_against_deposit (
+        id, loan_number, customer_id, customer_name, customer_phone, collateral_type,
+        collateral_fd_number, fd_deposit_amount, sanctioned_amount, disbursed_amount,
+        interest_rate, tenure_months, emi_amount, disbursal_date, maturity_date,
+        outstanding_principal, total_recovered, status
+      ) VALUES (?, ?, ?, ?, ?, 'FD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+    `);
+
+    const ladLoans = [
+      [1, 'LAD-2026-001', 1, 'PRAHLAD SINGH HIRANWAL', '9897463367', 'FD00001', 1000000.0, 750000.0, 750000.0, 14.0, 36, 25633.0, '2026-02-15', '2029-02-15', 620000.0, 130000.0],
+      [2, 'LAD-2026-002', 2, 'NARPAT SINGH', '9837012345', 'FD00002', 1500000.0, 1000000.0, 1000000.0, 14.5, 48, 27580.0, '2026-01-10', '2030-01-10', 800000.0, 200000.0]
+    ];
+    for (const l of ladLoans) insertLAD.run(...l);
   });
 
   runTx();

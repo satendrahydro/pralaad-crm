@@ -21,6 +21,8 @@ const savingsRoutes = require('./routes/savings');
 const userRoutes = require('./routes/users');
 const permissionsRoutes = require('./routes/permissions');
 const agentRanksRoutes = require('./routes/agentRanks');
+const collectionCentersRoutes = require('./routes/collectionCenters');
+const loansRoutes = require('./routes/loans');
 const { router: licenseRoutes, getLockState } = require('./routes/license');
 
 const app = express();
@@ -63,6 +65,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/agent-ranks', agentRanksRoutes);
 app.use('/api/agents', agentRanksRoutes);
+app.use('/api/collection-centers', collectionCentersRoutes);
+app.use('/api/loans', loansRoutes);
 
 // Health check / API status endpoint
 app.get('/api/health', (req, res) => {

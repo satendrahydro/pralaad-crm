@@ -420,6 +420,46 @@ function initDB() {
       joining_date DATE,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- 15. Field Collection Centers & Groups
+    CREATE TABLE IF NOT EXISTS collection_centers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      center_code TEXT UNIQUE NOT NULL,
+      center_name TEXT NOT NULL,
+      branch_id INTEGER,
+      branch_name TEXT,
+      advisor_id INTEGER,
+      advisor_name TEXT,
+      collection_day TEXT DEFAULT 'DAILY',
+      meeting_time TEXT DEFAULT '10:00 AM',
+      total_members INTEGER DEFAULT 0,
+      total_collected REAL DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 16. Loan Against Deposit (LAD / Secured Gold & FD Loans)
+    CREATE TABLE IF NOT EXISTS loans_against_deposit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      loan_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT,
+      collateral_type TEXT DEFAULT 'FD',
+      collateral_fd_number TEXT NOT NULL,
+      fd_deposit_amount REAL NOT NULL,
+      sanctioned_amount REAL NOT NULL,
+      disbursed_amount REAL NOT NULL,
+      interest_rate REAL NOT NULL,
+      tenure_months INTEGER NOT NULL,
+      emi_amount REAL NOT NULL,
+      disbursal_date DATE NOT NULL,
+      maturity_date DATE NOT NULL,
+      outstanding_principal REAL NOT NULL,
+      total_recovered REAL DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Seed default admin user if not exists
@@ -503,7 +543,9 @@ function initDB() {
     try { misCount = db.prepare('SELECT count(*) as count FROM mis_accounts').get(); } catch(e){}
     let rankCount = { count: 0 };
     try { rankCount = db.prepare('SELECT count(*) as count FROM agent_ranks').get(); } catch(e){}
-    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0) {
+    let centerCount = { count: 0 };
+    try { centerCount = db.prepare('SELECT count(*) as count FROM collection_centers').get(); } catch(e){}
+    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0 || !centerCount || centerCount.count === 0) {
       const { seedComplete5ClientData } = require('./seedData');
       seedComplete5ClientData(db);
     }
