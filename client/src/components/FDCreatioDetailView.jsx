@@ -612,29 +612,43 @@ export default function FDCreatioDetailView({
                       <th className="py-2 px-3">Type</th>
                       <th className="py-2 px-3 text-right">Debit</th>
                       <th className="py-2 px-3 text-right">Credit</th>
+                      <th className="py-2 px-3 text-right">Running Balance</th>
                       <th className="py-2 px-3">Narration</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {transactions && transactions.length > 0 ? (
-                      transactions.map(t => (
-                        <tr key={t.id} className="hover:bg-slate-50">
-                          <td className="py-2 px-3 text-slate-600">{formatDate(t.transaction_date)}</td>
-                          <td className="py-2 px-3 font-mono font-medium text-slate-900">{t.transaction_number}</td>
-                          <td className="py-2 px-3">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                              {t.type}
-                            </span>
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono text-slate-700">{formatINR(t.total_debit)}</td>
-                          <td className="py-2 px-3 text-right font-mono text-slate-700">{formatINR(t.total_credit)}</td>
-                          <td className="py-2 px-3 text-slate-500 truncate max-w-xs">{t.narration}</td>
-                        </tr>
-                      ))
+                      (() => {
+                        let runningBal = 0;
+                        return transactions.map((t, idx) => {
+                          const credit = Number(t.total_credit) || 0;
+                          const debit = Number(t.total_debit) || 0;
+                          if (idx === 0) {
+                            runningBal = credit - debit;
+                          } else {
+                            runningBal = runningBal + credit - debit;
+                          }
+                          return (
+                            <tr key={t.id} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 text-slate-600">{formatDate(t.transaction_date)}</td>
+                              <td className="py-2 px-3 font-mono font-medium text-slate-900">{t.transaction_number}</td>
+                              <td className="py-2 px-3">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                                  {t.type}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-rose-700 font-bold">{debit ? `-${formatINR(debit)}` : '-'}</td>
+                              <td className="py-2 px-3 text-right font-mono text-emerald-700 font-bold">{credit ? `+${formatINR(credit)}` : '-'}</td>
+                              <td className="py-2 px-3 text-right font-mono font-black text-indigo-900 bg-slate-50/50">{formatINR(runningBal || fd?.deposit_amount)}</td>
+                              <td className="py-2 px-3 text-slate-500 truncate max-w-xs">{t.narration}</td>
+                            </tr>
+                          );
+                        });
+                      })()
                     ) : (
                       <tr>
-                        <td colSpan="6" className="py-6 text-center text-slate-400">
-                          Initial booking transaction logged
+                        <td colSpan="7" className="py-6 text-center text-slate-400">
+                          Initial booking transaction logged • Book Balance: {formatINR(fd?.deposit_amount)}
                         </td>
                       </tr>
                     )}
