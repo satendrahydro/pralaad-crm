@@ -25,6 +25,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import RolePermissionsEditor from './RolePermissionsEditor';
 
 export default function UserManagement({ onOpenCustomerPortfolio }) {
   const [activeTab, setActiveTab] = useState('staff'); // 'staff' | 'customers'
@@ -384,6 +385,18 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
               <Smartphone className="w-4 h-4" />
               Customer Mobile App Logins ({customerList.length})
             </button>
+
+            <button
+              onClick={() => setActiveTab('roles')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer ${
+                activeTab === 'roles'
+                  ? 'bg-white text-amber-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-600" />
+              Permissions / Roles (Hubco Matrix)
+            </button>
           </div>
 
           {/* Search Bar */}
@@ -737,6 +750,15 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
               </table>
             </div>
 
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 3: PERMISSIONS / ROLES (HUBCO MATRIX)                */}
+        {/* ======================================================== */}
+        {activeTab === 'roles' && (
+          <div className="p-4 sm:p-6">
+            <RolePermissionsEditor onCancel={() => setActiveTab('staff')} />
           </div>
         )}
 

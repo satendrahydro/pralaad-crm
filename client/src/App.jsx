@@ -92,6 +92,7 @@ import DailyCollection from './components/DailyCollection';
 import ScheduleSmsModal from './components/ScheduleSmsModal';
 import PaymentsToCollect from './components/PaymentsToCollect';
 import PaymentsToRelease from './components/PaymentsToRelease';
+import RolePermissionsEditor from './components/RolePermissionsEditor';
 
 import NewFDModal from './components/NewFDModal';
 import FDDetailModal from './components/FDDetailModal';
@@ -477,8 +478,9 @@ export default function App() {
     {
       title: 'GOVERNANCE & SECURITY',
       items: [
+        { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Hubco' },
         { id: 'users', label: 'User Management', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
-        { id: 'staff_permissions', label: 'Staff Permissions', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' },
+        { id: 'staff_permissions', label: 'Staff Permissions (Matrix)', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' },
         { id: 'branches', label: 'Branch Management', icon: Building2, color: 'bg-slate-600' },
         { id: 'subscription', label: 'Subscription & APIs', icon: ShieldCheck, color: 'bg-indigo-600' },
         { id: 'settings', label: 'CRM Settings', icon: SettingsIcon, color: 'bg-slate-600' }
@@ -1151,6 +1153,12 @@ export default function App() {
                 setPortfolioCustomerId(cid);
                 setCustomerPortfolioModalOpen(true);
               }}
+            />
+          )}
+
+          {activeTab === 'roles_permissions' && (
+            <RolePermissionsEditor 
+              onCancel={() => handleSwitchTab('dashboard', 'Executive Dashboard', LayoutDashboard, 'bg-indigo-600')} 
             />
           )}
 
