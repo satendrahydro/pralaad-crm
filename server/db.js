@@ -1,13 +1,33 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.DB_FILE || path.join(__dirname, 'fd_crm.sqlite');
-const db = new Database(dbPath);
 
-// Enable foreign keys and WAL mode for high performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+function getDatabaseConnection() {
+  try {
+    const d = new Database(dbPath);
+    d.pragma('journal_mode = WAL');
+    d.pragma('foreign_keys = ON');
+    return d;
+  } catch (err) {
+    console.error('SQLite initialization error / corrupt DB detected:', err.message);
+    try {
+      if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+      if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
+      if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
+    } catch (e) {
+      console.error('Failed to unlink corrupt DB files:', e.message);
+    }
+    const d = new Database(dbPath);
+    d.pragma('journal_mode = WAL');
+    d.pragma('foreign_keys = ON');
+    return d;
+  }
+}
+
+const db = getDatabaseConnection();
 
 function initDB() {
   // 1. Users table (Admin & Staff for CRM login)
@@ -429,8 +449,13 @@ function initDB() {
 
   // Ensure rich 5-client functional demo data if tables are empty
   try {
-    const { seedDemoIfEmpty } = require('./seedDemoData');
-    seedDemoIfEmpty(db);
+    const custCount = db.prepare('SELECT count(*) as count FROM customers').get();
+    let misCount = { count: 0 };
+    try { misCount = db.prepare('SELECT count(*) as count FROM mis_accounts').get(); } catch(e){}
+    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0) {
+      const { seedComplete5ClientData } = require('./seedData');
+      seedComplete5ClientData(db);
+    }
   } catch (e) {
     console.error('Auto-seed check error:', e.message);
   }
