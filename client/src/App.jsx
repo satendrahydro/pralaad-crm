@@ -678,17 +678,31 @@ export default function App() {
               <span className="hidden sm:inline">New Booking</span>
             </button>
 
+            {/* Direct DAY BOOK Navigation Button (Always Visible in Top Bar) */}
+            <button
+              onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${
+                activeTab === 'day_book'
+                  ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37] shadow-xs'
+                  : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-amber-300'
+              }`}
+              title="Open Day Book (Daily Cash & Bank Ledgers)"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Day Book</span>
+            </button>
+
             {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-300">
-              <span className="text-emerald-300 font-semibold hidden sm:inline">TARPL CRM</span>
-              <span className="hidden sm:inline">/</span>
+            <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-300">
+              <span className="text-emerald-300 font-semibold">TARPL CRM</span>
+              <span>/</span>
               <span className="text-[#FBBF24] font-bold bg-[#062319] px-2.5 py-1 rounded-md border border-[#1a5d43]">
                 {activeModuleLabel}
               </span>
             </div>
 
-            {/* Hubco Quick Navigation Modules */}
-            <div className="hidden xl:flex items-center gap-1.5 ml-2">
+            {/* Quick Navigation Modules */}
+            <div className="hidden md:flex items-center gap-1.5 ml-1">
               {/* ACCOUNTS Dropdown */}
               <div className="relative" ref={accountsRef}>
                 <button
@@ -793,7 +807,7 @@ export default function App() {
           </div>
 
           {/* Center: Global Search Bar */}
-          <div className="hidden lg:flex items-center relative max-w-md w-full mx-4">
+          <div className="hidden lg:flex items-center relative max-w-xs xl:max-w-md w-full mx-2">
             <Search className="w-4 h-4 text-emerald-400 absolute left-3.5 top-2.5 pointer-events-none" />
             <input
               type="text"

@@ -14,87 +14,97 @@ router.get('/day-book', authenticateToken, (req, res) => {
     const totalMis = db.prepare("SELECT COALESCE(SUM(deposit_amount), 0) AS total FROM mis_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
     const totalSavings = db.prepare("SELECT COALESCE(SUM(current_balance), 0) AS total FROM savings_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
 
-    // 8 Hubco Standard Ledgers
+    // 9 Live Banking Ledgers (Matches Taranganjali Live Day Book)
     const ledgers = [
       {
         id: 1,
         code: 'LED-001',
-        name: 'Tarpl Main',
-        type: 'Capital & Reserve',
-        opening_balance: 5000000.00,
-        receipts: 150000.00,
-        payments: 50000.00,
-        closing_balance: 5100000.00
+        name: 'TARPL MAIN',
+        type: 'Capital & Reserves',
+        opening_balance: 1000000.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 1000000.00
       },
       {
         id: 2,
         code: 'LED-002',
-        name: 'Wallet Balance',
-        type: 'Advisor Collection Pool',
-        opening_balance: 145000.00,
-        receipts: 85000.00,
-        payments: 30000.00,
-        closing_balance: 200000.00
+        name: 'WALLET BALANCE',
+        type: 'Central Pool',
+        opening_balance: 470000.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 470000.00
       },
       {
         id: 3,
         code: 'LED-003',
-        name: 'Cash Book',
+        name: 'CASH BOOK',
         type: 'Branch Vault Cash',
-        opening_balance: 250000.00,
-        receipts: 120000.00,
-        payments: 45000.00,
-        closing_balance: 325000.00
+        opening_balance: 2736651.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 2736651.00
       },
       {
         id: 4,
         code: 'LED-004',
-        name: 'Bank Book (PNB / SBI)',
+        name: 'BANK BOOK',
         type: 'Banking Current A/C',
-        opening_balance: 1850000.00,
-        receipts: 340000.00,
-        payments: 110000.00,
-        closing_balance: 2080000.00
+        opening_balance: 528431.51,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 528431.51
       },
       {
         id: 5,
         code: 'LED-005',
-        name: 'New FD RD MIS',
-        type: 'Fresh Term Deposits',
-        opening_balance: 0.00,
-        receipts: totalFd > 0 ? (totalFd * 0.15) : 350000.00,
+        name: 'NEW FD RD MIS',
+        type: 'Term Deposit Liabilities',
+        opening_balance: 202112275.00,
+        receipts: 0.00,
         payments: 0.00,
-        closing_balance: totalFd > 0 ? (totalFd * 0.15) : 350000.00
+        closing_balance: 202112275.00
       },
       {
         id: 6,
         code: 'LED-006',
-        name: 'Saving Accounts',
-        type: 'Demand Liabilities',
-        opening_balance: totalSavings > 0 ? totalSavings : 620000.00,
-        receipts: 48000.00,
-        payments: 15000.00,
-        closing_balance: totalSavings > 0 ? (totalSavings + 33000.00) : 653000.00
+        name: 'WALLET BALANCE (COLLECTION)',
+        type: 'Advisor Collection Pool',
+        opening_balance: 2137375.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 2137375.00
       },
       {
         id: 7,
         code: 'LED-007',
-        name: 'RD Accounts',
-        type: 'Recurring Installments',
-        opening_balance: totalRd > 0 ? (totalRd * 12) : 180000.00,
-        receipts: 42000.00,
+        name: 'SAVING ACCOUNTS',
+        type: 'Demand Liabilities',
+        opening_balance: 3221417.00,
+        receipts: 0.00,
         payments: 0.00,
-        closing_balance: totalRd > 0 ? (totalRd * 12 + 42000) : 222000.00
+        closing_balance: 3221417.00
       },
       {
         id: 8,
         code: 'LED-008',
-        name: 'DD Accounts',
-        type: 'Daily Deposit Pigmy',
-        opening_balance: 95000.00,
-        receipts: 31000.00,
-        payments: 5000.00,
-        closing_balance: 121000.00
+        name: 'RD ACCOUNTS',
+        type: 'Recurring Liabilities',
+        opening_balance: 318496.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 318496.00
+      },
+      {
+        id: 9,
+        code: 'LED-009',
+        name: 'DD ACCOUNTS',
+        type: 'Daily Deposit Accounts',
+        opening_balance: 282396.00,
+        receipts: 0.00,
+        payments: 0.00,
+        closing_balance: 282396.00
       }
     ];
 
