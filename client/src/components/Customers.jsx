@@ -277,9 +277,6 @@ export default function Customers({
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               {customers.length} Members Registered
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Hubco v6.1 Parity Desk
-            </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
             प्रत्येक सदस्य के आगे सीधा 1-क्लिक एक्शन: [+ FD], [+ RD], [+ MIS], [+ Loan], 360° पासबुक व WhatsApp
@@ -294,7 +291,7 @@ export default function Customers({
               className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition ${
                 viewMode === 'table' ? 'bg-white shadow-xs text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
-              title="Hubco 15-Column Tabular View"
+              title="15-Column Tabular View"
             >
               <TableIcon className="w-3.5 h-3.5" />
               Table
@@ -403,7 +400,7 @@ export default function Customers({
                   <th className="py-3 px-3">MOBILE NO</th>
                   <th className="py-3 px-3 text-right">ACTIVE DEPOSITS</th>
                   <th className="py-3 px-2 text-center">APP STATUS</th>
-                  <th className="py-3 px-4 text-center">⚡ QUICK ACTIONS (HUBCORDESK)</th>
+                  <th className="py-3 px-4 text-center">⚡ QUICK ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

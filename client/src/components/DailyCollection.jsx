@@ -159,7 +159,7 @@ export default function DailyCollection() {
                 NEW
               </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                Hubco v6.1 Parity
+                Field Operations
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">

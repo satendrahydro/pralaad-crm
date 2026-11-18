@@ -290,7 +290,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-slate-950" />
-            {activeTab === 'roles' ? 'Back to Staff Accounts' : 'Hubco Roles & Permissions Matrix'}
+            {activeTab === 'roles' ? 'Back to Staff Accounts' : 'Roles & Permissions Matrix'}
           </button>
 
           {activeTab === 'staff' ? (
@@ -407,8 +407,8 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
               }`}
             >
               <ShieldCheck className="w-4 h-4 text-amber-700" />
-              Permissions / Roles (Hubco Matrix)
-              <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-600 text-white">Hubco</span>
+              Roles & Permissions Matrix
+              <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-600 text-white">Security</span>
             </button>
           </div>
 

@@ -415,7 +415,7 @@ export default function FDSchemes({ onOpenNewFD }) {
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
-            कंपनी की सभी अधिकृत 19 फिक्स्ड डिपॉजिट व मासिक आय योजनाएं (Hubco v6.1 Parity)
+            कंपनी की सभी अधिकृत 19 फिक्स्ड डिपॉजिट व मासिक आय योजनाएं
           </p>
         </div>
 
@@ -427,7 +427,7 @@ export default function FDSchemes({ onOpenNewFD }) {
               className={`p-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition ${
                 viewMode === 'table' ? 'bg-white shadow-xs text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
-              title="Hubco Tabular View"
+              title="Tabular View"
             >
               <TableIcon className="w-3.5 h-3.5" />
               Table

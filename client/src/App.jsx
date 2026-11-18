@@ -443,9 +443,9 @@ export default function App() {
       ]
     },
     {
-      title: 'USER MANAGEMENT (HUBCO)',
+      title: 'USER & ACCESS MANAGEMENT',
       items: [
-        { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Hubco' },
+        { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Matrix' },
         { id: 'users', label: 'Staff & Mobile Users', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
         { id: 'staff_permissions', label: 'Staff Guard Matrix', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' }
       ]
@@ -453,7 +453,7 @@ export default function App() {
     {
       title: 'ACCOUNTING & FIELD OPS',
       items: [
-        { id: 'day_book', label: 'Day Book (8 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Hubco' },
+        { id: 'day_book', label: 'Day Book (8 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Ledger' },
         { id: 'daily_collection', label: 'Daily Collection', icon: Coins, color: 'bg-emerald-600', badge: 'NEW' },
         { id: 'payments_to_collect', label: 'Payments to Collect', icon: CreditCard, color: 'bg-orange-600', badge: '15 Fields' },
         { id: 'payments_to_release', label: 'Payments to Release', icon: ArrowUpRight, color: 'bg-rose-600', badge: 'Payouts' }

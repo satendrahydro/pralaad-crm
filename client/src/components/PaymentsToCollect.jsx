@@ -115,7 +115,7 @@ export default function PaymentsToCollect() {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">Payments to Collect</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-                15 Hubco Fields
+                Collections Desk
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">

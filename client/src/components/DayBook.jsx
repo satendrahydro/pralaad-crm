@@ -65,7 +65,7 @@ export default function DayBook({ onOpenJournalEntry }) {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-slate-900 tracking-tight">Day Book & Cash / Bank Ledgers</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                Hubco v6.1 Parity
+                Core Banking
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -147,7 +147,7 @@ export default function DayBook({ onOpenJournalEntry }) {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-900">8 Hubco Banking Balance Ledgers</h2>
+            <h2 className="text-sm font-bold text-slate-900">8 Banking Balance Ledgers</h2>
             <p className="text-xs text-slate-500">Live reconciliation breakdown for {date}</p>
           </div>
           <button
