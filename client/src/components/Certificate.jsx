@@ -92,10 +92,10 @@ export default function Certificate({ fdId, isOpen, onClose }) {
                 <TarplLogo variant="badge" size={60} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-[#062319] uppercase mt-2">
-                TARPL ORGANIC FOODS LIMITED
+                TARANG ANJALI REAL TECH PVT. LTD.
               </h1>
               <p className="text-xs font-semibold text-[#0A5C36] tracking-wider uppercase mt-1">
-                Fixed Deposit & Wealth Management Division
+                जीत आपके विश्वास की • Fixed Deposit & Wealth Management Division
               </p>
               <p className="text-[11px] text-slate-500 mt-1">
                 {companySettings.address || 'Head Office • Corporate Wealth Hub'} • Phone: {companySettings.phone || '+91 98111 00000'}

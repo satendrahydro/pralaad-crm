@@ -5,4 +5,6 @@ client/android/
 *.log
 server/backups/
 server/*_results.json
+*.bak*
+server/fd_crm_taranganjali_real_production.sqlite
 

@@ -153,8 +153,8 @@ export default function Login({ onLoginSuccess }) {
           <div className="flex justify-center mb-3">
             <TarplLogo variant="badge" size={84} />
           </div>
-          <h1 className="text-xl font-black text-[#062319] tracking-tight">TARPL ORGANIC FOODS</h1>
-          <p className="text-xs text-[#0A5C36] font-bold mt-0.5">Multi-Product Institutional Wealth & Banking CRM</p>
+          <h1 className="text-xl font-black text-[#062319] tracking-tight">TARANG ANJALI REAL TECH PVT. LTD.</h1>
+          <p className="text-xs text-[#0A5C36] font-bold mt-0.5">जीत आपके विश्वास की • Institutional Banking & Wealth CRM</p>
         </div>
 
         {/* Quick Role Select Tabs */}

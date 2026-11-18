@@ -43,7 +43,11 @@ import {
   FileText,
   Repeat,
   Coins,
-  Wallet
+  Wallet,
+  BookOpen,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Send
 } from 'lucide-react';
 
 import Login from './components/Login';
@@ -82,6 +86,12 @@ import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModa
 import NewRDModal from './components/NewRDModal';
 import NewMISModal from './components/NewMISModal';
 import NewSavingsModal from './components/NewSavingsModal';
+import DayBook from './components/DayBook';
+import NewJournalEntryModal from './components/NewJournalEntryModal';
+import DailyCollection from './components/DailyCollection';
+import ScheduleSmsModal from './components/ScheduleSmsModal';
+import PaymentsToCollect from './components/PaymentsToCollect';
+import PaymentsToRelease from './components/PaymentsToRelease';
 
 import NewFDModal from './components/NewFDModal';
 import FDDetailModal from './components/FDDetailModal';
@@ -200,6 +210,12 @@ export default function App() {
   const [customerPortfolioModalOpen, setCustomerPortfolioModalOpen] = useState(false);
   const [portfolioCustomerId, setPortfolioCustomerId] = useState(null);
 
+  // Hubco v6.1 Parity Accounting & SMS Modals / Dropdowns
+  const [journalEntryModalOpen, setJournalEntryModalOpen] = useState(false);
+  const [scheduleSmsModalOpen, setScheduleSmsModalOpen] = useState(false);
+  const [accountsDropdownOpen, setAccountsDropdownOpen] = useState(false);
+  const accountsRef = useRef(null);
+
   // Dropdown close on outside click
   useEffect(() => {
     function handleClickOutside(event) {
@@ -214,6 +230,9 @@ export default function App() {
       }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
+      }
+      if (accountsRef.current && !accountsRef.current.contains(event.target)) {
+        setAccountsDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -420,6 +439,15 @@ export default function App() {
         { id: 'customers', label: 'Customers & KYC 360', icon: Users, color: 'bg-teal-600' },
         { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' },
         { id: 'loans', label: 'Loan Against Deposit (LAD)', icon: BadgePercent, color: 'bg-indigo-600', badge: 'Secured' }
+      ]
+    },
+    {
+      title: 'ACCOUNTING & FIELD OPS',
+      items: [
+        { id: 'day_book', label: 'Day Book (8 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Hubco' },
+        { id: 'daily_collection', label: 'Daily Collection', icon: Coins, color: 'bg-emerald-600', badge: 'NEW' },
+        { id: 'payments_to_collect', label: 'Payments to Collect', icon: CreditCard, color: 'bg-orange-600', badge: '15 Fields' },
+        { id: 'payments_to_release', label: 'Payments to Release', icon: ArrowUpRight, color: 'bg-rose-600', badge: 'Payouts' }
       ]
     },
     {
@@ -655,6 +683,110 @@ export default function App() {
               <span className="text-[#FBBF24] font-bold bg-[#062319] px-2.5 py-1 rounded-md border border-[#1a5d43]">
                 {activeModuleLabel}
               </span>
+            </div>
+
+            {/* Hubco Quick Navigation Modules */}
+            <div className="hidden xl:flex items-center gap-1.5 ml-2">
+              {/* ACCOUNTS Dropdown */}
+              <div className="relative" ref={accountsRef}>
+                <button
+                  onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer"
+                  title="Banking Accounts & Ledgers"
+                >
+                  <span>Accounts</span>
+                  <ChevronDown className="w-3 h-3 text-amber-400" />
+                </button>
+
+                {accountsDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Core Banking Ledgers
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600');
+                        setAccountsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Day Book (8 Ledgers)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setJournalEntryModalOpen(true);
+                        setAccountsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>New Journal Entry</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleSwitchTab('transactions', 'Transactions Ledger', Receipt, 'bg-teal-600');
+                        setAccountsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Receipt className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>General Ledger</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleSwitchTab('reports', 'Reports & Analytics', BarChart3, 'bg-rose-600');
+                        setAccountsDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Trial Balance & Balance Sheet</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct NEW JOURNAL ENTRY button */}
+              <button
+                onClick={() => setJournalEntryModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer whitespace-nowrap"
+              >
+                New Journal Entry
+              </button>
+
+              {/* Direct DAY BOOK button */}
+              <button
+                onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
+                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
+                  activeTab === 'day_book'
+                    ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37]'
+                    : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-white'
+                }`}
+              >
+                Day Book
+              </button>
+
+              {/* Direct SCHEDULE SMS button */}
+              <button
+                onClick={() => setScheduleSmsModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer whitespace-nowrap"
+              >
+                Schedule SMS
+              </button>
+
+              {/* Direct DAILY COLLECTION button with NEW badge */}
+              <button
+                onClick={() => handleSwitchTab('daily_collection', 'Daily Collection', Coins, 'bg-emerald-600')}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
+                  activeTab === 'daily_collection'
+                    ? 'bg-emerald-600 text-white border-emerald-400'
+                    : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
+                }`}
+              >
+                <span>Daily Collection</span>
+                <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded">NEW</span>
+              </button>
             </div>
           </div>
 
@@ -1050,6 +1182,24 @@ export default function App() {
             <LoansAgainstDeposit />
           )}
 
+          {activeTab === 'day_book' && (
+            <DayBook 
+              onOpenJournalEntry={() => setJournalEntryModalOpen(true)} 
+            />
+          )}
+
+          {activeTab === 'daily_collection' && (
+            <DailyCollection />
+          )}
+
+          {activeTab === 'payments_to_collect' && (
+            <PaymentsToCollect />
+          )}
+
+          {activeTab === 'payments_to_release' && (
+            <PaymentsToRelease />
+          )}
+
           {activeTab === 'subscription' && (
             <Subscription />
           )}
@@ -1186,6 +1336,18 @@ export default function App() {
         onOpenRD={() => setNewRDModalOpen(true)}
         onOpenMIS={() => setNewMISModalOpen(true)}
         onOpenSavings={() => setNewSavingsModalOpen(true)}
+      />
+
+      {/* Hubco Parity Accounting & SMS Modals */}
+      <NewJournalEntryModal
+        isOpen={journalEntryModalOpen}
+        onClose={() => setJournalEntryModalOpen(false)}
+        onSuccess={() => {}}
+      />
+
+      <ScheduleSmsModal
+        isOpen={scheduleSmsModalOpen}
+        onClose={() => setScheduleSmsModalOpen(false)}
       />
 
     </div>

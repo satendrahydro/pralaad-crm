@@ -1,20 +1,28 @@
 import React from 'react';
-import tarplLogoImg from '../assets/tarpl_logo.jpg';
+import tarplLogoImg from '../assets/tarpl_logo.png';
+import tarplLogoTrans from '../assets/tarpl_logo_transparent.png';
 
 /**
- * TARPL ORGANIC FOODS — Official Brand Logo Component
- * Uses the exact client-provided original logo image:
- * Golden tree of hands & flourishing leaves on dark forest green.
+ * TARANG ANJALI REAL TECH PVT. LTD. (TARPL)
+ * Official Brand Logo Component
+ * Slogan: जीत आपके विश्वास की
  */
-export default function TarplLogo({ size = 38, variant = 'full', className = '', showSubtitle = true }) {
+export default function TarplLogo({ 
+  size = 40, 
+  variant = 'full', 
+  className = '', 
+  showSubtitle = true,
+  darkBg = false 
+}) {
+  // If darkBg is true or default full in dark sidebar, provide clean contrast
   if (variant === 'icon') {
     return (
-      <div className={`inline-flex items-center justify-center shrink-0 ${className}`}>
+      <div className={`inline-flex items-center justify-center shrink-0 bg-white rounded-lg p-1 shadow-sm border border-emerald-900/20 ${className}`}>
         <img 
           src={tarplLogoImg} 
           alt="TARPL Logo" 
-          className="rounded-xl object-cover shadow-sm ring-1 ring-[#D4AF37]/50"
-          style={{ width: size, height: size }}
+          className="object-contain"
+          style={{ width: size, height: Math.round(size * 0.56) }}
         />
       </div>
     );
@@ -22,37 +30,40 @@ export default function TarplLogo({ size = 38, variant = 'full', className = '',
 
   if (variant === 'badge' || variant === 'full-image') {
     return (
-      <div className={`inline-flex flex-col items-center ${className}`}>
+      <div className={`inline-flex flex-col items-center bg-white rounded-xl p-2.5 shadow-md border border-slate-200 ${className}`}>
         <img 
           src={tarplLogoImg} 
-          alt="TARPL ORGANIC FOODS" 
-          className="rounded-2xl shadow-lg ring-1 ring-[#D4AF37]/60 object-contain"
-          style={{ width: size, height: size }}
+          alt="Tarang Anjali Real Tech Pvt. Ltd." 
+          className="object-contain"
+          style={{ width: size * 1.77, height: size }}
         />
       </div>
     );
   }
 
+  // Full brand header: Clean crisp official logo badge + company branding text
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <img 
-        src={tarplLogoImg} 
-        alt="TARPL" 
-        className="rounded-xl object-cover shadow-sm ring-1 ring-[#D4AF37]/50 shrink-0"
-        style={{ width: size, height: size }}
-      />
+      <div className="bg-white rounded-lg px-1.5 py-1 shadow-sm border border-amber-300/40 shrink-0 flex items-center justify-center">
+        <img 
+          src={tarplLogoImg} 
+          alt="TARPL" 
+          className="object-contain"
+          style={{ height: Math.max(28, size), width: Math.round(Math.max(28, size) * 1.77) }}
+        />
+      </div>
       <div className="min-w-0 leading-tight">
         <div className="flex items-center gap-1.5">
-          <span className="font-black text-sm tracking-wider text-[#FBBF24] uppercase font-sans">
-            TARPL
+          <span className="font-extrabold text-sm tracking-wide text-amber-300 font-sans uppercase">
+            TARANGANJALI
           </span>
-          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#D4AF37]/20 text-[#FDE68A] border border-[#D4AF37]/40 tracking-wider">
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 border border-amber-400/40 tracking-wider">
             CRM
           </span>
         </div>
         {showSubtitle && (
-          <div className="text-[10px] font-semibold text-emerald-300/80 truncate uppercase tracking-tight">
-            ORGANIC FOODS • WEALTH
+          <div className="text-[10px] font-medium text-emerald-200/90 truncate tracking-tight">
+            Tarang Anjali Real Tech Pvt. Ltd.
           </div>
         )}
       </div>
