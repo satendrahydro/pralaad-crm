@@ -281,6 +281,18 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab(activeTab === 'roles' ? 'staff' : 'roles')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 transition cursor-pointer border ${
+              activeTab === 'roles'
+                ? 'bg-slate-900 text-amber-300 border-slate-950'
+                : 'bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-600'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 text-slate-950" />
+            {activeTab === 'roles' ? 'Back to Staff Accounts' : 'Hubco Roles & Permissions Matrix'}
+          </button>
+
           {activeTab === 'staff' ? (
             <button
               onClick={() => setShowAddStaffModal(true)}
@@ -289,7 +301,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
               <UserPlus className="w-4 h-4" />
               Add Staff Member
             </button>
-          ) : (
+          ) : activeTab === 'customers' ? (
             <button
               onClick={() => setShowCreateCustAppModal(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md text-xs flex items-center gap-2 transition cursor-pointer"
@@ -297,7 +309,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
               <Smartphone className="w-4 h-4" />
               Create Customer App Login
             </button>
-          )}
+          ) : null}
 
           <button
             onClick={fetchData}
@@ -388,14 +400,15 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
 
             <button
               onClick={() => setActiveTab('roles')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer font-bold ${
                 activeTab === 'roles'
-                  ? 'bg-white text-amber-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs ring-2 ring-amber-400'
+                  : 'bg-amber-100/90 text-amber-900 hover:bg-amber-200'
               }`}
             >
-              <ShieldCheck className="w-4 h-4 text-amber-600" />
+              <ShieldCheck className="w-4 h-4 text-amber-700" />
               Permissions / Roles (Hubco Matrix)
+              <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-600 text-white">Hubco</span>
             </button>
           </div>
 

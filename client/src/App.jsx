@@ -443,6 +443,14 @@ export default function App() {
       ]
     },
     {
+      title: 'USER MANAGEMENT (HUBCO)',
+      items: [
+        { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Hubco' },
+        { id: 'users', label: 'Staff & Mobile Users', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
+        { id: 'staff_permissions', label: 'Staff Guard Matrix', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' }
+      ]
+    },
+    {
       title: 'ACCOUNTING & FIELD OPS',
       items: [
         { id: 'day_book', label: 'Day Book (8 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Hubco' },
@@ -461,13 +469,6 @@ export default function App() {
       ]
     },
     {
-      title: 'INTELLIGENCE & COMMS',
-      items: [
-        { id: 'reports', label: 'Reports & Analytics', icon: BarChart3, color: 'bg-rose-600' },
-        { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, color: 'bg-emerald-600' }
-      ]
-    },
-    {
       title: 'AGENTS & ADVISORS',
       items: [
         { id: 'agent_ranks', label: 'Associate/ Advisor Ranks', icon: Award, color: 'bg-amber-600', badge: '6 Ranks' },
@@ -476,11 +477,10 @@ export default function App() {
       ]
     },
     {
-      title: 'GOVERNANCE & SECURITY',
+      title: 'INTELLIGENCE & SETTINGS',
       items: [
-        { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Hubco' },
-        { id: 'users', label: 'User Management', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
-        { id: 'staff_permissions', label: 'Staff Permissions (Matrix)', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' },
+        { id: 'reports', label: 'Reports & Analytics', icon: BarChart3, color: 'bg-rose-600' },
+        { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, color: 'bg-emerald-600' },
         { id: 'branches', label: 'Branch Management', icon: Building2, color: 'bg-slate-600' },
         { id: 'subscription', label: 'Subscription & APIs', icon: ShieldCheck, color: 'bg-indigo-600' },
         { id: 'settings', label: 'CRM Settings', icon: SettingsIcon, color: 'bg-slate-600' }
@@ -526,7 +526,7 @@ export default function App() {
           <div className="h-16 flex items-center justify-between px-4 border-b border-[#134e38]">
             <div 
               onClick={() => handleSwitchTab('dashboard', 'Executive Dashboard', LayoutDashboard, 'bg-emerald-700')}
-              className="flex items-center gap-3 cursor-pointer overflow-hidden"
+              className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
             >
               <TarplLogo variant={sidebarCollapsed ? 'icon' : 'full'} />
             </div>
