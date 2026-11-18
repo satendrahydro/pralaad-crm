@@ -52,6 +52,7 @@ function initDB() {
       app_access_enabled INTEGER DEFAULT 1,
       status TEXT DEFAULT 'ACTIVE',
       full_name TEXT NOT NULL,
+      father_name TEXT,
       phone TEXT NOT NULL,
       email TEXT,
       pan_card TEXT,
@@ -63,12 +64,21 @@ function initDB() {
       nominee_name TEXT,
       nominee_relation TEXT,
       is_senior_citizen INTEGER DEFAULT 0,
+      kyc_status TEXT DEFAULT 'Verified',
+      branch TEXT DEFAULT 'MAIN BRANCH',
+      group_name TEXT,
+      branch_id INTEGER,
       pin TEXT DEFAULT '1234',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
   // Safe migrations for columns in case table was created previously without them
+  try { db.exec("ALTER TABLE customers ADD COLUMN father_name TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN kyc_status TEXT DEFAULT 'Verified';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN branch TEXT DEFAULT 'MAIN BRANCH';"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN group_name TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE customers ADD COLUMN branch_id INTEGER;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN login_id TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN login_password TEXT DEFAULT 'client123';"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
@@ -87,6 +97,9 @@ function initDB() {
   try { db.exec("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN branch_id INTEGER;"); } catch(e){}
+  try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN branch_id INTEGER;"); } catch(e){}
+  try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN scheme_id INTEGER;"); } catch(e){}
 
   // 3. Fixed Deposits table
   db.exec(`
