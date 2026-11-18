@@ -157,6 +157,202 @@ function initDB() {
     );
   `);
 
+  // 8. Branches Master
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS branches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      branch_code TEXT UNIQUE NOT NULL,
+      branch_name TEXT NOT NULL,
+      address TEXT,
+      city TEXT DEFAULT 'Bijnor',
+      state TEXT DEFAULT 'Uttar Pradesh',
+      pincode TEXT DEFAULT '246701',
+      contact_phone TEXT,
+      contact_email TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // 9. Deposit Schemes Master
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS fd_schemes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scheme_code TEXT UNIQUE NOT NULL,
+      scheme_name TEXT NOT NULL,
+      min_amount REAL NOT NULL,
+      max_amount REAL NOT NULL,
+      min_tenure_months INTEGER NOT NULL,
+      max_tenure_months INTEGER NOT NULL,
+      interest_rate REAL NOT NULL,
+      senior_citizen_bonus REAL DEFAULT 0.50,
+      compounding_frequency TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // 10. Recurring Deposits (RD) Master & Installments
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS recurring_deposits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rd_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      branch_id INTEGER,
+      monthly_installment REAL NOT NULL,
+      annual_rate REAL NOT NULL,
+      tenure_months INTEGER NOT NULL,
+      start_date DATE NOT NULL,
+      maturity_date DATE NOT NULL,
+      total_principal REAL NOT NULL,
+      total_interest REAL NOT NULL,
+      maturity_amount REAL NOT NULL,
+      installments_paid INTEGER DEFAULT 0,
+      amount_deposited REAL DEFAULT 0,
+      late_fee_per_hundred REAL DEFAULT 1.50,
+      total_late_fees REAL DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE',
+      premature_penalty_rate REAL DEFAULT 1.00,
+      premature_closed_date DATE,
+      remarks TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id),
+      FOREIGN KEY (branch_id) REFERENCES branches(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS rd_installments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rd_id INTEGER NOT NULL,
+      installment_no INTEGER NOT NULL,
+      due_date DATE NOT NULL,
+      installment_amount REAL NOT NULL,
+      status TEXT DEFAULT 'PENDING',
+      paid_date DATE,
+      late_fee REAL DEFAULT 0,
+      total_collected REAL DEFAULT 0,
+      payment_mode TEXT,
+      transaction_ref TEXT,
+      collector_user_id INTEGER,
+      FOREIGN KEY (rd_id) REFERENCES recurring_deposits(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 11. Monthly Income Scheme (MIS) Master & Payout Schedules
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mis_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mis_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      branch_id INTEGER,
+      deposit_amount REAL NOT NULL,
+      annual_rate REAL NOT NULL,
+      tenure_months INTEGER NOT NULL,
+      monthly_payout REAL NOT NULL,
+      total_payout_amount REAL NOT NULL,
+      start_date DATE NOT NULL,
+      maturity_date DATE NOT NULL,
+      payout_account_no TEXT,
+      payout_bank_ifsc TEXT,
+      status TEXT DEFAULT 'ACTIVE',
+      premature_penalty_rate REAL DEFAULT 2.00,
+      closed_date DATE,
+      remarks TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id),
+      FOREIGN KEY (branch_id) REFERENCES branches(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS mis_payout_schedules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mis_id INTEGER NOT NULL,
+      month_no INTEGER NOT NULL,
+      payout_date DATE NOT NULL,
+      payout_amount REAL NOT NULL,
+      tds_deducted REAL DEFAULT 0,
+      net_payable REAL NOT NULL,
+      status TEXT DEFAULT 'PENDING',
+      paid_date DATE,
+      payment_reference TEXT,
+      FOREIGN KEY (mis_id) REFERENCES mis_accounts(id) ON DELETE CASCADE
+    );
+  `);
+
+  // 12. Savings Accounts Master & Passbook Transactions
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS savings_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      branch_id INTEGER,
+      current_balance REAL DEFAULT 0.00,
+      minimum_balance REAL DEFAULT 1000.00,
+      annual_interest_rate REAL DEFAULT 4.00,
+      status TEXT DEFAULT 'ACTIVE',
+      opened_date DATE NOT NULL,
+      last_interest_credit_date DATE,
+      nominee_name TEXT,
+      nominee_relation TEXT,
+      closed_date DATE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id),
+      FOREIGN KEY (branch_id) REFERENCES branches(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS savings_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL,
+      transaction_number TEXT UNIQUE NOT NULL,
+      transaction_type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      balance_after REAL NOT NULL,
+      payment_mode TEXT NOT NULL,
+      reference_number TEXT,
+      narration TEXT NOT NULL,
+      performed_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (account_id) REFERENCES savings_accounts(id)
+    );
+  `);
+
+  // 13. Maker-Checker Approvals Queue & Transactions Ledger
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS approval_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_number TEXT UNIQUE NOT NULL,
+      request_type TEXT NOT NULL,
+      maker_id INTEGER NOT NULL,
+      customer_id INTEGER,
+      fd_id INTEGER,
+      proposed_amount REAL,
+      request_data TEXT,
+      status TEXT DEFAULT 'PENDING_APPROVAL',
+      checker_id INTEGER,
+      decision_notes TEXT,
+      actioned_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      voucher_number TEXT UNIQUE NOT NULL,
+      voucher_date DATE NOT NULL,
+      voucher_type TEXT NOT NULL,
+      total_amount REAL NOT NULL,
+      narration TEXT,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS transaction_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id INTEGER NOT NULL,
+      account_type TEXT NOT NULL,
+      entry_type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      narration TEXT
+    );
+  `);
+
   // Seed default admin user if not exists
   const userCount = db.prepare('SELECT count(*) as count FROM users').get();
   if (userCount.count === 0) {
@@ -230,6 +426,14 @@ function initDB() {
     db.exec("UPDATE customers SET app_access_enabled = 1 WHERE app_access_enabled IS NULL;");
     db.exec("UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL;");
   } catch(e){}
+
+  // Ensure rich 5-client functional demo data if tables are empty
+  try {
+    const { seedDemoIfEmpty } = require('./seedDemoData');
+    seedDemoIfEmpty(db);
+  } catch (e) {
+    console.error('Auto-seed check error:', e.message);
+  }
 }
 
 initDB();
