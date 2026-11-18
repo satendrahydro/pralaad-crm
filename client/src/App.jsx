@@ -5,6 +5,7 @@ import {
   Calculator, 
   FolderLock, 
   Users, 
+  Award,
   CalendarDays, 
   CreditCard, 
   Settings as SettingsIcon, 
@@ -71,6 +72,8 @@ import FDCreatioDetailView from './components/FDCreatioDetailView';
 import RDList from './components/RDList';
 import MISList from './components/MISList';
 import SavingsList from './components/SavingsList';
+import AgentRanks from './components/AgentRanks';
+import AgentsList from './components/AgentsList';
 import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModal';
 import NewRDModal from './components/NewRDModal';
 import NewMISModal from './components/NewMISModal';
@@ -392,6 +395,13 @@ export default function App() {
         { id: 'calculator', label: 'Deposit Calculator', icon: Calculator, color: 'bg-indigo-500' },
         { id: 'maturity', label: 'Maturity Calendar', icon: CalendarDays, color: 'bg-sky-600' }
       ]
+    },
+    {
+      title: 'AGENTS & ADVISORS',
+      items: [
+        { id: 'agent_ranks', label: 'Associate/ Advisor Ranks', icon: Award, color: 'bg-amber-600' },
+        { id: 'agents_list', label: 'Associates / Advisors', icon: Users, color: 'bg-teal-600' }
+      ]
     }
   ] : [
     {
@@ -421,6 +431,13 @@ export default function App() {
       items: [
         { id: 'reports', label: 'Reports & Analytics', icon: BarChart3, color: 'bg-rose-600' },
         { id: 'whatsapp', label: 'WhatsApp Alerts', icon: MessageSquare, color: 'bg-emerald-600' }
+      ]
+    },
+    {
+      title: 'AGENTS & ADVISORS',
+      items: [
+        { id: 'agent_ranks', label: 'Associate/ Advisor Ranks', icon: Award, color: 'bg-amber-600', badge: '6 Ranks' },
+        { id: 'agents_list', label: 'Associates / Advisors', icon: Users, color: 'bg-teal-600', badge: '16 Active' }
       ]
     },
     {
@@ -1005,6 +1022,18 @@ export default function App() {
 
           {activeTab === 'branches' && (
             <BranchManagement />
+          )}
+
+          {activeTab === 'agent_ranks' && (
+            <AgentRanks 
+              onOpenAgentsDirectory={() => handleSwitchTab('agents_list', 'Associates / Advisors', Users, 'bg-teal-600')} 
+            />
+          )}
+
+          {activeTab === 'agents_list' && (
+            <AgentsList 
+              onBackToRanks={() => handleSwitchTab('agent_ranks', 'Associate/ Advisor Ranks', Award, 'bg-amber-600')} 
+            />
           )}
 
           {activeTab === 'subscription' && (

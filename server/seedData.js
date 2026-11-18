@@ -13,6 +13,7 @@ function seedComplete5ClientData(db) {
       'mis_payout_schedules', 'mis_accounts',
       'fd_schedules', 'fixed_deposits',
       'approval_requests', 'transaction_entries', 'transactions',
+      'agents', 'agent_ranks',
       'customers', 'branches', 'fd_schemes'
     ];
     for (const t of tables) {
@@ -390,6 +391,53 @@ function seedComplete5ClientData(db) {
         UPDATE users SET password_hash = ?, failed_attempts = 0 WHERE username = 'admin'
       `).run(hash);
     }
+
+    // 11. Official Associate / Advisor Ranks (Matching Taranganjali Hierarchy)
+    const insertRank = db.prepare(`
+      INSERT INTO agent_ranks (
+        id, name, display_position, rank_position, collection_charge_commission, 
+        commission_percentage, associates_count, min_target, description, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+    `);
+
+    const officialRanks = [
+      [1, 'Branch manager', 1, 1, 1, 12.0, 0, 5000000.0, 'Senior Branch Management & Oversight'],
+      [2, 'assistant branch manager', 2, 2, 1, 10.0, 0, 3500000.0, 'Operational & Agency Support Supervision'],
+      [3, 'Executive sales manager', 3, 3, 1, 8.5, 0, 2500000.0, 'Regional Business Development & Team Target'],
+      [4, 'Sr. sales manager', 4, 4, 1, 7.0, 0, 1500000.0, 'Cluster Advisor Mobilization & Training'],
+      [5, 'Sales manager', 5, 5, 1, 6.0, 0, 1000000.0, 'Direct Field Advisory Support & Verification'],
+      [6, 'ADVISOR', 6, 6, 1, 5.0, 16, 200000.0, 'Primary Field Associate / Deposit Mobilization Specialist']
+    ];
+    for (const r of officialRanks) insertRank.run(...r);
+
+    // 12. 16 Official Field Associates / Advisors (Linked to ADVISOR Rank)
+    const insertAgent = db.prepare(`
+      INSERT INTO agents (
+        id, agent_code, full_name, phone, email, branch_id, branch_name, rank_id, rank_name,
+        collection_charge_enabled, commission_rate, total_business_collected, total_commission_paid,
+        status, joining_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+    `);
+
+    const advisors = [
+      [1, 'ADV0001', 'Rajesh Kumar Tyagi', '9837554411', 'rajesh.adv@taranganjali.com', 1, 'MAIN BRANCH', 6, 'ADVISOR', 1, 5.0, 1250000.0, 62500.0, '2021-04-10'],
+      [2, 'ADV0002', 'Sanjeev Sharma', '9837554422', 'sanjeev.adv@taranganjali.com', 1, 'MAIN BRANCH', 6, 'ADVISOR', 1, 5.0, 980000.0, 49000.0, '2021-06-15'],
+      [3, 'ADV0003', 'Ramesh Chand Verma', '9837554433', 'ramesh.adv@taranganjali.com', 2, 'TARPL SAVING', 6, 'ADVISOR', 1, 5.0, 1420000.0, 71000.0, '2020-09-01'],
+      [4, 'ADV0004', 'Dharmveer Singh', '9837554444', 'dharmveer.adv@taranganjali.com', 2, 'TARPL SAVING', 6, 'ADVISOR', 1, 5.0, 850000.0, 42500.0, '2022-01-12'],
+      [5, 'ADV0005', 'Arvind Tyagi', '9837554455', 'arvind.adv@taranganjali.com', 3, 'SHEKHUPURA BRANCH', 6, 'ADVISOR', 1, 5.0, 1130000.0, 56500.0, '2021-11-20'],
+      [6, 'ADV0006', 'Manoj Kumar', '9837554466', 'manoj.adv@taranganjali.com', 3, 'SHEKHUPURA BRANCH', 6, 'ADVISOR', 1, 5.0, 790000.0, 39500.0, '2022-05-18'],
+      [7, 'ADV0007', 'Virendra Pal', '9837554477', 'virendra.adv@taranganjali.com', 4, 'TARPL0002', 6, 'ADVISOR', 1, 5.0, 1560000.0, 78000.0, '2020-03-14'],
+      [8, 'ADV0008', 'Satpal Singh Chauhan', '9837554488', 'satpal.adv@taranganjali.com', 4, 'TARPL0002', 6, 'ADVISOR', 1, 5.0, 640000.0, 32000.0, '2022-08-22'],
+      [9, 'ADV0009', 'Amit Chauhan', '9837554499', 'amit.adv@taranganjali.com', 1, 'MAIN BRANCH', 6, 'ADVISOR', 1, 5.0, 1020000.0, 51000.0, '2021-08-05'],
+      [10, 'ADV0010', 'Deepak Sharma', '9837554410', 'deepak.adv@taranganjali.com', 2, 'TARPL SAVING', 6, 'ADVISOR', 1, 5.0, 1340000.0, 67000.0, '2021-02-19'],
+      [11, 'ADV0011', 'Kapil Dev', '9837554412', 'kapil.adv@taranganjali.com', 3, 'SHEKHUPURA BRANCH', 6, 'ADVISOR', 1, 5.0, 890000.0, 44500.0, '2022-03-10'],
+      [12, 'ADV0012', 'Naresh Pal', '9837554413', 'naresh.adv@taranganjali.com', 4, 'TARPL0002', 6, 'ADVISOR', 1, 5.0, 1180000.0, 59000.0, '2021-07-27'],
+      [13, 'ADV0013', 'Suresh Verma', '9837554414', 'suresh.adv@taranganjali.com', 1, 'MAIN BRANCH', 6, 'ADVISOR', 1, 5.0, 750000.0, 37500.0, '2022-10-01'],
+      [14, 'ADV0014', 'Pramod Kumar', '9837554415', 'pramod.adv@taranganjali.com', 2, 'TARPL SAVING', 6, 'ADVISOR', 1, 5.0, 910000.0, 45500.0, '2022-02-14'],
+      [15, 'ADV0015', 'Harish Singh', '9837554416', 'harish.adv@taranganjali.com', 3, 'SHEKHUPURA BRANCH', 6, 'ADVISOR', 1, 5.0, 1200000.0, 60000.0, '2021-05-30'],
+      [16, 'ADV0016', 'Ravindra Kumar', '9837554417', 'ravindra.adv@taranganjali.com', 4, 'TARPL0002', 6, 'ADVISOR', 1, 5.0, 1050000.0, 52500.0, '2021-12-08']
+    ];
+    for (const a of advisors) insertAgent.run(...a);
   });
 
   runTx();

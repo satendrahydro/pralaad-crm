@@ -384,6 +384,42 @@ function initDB() {
       amount REAL NOT NULL,
       narration TEXT
     );
+
+    -- 14. Associate / Advisor Network & Hierarchy Ranks
+    CREATE TABLE IF NOT EXISTS agent_ranks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      display_position INTEGER NOT NULL,
+      rank_position INTEGER NOT NULL,
+      collection_charge_commission INTEGER DEFAULT 1,
+      commission_percentage REAL DEFAULT 5.0,
+      associates_count INTEGER DEFAULT 0,
+      min_target REAL DEFAULT 0,
+      description TEXT,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS agents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_code TEXT UNIQUE NOT NULL,
+      full_name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      branch_id INTEGER,
+      branch_name TEXT,
+      rank_id INTEGER REFERENCES agent_ranks(id),
+      rank_name TEXT,
+      reporting_to_agent_id INTEGER,
+      collection_charge_enabled INTEGER DEFAULT 1,
+      commission_rate REAL DEFAULT 5.0,
+      total_business_collected REAL DEFAULT 0,
+      total_commission_paid REAL DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE',
+      joining_date DATE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Seed default admin user if not exists
@@ -460,12 +496,14 @@ function initDB() {
     db.exec("UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL;");
   } catch(e){}
 
-  // Ensure rich 5-client functional demo data if tables are empty
+  // Ensure rich 5-client functional demo data & Agent Network if tables are empty
   try {
     const custCount = db.prepare('SELECT count(*) as count FROM customers').get();
     let misCount = { count: 0 };
     try { misCount = db.prepare('SELECT count(*) as count FROM mis_accounts').get(); } catch(e){}
-    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0) {
+    let rankCount = { count: 0 };
+    try { rankCount = db.prepare('SELECT count(*) as count FROM agent_ranks').get(); } catch(e){}
+    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0) {
       const { seedComplete5ClientData } = require('./seedData');
       seedComplete5ClientData(db);
     }

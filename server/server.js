@@ -20,6 +20,7 @@ const misRoutes = require('./routes/mis');
 const savingsRoutes = require('./routes/savings');
 const userRoutes = require('./routes/users');
 const permissionsRoutes = require('./routes/permissions');
+const agentRanksRoutes = require('./routes/agentRanks');
 const { router: licenseRoutes, getLockState } = require('./routes/license');
 
 const app = express();
@@ -60,6 +61,8 @@ app.use('/api/customer-portal', customerPortalRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/permissions', permissionsRoutes);
+app.use('/api/agent-ranks', agentRanksRoutes);
+app.use('/api/agents', agentRanksRoutes);
 
 // Health check / API status endpoint
 app.get('/api/health', (req, res) => {
