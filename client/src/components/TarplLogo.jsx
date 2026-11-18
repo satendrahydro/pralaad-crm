@@ -14,15 +14,14 @@ export default function TarplLogo({
   showSubtitle = true,
   darkBg = false 
 }) {
-  // If darkBg is true or default full in dark sidebar, provide clean contrast
   if (variant === 'icon') {
     return (
-      <div className={`inline-flex items-center justify-center shrink-0 bg-white rounded-lg p-1 shadow-sm border border-emerald-900/20 ${className}`}>
+      <div className={`inline-flex items-center justify-center shrink-0 bg-white rounded-lg p-1 shadow-xs border border-slate-200 ${className}`}>
         <img 
           src={tarplLogoImg} 
-          alt="TARPL Logo" 
+          alt="TARPL" 
           className="object-contain"
-          style={{ width: size, height: Math.round(size * 0.56) }}
+          style={{ width: size, height: Math.round(size / 1.69) }}
         />
       </div>
     );
@@ -30,26 +29,26 @@ export default function TarplLogo({
 
   if (variant === 'badge' || variant === 'full-image') {
     return (
-      <div className={`inline-flex flex-col items-center bg-white rounded-xl p-2.5 shadow-md border border-slate-200 ${className}`}>
+      <div className={`inline-flex flex-col items-center bg-white rounded-2xl p-3 shadow-md border border-slate-200/80 ${className}`}>
         <img 
           src={tarplLogoImg} 
-          alt="Tarang Anjali Real Tech Pvt. Ltd." 
+          alt="Tarang Anjali Real Tech Pvt. Ltd. - जीत आपके विश्वास की" 
           className="object-contain"
-          style={{ width: size * 1.77, height: size }}
+          style={{ width: Math.round(size * 1.69), height: size }}
         />
       </div>
     );
   }
 
-  // Full brand header: Clean crisp official logo badge + company branding text
+  // Full brand header in Sidebar & Navigation
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <div className="bg-white rounded-lg px-1.5 py-1 shadow-sm border border-amber-300/40 shrink-0 flex items-center justify-center">
+      <div className="bg-white rounded-xl p-1 shadow-sm border border-amber-300/50 shrink-0 flex items-center justify-center">
         <img 
           src={tarplLogoImg} 
           alt="TARPL" 
           className="object-contain"
-          style={{ height: Math.max(28, size), width: Math.round(Math.max(28, size) * 1.77) }}
+          style={{ height: Math.max(32, size), width: Math.round(Math.max(32, size) * 1.69) }}
         />
       </div>
       <div className="min-w-0 leading-tight">
@@ -63,7 +62,7 @@ export default function TarplLogo({
         </div>
         {showSubtitle && (
           <div className="text-[10px] font-medium text-emerald-200/90 truncate tracking-tight">
-            Tarang Anjali Real Tech Pvt. Ltd.
+            जीत आपके विश्वास की
           </div>
         )}
       </div>
