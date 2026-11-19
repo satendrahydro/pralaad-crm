@@ -27,7 +27,9 @@ import {
   ArrowRight,
   ChevronRight,
   Filter,
-  DollarSign
+  DollarSign,
+  Wallet,
+  Coins
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
@@ -35,6 +37,7 @@ export default function Customers({
   onSelectCustomerForFD, 
   onSelectCustomerForRD,
   onSelectCustomerForMIS,
+  onSelectCustomerForSavings,
   onViewPortfolio 
 }) {
   const [customers, setCustomers] = useState([]);
@@ -70,6 +73,15 @@ export default function Customers({
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // Simultaneous Account Opening Options during Customer Registration
+  const [openSavingsWithCust, setOpenSavingsWithCust] = useState(false);
+  const [savingsDeposit, setSavingsDeposit] = useState(1000);
+  const [openFDWithCust, setOpenFDWithCust] = useState(false);
+  const [fdPrincipal, setFdPrincipal] = useState(50000);
+  const [fdTenureMonths, setFdTenureMonths] = useState(12);
+  const [fdInterestRate, setFdInterestRate] = useState(9.5);
+  const [fdCompounding, setFdCompounding] = useState('quarterly');
 
   // Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -233,8 +245,60 @@ export default function Customers({
         body: JSON.stringify(formData)
       });
 
-      if (res.success) {
+      if (res.success && res.customer) {
+        const newCustId = res.customer.id;
+        let createdNotices = [];
+
+        // 1. If Savings Account requested simultaneously
+        if (openSavingsWithCust) {
+          try {
+            const sbRes = await apiRequest('/savings', {
+              method: 'POST',
+              body: JSON.stringify({
+                customer_id: newCustId,
+                opening_balance: Number(savingsDeposit) || 1000,
+                minimum_balance: 1000,
+                annual_interest_rate: 4.0,
+                nominee_name: formData.nominee_name,
+                nominee_relation: formData.nominee_relation,
+                remarks: 'Opened simultaneously with Member KYC registration'
+              })
+            });
+            if (sbRes.success) createdNotices.push('बचत खाता (Savings Account)');
+          } catch(e) {
+            console.error('Failed to auto-open savings:', e);
+          }
+        }
+
+        // 2. If Fixed Deposit requested simultaneously
+        if (openFDWithCust) {
+          try {
+            const effectiveRate = Number(fdInterestRate) || (formData.is_senior_citizen ? 10.0 : 9.5);
+            const fdRes = await apiRequest('/fds', {
+              method: 'POST',
+              body: JSON.stringify({
+                customer_id: newCustId,
+                principal_amount: Number(fdPrincipal) || 50000,
+                annual_rate: effectiveRate,
+                tenure_months: Number(fdTenureMonths) || 12,
+                compounding_frequency: fdCompounding || 'quarterly',
+                start_date: new Date().toISOString().split('T')[0],
+                remarks: 'Booked simultaneously with Member KYC registration'
+              })
+            });
+            if (fdRes.success) createdNotices.push('फिक्स्ड डिपॉजिट (FD)');
+          } catch(e) {
+            console.error('Failed to auto-book FD:', e);
+          }
+        }
+
+        if (createdNotices.length > 0) {
+          alert(`सदस्य सफलतापूर्वक पंजीकृत हो गया है एवं ${createdNotices.join(' तथा ')} खाता तुरंत चालू कर दिया गया है!`);
+        }
+
         setModalOpen(false);
+        setOpenSavingsWithCust(false);
+        setOpenFDWithCust(false);
         setFormData({
           full_name: '',
           father_name: '',
@@ -512,9 +576,18 @@ export default function Customers({
                           <button
                             onClick={() => onSelectCustomerForFD && onSelectCustomerForFD(c.id)}
                             className="px-2 py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
-                            title="Book New Fixed Deposit"
+                            title="Book New Fixed Deposit (FD)"
                           >
                             + FD
+                          </button>
+
+                          {/* [+ SB / Savings] */}
+                          <button
+                            onClick={() => onSelectCustomerForSavings && onSelectCustomerForSavings(c.id)}
+                            className="px-2 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded text-[11px] font-bold transition cursor-pointer whitespace-nowrap"
+                            title="Open New Savings Account (बचत खाता खोलें)"
+                          >
+                            + SB (Savings)
                           </button>
 
                           {/* [+ RD] */}
@@ -702,12 +775,18 @@ export default function Customers({
                     <span className="font-black text-emerald-700 text-sm">{formatINR(c.total_active_investment || 0)}</span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-5 gap-1.5">
                     <button
                       onClick={() => onSelectCustomerForFD && onSelectCustomerForFD(c.id)}
                       className="py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
                     >
                       + FD
+                    </button>
+                    <button
+                      onClick={() => onSelectCustomerForSavings && onSelectCustomerForSavings(c.id)}
+                      className="py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
+                    >
+                      + SB
                     </button>
                     <button
                       onClick={() => onSelectCustomerForRD && onSelectCustomerForRD(c.id)}
@@ -1180,6 +1259,154 @@ export default function Customers({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
                     placeholder="e.g. Spouse / Son / Daughter"
                   />
+                </div>
+              </div>
+
+              {/* Simultaneous Account Opening (FD & Savings Account Options) */}
+              <div className="p-4 bg-gradient-to-br from-emerald-50/80 to-teal-50/80 border-2 border-emerald-300/80 rounded-2xl space-y-3.5 shadow-xs">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-emerald-600 text-white rounded-lg shadow-xs">
+                      <Coins className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-950">
+                        खाता चयन (Open Accounts Simultaneously)
+                      </h4>
+                      <p className="text-[11px] text-emerald-700">
+                        सदस्य पंजीकरण के साथ ही बचत खाता (Savings) व FD एक साथ चालू करें
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200/60 text-emerald-800">
+                    Optional
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Option 1: Savings Account */}
+                  <div className={`p-3.5 rounded-xl border-2 transition-all ${
+                    openSavingsWithCust 
+                      ? 'bg-white border-emerald-500 shadow-sm ring-1 ring-emerald-400' 
+                      : 'bg-white/70 border-slate-200 hover:border-emerald-300'
+                  }`}>
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={openSavingsWithCust}
+                        onChange={(e) => setOpenSavingsWithCust(e.target.checked)}
+                        className="w-4 h-4 accent-emerald-600 rounded mt-0.5 cursor-pointer"
+                      />
+                      <div className="flex-1 text-xs">
+                        <div className="font-black text-slate-900 flex items-center gap-1.5">
+                          <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>1. बचत खाता (Savings A/C)</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          न्यूनतम बैलेंस ₹1,000 • 4% वार्षिक ब्याज
+                        </p>
+                      </div>
+                    </label>
+
+                    {openSavingsWithCust && (
+                      <div className="mt-3 pt-2.5 border-t border-emerald-100 space-y-1 animate-fadeIn">
+                        <label className="block text-[10px] font-bold text-slate-700">
+                          प्रारंभिक जमा राशि (Initial Deposit ₹):
+                        </label>
+                        <input
+                          type="number"
+                          value={savingsDeposit}
+                          onChange={(e) => setSavingsDeposit(e.target.value)}
+                          min="500"
+                          step="100"
+                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-emerald-500"
+                          placeholder="e.g. 5000"
+                        />
+                        <span className="text-[9px] text-slate-400 block">पासबुक व चेक सुविधा तुरंत सक्रिय</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Option 2: Fixed Deposit (FD) */}
+                  <div className={`p-3.5 rounded-xl border-2 transition-all ${
+                    openFDWithCust 
+                      ? 'bg-white border-indigo-500 shadow-sm ring-1 ring-indigo-400' 
+                      : 'bg-white/70 border-slate-200 hover:border-indigo-300'
+                  }`}>
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={openFDWithCust}
+                        onChange={(e) => {
+                          const willOpen = e.target.checked;
+                          setOpenFDWithCust(willOpen);
+                          if (willOpen && formData.is_senior_citizen) {
+                            setFdInterestRate(10.0);
+                          } else if (willOpen) {
+                            setFdInterestRate(9.5);
+                          }
+                        }}
+                        className="w-4 h-4 accent-indigo-600 rounded mt-0.5 cursor-pointer"
+                      />
+                      <div className="flex-1 text-xs">
+                        <div className="font-black text-slate-900 flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>2. फिक्स्ड डिपॉजिट (FD)</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          FD सर्टिफिकेट व मैच्योरिटी बॉन्ड
+                        </p>
+                      </div>
+                    </label>
+
+                    {openFDWithCust && (
+                      <div className="mt-3 pt-2.5 border-t border-indigo-100 space-y-2 animate-fadeIn">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
+                            FD मूलधन राशि (Principal Amount ₹):
+                          </label>
+                          <input
+                            type="number"
+                            value={fdPrincipal}
+                            onChange={(e) => setFdPrincipal(e.target.value)}
+                            min="1000"
+                            step="1000"
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
+                            placeholder="e.g. 50000"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
+                              अवधि (Months):
+                            </label>
+                            <input
+                              type="number"
+                              value={fdTenureMonths}
+                              onChange={(e) => setFdTenureMonths(e.target.value)}
+                              min="1"
+                              max="120"
+                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                              placeholder="12"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
+                              ब्याज दर (% Annual):
+                            </label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={fdInterestRate}
+                              onChange={(e) => setFdInterestRate(e.target.value)}
+                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-indigo-700"
+                              placeholder="9.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

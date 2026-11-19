@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Wallet, ShieldCheck, UserPlus } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
 
-export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee = false }) {
+export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee = false, initialCustomerId = null }) {
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -32,8 +32,11 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
   useEffect(() => {
     if (isOpen) {
       loadCustomers();
+      if (initialCustomerId) {
+        setCustomerId(String(initialCustomerId));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialCustomerId]);
 
   const handleQuickAddSubmit = async (e) => {
     e.preventDefault();

@@ -215,6 +215,7 @@ export default function App() {
   const [newRDModalOpen, setNewRDModalOpen] = useState(false);
   const [newMISModalOpen, setNewMISModalOpen] = useState(false);
   const [newSavingsModalOpen, setNewSavingsModalOpen] = useState(false);
+  const [savingsCustomerId, setSavingsCustomerId] = useState(null);
   const [customerPortfolioModalOpen, setCustomerPortfolioModalOpen] = useState(false);
   const [portfolioCustomerId, setPortfolioCustomerId] = useState(null);
 
@@ -1157,6 +1158,10 @@ export default function App() {
                 setNewFDInitialData({ customer_id: cid });
                 setNewFDModalOpen(true);
               }}
+              onSelectCustomerForSavings={(cid) => {
+                setSavingsCustomerId(cid);
+                setNewSavingsModalOpen(true);
+              }}
               onSelectCustomerForRD={(cid) => {
                 setNewRDModalOpen(true);
               }}
@@ -1401,12 +1406,17 @@ export default function App() {
 
       <NewSavingsModal
         isOpen={newSavingsModalOpen}
-        onClose={() => setNewSavingsModalOpen(false)}
+        onClose={() => {
+          setNewSavingsModalOpen(false);
+          setSavingsCustomerId(null);
+        }}
         onSuccess={() => {
           setNewSavingsModalOpen(false);
+          setSavingsCustomerId(null);
           setActiveTab('savings');
         }}
         isEmployee={isEmployee}
+        initialCustomerId={savingsCustomerId}
       />
 
       <UnifiedCustomerProfileModal
