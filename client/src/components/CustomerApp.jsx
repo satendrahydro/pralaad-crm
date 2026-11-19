@@ -24,7 +24,12 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
-  ChevronDown
+  ChevronDown,
+  QrCode,
+  ArrowDownLeft,
+  Send,
+  Edit3,
+  Download
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest, getApiBase, getDefaultServerUrl } from '../utils';
 import TarplLogo from './TarplLogo';
@@ -130,6 +135,24 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
   const [profileNominee, setProfileNominee] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // In-App Payments State (UPI / QR / Bank)
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [payPurpose, setPayPurpose] = useState('RD_INSTALLMENT');
+  const [payAmount, setPayAmount] = useState(1000);
+  const [payMode, setPayMode] = useState('UPI');
+  const [payUtr, setPayUtr] = useState('');
+  const [payProcessing, setPayProcessing] = useState(false);
+  const [paymentReceipt, setPaymentReceipt] = useState(null);
+
+  // Profile Correction Request State (Super Admin Approval)
+  const [correctionField, setCorrectionField] = useState('full_name');
+  const [correctionNewVal, setCorrectionNewVal] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionSubmitting, setCorrectionSubmitting] = useState(false);
+  const [correctionSuccess, setCorrectionSuccess] = useState('');
+  const [correctionError, setCorrectionError] = useState('');
+  const [correctionRequestsList, setCorrectionRequestsList] = useState([]);
+
   const fetchPortfolio = async () => {
     if (!customerToken) return;
     try {
@@ -158,6 +181,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
 
   useEffect(() => {
     fetchPortfolio();
+    fetchCorrectionRequests();
   }, [customerToken]);
 
   // Live calculator calculation
@@ -516,6 +540,104 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
     }
   };
 
+  // 1. Mobile In-App Payment (UPI / QR / Net Banking)
+  const handleMakePayment = async (e) => {
+    e.preventDefault();
+    if (!payAmount || Number(payAmount) <= 0) {
+      alert('कृपया वैध भुगतान राशि दर्ज करें');
+      return;
+    }
+    setPayProcessing(true);
+    try {
+      const res = await fetch(`${getApiBase()}/customer-portal/make-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${customerToken}`
+        },
+        body: JSON.stringify({
+          customer_id: portfolioData?.customer?.id,
+          purpose: payPurpose,
+          amount: Number(payAmount),
+          payment_mode: payMode,
+          utr_reference: payUtr || `UPI-APP-${Date.now().toString().slice(-6)}`,
+          notes: `Customer Mobile App Payment for ${payPurpose}`
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      setPaymentReceipt(data.receipt);
+      setPayUtr('');
+      fetchPortfolio();
+    } catch(err) {
+      alert(err.message);
+    } finally {
+      setPayProcessing(false);
+    }
+  };
+
+  // 2. Profile & Name Correction Request (Sent to Super Admin Checker)
+  const handleSubmitCorrection = async (e) => {
+    e.preventDefault();
+    if (!correctionNewVal.trim()) {
+      alert('कृपया नया सही विवरण दर्ज करें');
+      return;
+    }
+    setCorrectionSubmitting(true);
+    setCorrectionError('');
+    setCorrectionSuccess('');
+    try {
+      const fieldLabels = {
+        full_name: 'Customer Full Name (नाम में सुधार)',
+        phone: 'Mobile Phone Number (मोबाइल नंबर)',
+        father_name: 'Father / Husband Name (पिता/पति का नाम)',
+        nominee_name: 'Nominee Name (नॉमिनी का नाम)',
+        nominee_relation: 'Nominee Relation (नॉमिनी से संबंध)',
+        account_no: 'Bank Account Number (बैंक खाता संख्या)',
+        ifsc_code: 'Bank IFSC Code (बैंक IFSC कोड)',
+        address: 'Permanent Address (स्थाई पता)'
+      };
+
+      const res = await fetch(`${getApiBase()}/customer-portal/correction-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${customerToken}`
+        },
+        body: JSON.stringify({
+          customer_id: portfolioData?.customer?.id || customer?.id,
+          field: correctionField,
+          field_label: fieldLabels[correctionField] || correctionField,
+          new_value: correctionNewVal.trim(),
+          reason: correctionReason.trim()
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      setCorrectionSuccess(data.message);
+      setCorrectionNewVal('');
+      setCorrectionReason('');
+      fetchCorrectionRequests();
+    } catch(err) {
+      setCorrectionError(err.message);
+    } finally {
+      setCorrectionSubmitting(false);
+    }
+  };
+
+  const fetchCorrectionRequests = async () => {
+    if (!customerToken) return;
+    try {
+      const res = await fetch(`${getApiBase()}/customer-portal/correction-requests`, {
+        headers: { 'Authorization': `Bearer ${customerToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCorrectionRequestsList(data.data || []);
+      }
+    } catch(e) {}
+  };
+
   if (isCommercialLocked) {
     return (
       <CommercialLockScreen 
@@ -553,10 +675,29 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
           
           <div className="text-center mb-6">
             <div className="flex justify-center mb-3">
-              <TarplLogo variant="badge" size={72} />
+              <div className="bg-white rounded-2xl p-3 shadow-lg border border-amber-300/60 inline-flex flex-col items-center">
+                <img 
+                  src="/tarpl_logo.png" 
+                  alt="TARANGANJALI - जीत आपके विश्वास की" 
+                  className="object-contain"
+                  style={{ width: 140, height: 75 }}
+                />
+              </div>
             </div>
-            <h1 className="text-2xl font-black text-[#062319]">TARPL Wealth App</h1>
-            <p className="text-xs text-slate-500 mt-1">अपने सभी Fixed Deposits और पेआउट्स की स्थिति लाइव देखें</p>
+            <div className="flex items-center justify-center gap-1.5">
+              <h1 className="text-2xl font-black text-[#062319] tracking-wider uppercase font-sans">
+                TARANGANJALI
+              </h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                APP
+              </span>
+            </div>
+            <div className="text-xs font-bold text-[#0A5C36] mt-0.5">
+              जीत आपके विश्वास की • Tarang Anjali Real Tech Pvt. Ltd.
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              ग्राहक डिजिटल पासबुक एवं सुरक्षित मोबाइल बैंकिंग
+            </p>
           </div>
 
           {loginError && (
@@ -704,7 +845,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                     type="text"
                     value={customServerInput}
                     onChange={(e) => setCustomServerInput(e.target.value)}
-                    placeholder="http://192.168.31.240:5000"
+                    placeholder="http://192.168.0.150:5000"
                     className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
                   />
                   <button
@@ -722,7 +863,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed">
-                  💡 <b>Office / Wi-Fi par:</b> Laptop ka IP address (default: <code className="text-slate-700 font-bold">http://192.168.31.240:5000</code>)<br/>
+                  💡 <b>Office / Wi-Fi par:</b> Laptop ka IP address (default: <code className="text-slate-700 font-bold">http://192.168.0.150:5000</code>)<br/>
                   🌐 <b>Anywhere Internet:</b> Apna live server / cloud domain enter karein.
                 </p>
               </div>
@@ -731,8 +872,49 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
 
         </div>
 
+        {/* Customer Security Shield Banner */}
+        <div className="mt-4 p-4 bg-emerald-950/90 border border-emerald-800/80 rounded-2xl text-white shadow-xl space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-emerald-800/60">
+            <ShieldCheck className="w-5 h-5 text-[#D4AF37]" />
+            <div>
+              <div className="text-xs font-black tracking-wide text-white">
+                तरंगांजलि त्रिस्तरीय ग्राहक सुरक्षा कवच
+              </div>
+              <div className="text-[10px] text-emerald-300">
+                100% Protected • 256-Bit SSL • Super Admin Governance
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-[11px] text-emerald-100">
+            <div className="flex items-start gap-2 bg-emerald-900/60 p-2 rounded-xl border border-emerald-800/40">
+              <span className="text-[#D4AF37] font-bold">1.</span>
+              <div>
+                <strong className="text-white block">सुपर एडमिन सुरक्षा (Maker-Checker):</strong>
+                आपके खाते का नाम, मोबाइल या बैंक विवरण बिना सुपर एडमिन के प्रत्यक्ष सत्यापन और अनुमोदन के कोई नहीं बदल सकता।
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-emerald-900/60 p-2 rounded-xl border border-emerald-800/40">
+              <span className="text-[#D4AF37] font-bold">2.</span>
+              <div>
+                <strong className="text-white block">256-बिट बैंक-ग्रेड एन्क्रिप्शन:</strong>
+                आपकी समस्त जमा, ब्याज, एफडी व आरडी विवरण सुरक्षित सर्वर पर 256-बिट क्रिप्टोग्राफी से पूर्ण सुरक्षित है।
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-emerald-900/60 p-2 rounded-xl border border-emerald-800/40">
+              <span className="text-[#D4AF37] font-bold">3.</span>
+              <div>
+                <strong className="text-white block">डिजिटल ई-रसीद गारंटी:</strong>
+                प्रत्येक भुगतान व किस्त जमा पर तुरंत यूनिक रसीद संख्या (Receipt ID) व मुहर सहित डिजिटल रसीद मिलती है।
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="text-center text-xs text-slate-500 py-4">
+        <div className="text-center text-xs text-slate-500 py-3">
           Safe & Encrypted 256-Bit Financial Client Portal
         </div>
 
@@ -1045,13 +1227,25 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
       {/* App Mobile Header */}
       <header className="bg-[#062319] text-white sticky top-0 z-40 border-b border-[#134e38] shadow-md">
         <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <TarplLogo variant="icon" size={38} />
-            <div>
-              <h2 className="font-black text-sm tracking-tight text-white leading-tight">
-                {customer?.full_name || 'My FD Account'}
-              </h2>
-              <span className="text-[10px] text-amber-200 font-mono">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="bg-white rounded-lg p-1 shadow-sm border border-amber-300/60 shrink-0 flex items-center justify-center">
+              <img 
+                src="/tarpl_logo.png" 
+                alt="TARANGANJALI" 
+                className="object-contain"
+                style={{ height: 28, width: 38 }}
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h2 className="font-black text-sm tracking-tight text-white leading-tight truncate">
+                  {customer?.full_name || 'My FD Account'}
+                </h2>
+                <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-amber-400/20 text-[#FBBF24] border border-amber-400/40">
+                  TARPL
+                </span>
+              </div>
+              <span className="text-[10px] text-amber-200/90 font-mono truncate block">
                 {customer?.customer_code} • {customer?.phone}
               </span>
             </div>
@@ -1164,35 +1358,49 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                 </div>
 
                 {/* Quick Action Shortcuts */}
-                <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+                <div className="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+                  <button
+                    onClick={() => {
+                      setPaymentReceipt(null);
+                      setPayModalOpen(true);
+                    }}
+                    className="p-2.5 bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer flex flex-col items-center gap-1 relative overflow-hidden"
+                  >
+                    <div className="p-1.5 bg-white/20 text-white rounded-xl">
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-bold">Pay / Deposit</span>
+                    <span className="text-[7px] bg-[#FBBF24] text-[#062319] px-1 rounded-full font-black uppercase">UPI/QR</span>
+                  </button>
+
                   <button
                     onClick={() => setCurrentNav('fds')}
-                    className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
+                    className="p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
                   >
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-xl">
                       <FileText className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] text-slate-800">My Receipts</span>
+                    <span className="text-[10px] text-slate-800 font-semibold">Receipts</span>
                   </button>
 
                   <button
                     onClick={() => setCurrentNav('invest')}
-                    className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
+                    className="p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
                   >
-                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <div className="p-1.5 bg-amber-50 text-amber-600 rounded-xl">
                       <PlusCircle className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] text-slate-800">Invest More</span>
+                    <span className="text-[10px] text-slate-800 font-semibold">Invest</span>
                   </button>
 
                   <button
                     onClick={() => setCurrentNav('calc')}
-                    className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
+                    className="p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition cursor-pointer flex flex-col items-center gap-1.5"
                   >
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-xl">
                       <CalcIcon className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] text-slate-800">Calculator</span>
+                    <span className="text-[10px] text-slate-800 font-semibold">Calculator</span>
                   </button>
                 </div>
 
@@ -1565,6 +1773,133 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                     </button>
                   </form>
 
+                  {/* ======================================================== */}
+                  {/* PROFILE & NAME CORRECTION REQUEST (SUPER ADMIN APPROVAL) */}
+                  {/* ======================================================== */}
+                  <div className="pt-4 border-t border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Edit3 className="w-4 h-4 text-purple-600" />
+                        <span className="font-bold text-slate-900 text-xs">Request Profile Correction / Name Change</span>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                        Super Admin Approval
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 leading-relaxed bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                      🛡️ <strong>सुरक्षा सूचना:</strong> नाम में सुधार (Name Change), मोबाइल नंबर, नॉमिनी या बैंक खाता विवरण बदलने का अनुरोध सीधे <strong>सुपर एडमिन (Checker)</strong> के पास अनुमोदन हेतु जाता है। सुपर एडमिन द्वारा सत्यापन और स्वीकृति के बाद ही आपका रिकॉर्ड लाइव अपडेट होगा।
+                    </p>
+
+                    {correctionSuccess && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{correctionSuccess}</span>
+                      </div>
+                    )}
+
+                    {correctionError && (
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{correctionError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmitCorrection} className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">संशोधन का क्षेत्र (Field to Correct):</label>
+                        <select
+                          value={correctionField}
+                          onChange={(e) => {
+                            setCorrectionField(e.target.value);
+                            setCorrectionNewVal('');
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="full_name">Customer Full Name (नाम में सुधार / Name Change)</option>
+                          <option value="phone">Mobile Phone (मोबाइल नंबर)</option>
+                          <option value="father_name">Father / Husband Name (पिता/पति का नाम)</option>
+                          <option value="nominee_name">Nominee Name (नॉमिनी का नाम)</option>
+                          <option value="nominee_relation">Nominee Relation (नॉमिनी से संबंध)</option>
+                          <option value="account_no">Bank Account Number (बैंक खाता संख्या)</option>
+                          <option value="ifsc_code">Bank IFSC Code (बैंक IFSC कोड)</option>
+                          <option value="address">Permanent Address (स्थाई पता)</option>
+                        </select>
+                      </div>
+
+                      <div className="p-2 bg-white rounded-xl border border-slate-200 text-xs">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold">Current Record (मौजूदा विवरण):</span>
+                        <span className="font-bold text-slate-800 font-mono text-xs">
+                          {customer?.[correctionField] || '(खाली / Not Set)'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">नया सही विवरण (Requested New Value):</label>
+                        <input
+                          type="text"
+                          required
+                          value={correctionNewVal}
+                          onChange={(e) => setCorrectionNewVal(e.target.value)}
+                          placeholder="उदा. आधार कार्ड के अनुसार सही नाम"
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">संशोधन का कारण (Reason / Document Note):</label>
+                        <input
+                          type="text"
+                          value={correctionReason}
+                          onChange={(e) => setCorrectionReason(e.target.value)}
+                          placeholder="उदा. आधार कार्ड के अनुसार स्पेलिंग सुधार"
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={correctionSubmitting}
+                        className="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{correctionSubmitting ? 'भेजा जा रहा है...' : 'Send Request to Super Admin (सत्यापन हेतु भेजें)'}</span>
+                      </button>
+                    </form>
+
+                    {/* Correction Requests Status History */}
+                    {correctionRequestsList.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <span className="font-bold text-slate-800 block text-xs">मेरे पूर्व संशोधन अनुरोध (Correction Requests History):</span>
+                        <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden text-xs">
+                          {correctionRequestsList.map(req => (
+                            <div key={req.id} className="p-2.5 bg-white space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="font-mono font-bold text-[11px] text-slate-900">{req.request_number}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
+                                  req.status === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
+                                  'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {req.status === 'APPROVED' ? '✅ Approved by Super Admin' :
+                                   req.status === 'REJECTED' ? '❌ Rejected' : '⏳ Pending Super Admin Approval'}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-600">
+                                <strong>{req.field_label || req.field}:</strong> <span className="line-through text-rose-500">{req.old_value || '(खाली)'}</span> ➔ <span className="text-emerald-700 font-bold">{req.new_value}</span>
+                              </div>
+                              {req.decision_notes && (
+                                <div className="text-[10px] text-slate-500 italic">
+                                  Super Admin Note: {req.decision_notes}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Voluntary Change Password Section */}
                   <div className="pt-4 border-t border-slate-200">
                     <button
@@ -1642,6 +1977,287 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
               </div>
             )}
           </>
+        )}
+
+        {/* ======================================================== */}
+        {/* IN-APP ONLINE PAYMENT & DIGITAL E-RECEIPT MODAL          */}
+        {/* ======================================================== */}
+        {payModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+              
+              {/* Receipt View (Shown after successful payment) */}
+              {paymentReceipt ? (
+                <div className="space-y-4 text-center">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                      Payment Successful & Synced
+                    </span>
+                    <h3 className="text-xl font-black text-slate-900 mt-1">Taranganjali Digital E-Receipt</h3>
+                    <p className="text-xs text-slate-400">जीत आपके विश्वास की</p>
+                  </div>
+
+                  {/* Printable E-Receipt Card */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left text-xs space-y-2.5 shadow-inner">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 text-[10px]">रसीद संख्या (Receipt No):</span>
+                      <strong className="font-mono text-slate-900 text-xs">{paymentReceipt.receipt_no}</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 text-[10px]">खाताधारक (Depositor):</span>
+                      <strong className="text-slate-800 text-xs">{paymentReceipt.customer_name} ({paymentReceipt.customer_code})</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 text-[10px]">भुगतान का प्रकार (Purpose):</span>
+                      <span className="font-bold text-indigo-700">{paymentReceipt.purpose}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 text-[10px]">भुगतान माध्यम (Mode):</span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                        {paymentReceipt.payment_mode}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                      <span className="text-slate-400 text-[10px]">UTR / Ref No:</span>
+                      <span className="font-mono font-bold text-slate-700">{paymentReceipt.utr_reference}</span>
+                    </div>
+
+                    <div className="pt-1 flex justify-between items-center text-sm">
+                      <span className="font-bold text-slate-700">कुल जमा राशि (Amount Paid):</span>
+                      <span className="font-black text-emerald-700 text-lg font-mono">
+                        {formatINR(paymentReceipt.amount)}
+                      </span>
+                    </div>
+
+                    <div className="pt-2 text-[10px] text-slate-400 text-center border-t border-slate-200">
+                      यह रसीद तरंगांजलि रियल टेक प्रा. लि. के कोर बैंकिंग लेजर में दर्ज हो चुकी है।
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => window.print()}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print Receipt</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPaymentReceipt(null);
+                        setPayModalOpen(false);
+                      }}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-md cursor-pointer"
+                    >
+                      Done / पूरा हुआ
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Payment Form View */
+                <form onSubmit={handleMakePayment} className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">Taranganjali Instant Pay</h3>
+                        <p className="text-[10px] text-slate-400">UPI / QR व बैंक से ऑनलाइन जमा करें</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPayModalOpen(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* 1. Purpose Selector */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      भुगतान का प्रकार चुनें (Payment Purpose):
+                    </label>
+                    <select
+                      value={payPurpose}
+                      onChange={(e) => setPayPurpose(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="RD_INSTALLMENT">RD Monthly Installment (आरडी मासिक किस्त)</option>
+                      <option value="SAVINGS_DEPOSIT">Savings Account Deposit (बचत खाते में जमा)</option>
+                      <option value="LOAN_EMI">Loan EMI / Repayment (ऋण की किस्त)</option>
+                      <option value="NEW_INVESTMENT">New Term Deposit (नया फिक्स डिपॉजिट)</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Amount Input & Quick Pills */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      जमा राशि (Amount in ₹):
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 font-bold text-slate-400 text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="100"
+                        step="100"
+                        required
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-black text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {[500, 1000, 2000, 5000, 10000].map(amt => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setPayAmount(amt)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                            Number(payAmount) === amt
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          ₹{amt.toLocaleString('en-IN')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 3. Payment Mode Tabs */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      भुगतान का माध्यम (Payment Method):
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setPayMode('UPI')}
+                        className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                          payMode === 'UPI'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <QrCode className="w-4 h-4 text-emerald-600" />
+                        <span>UPI / QR Scan</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPayMode('NET_BANKING')}
+                        className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                          payMode === 'NET_BANKING'
+                            ? 'bg-blue-50 border-blue-500 text-blue-800 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4 text-blue-600" />
+                        <span>Bank Transfer</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Payment Details Container */}
+                  {payMode === 'UPI' ? (
+                    <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-center space-y-2">
+                      <div className="inline-block p-2 bg-white rounded-xl shadow-xs border border-emerald-200">
+                        {/* Mock SVG QR Code */}
+                        <svg className="w-24 h-24 mx-auto" viewBox="0 0 100 100" fill="currentColor">
+                          <rect width="100" height="100" fill="white" />
+                          <rect x="5" y="5" width="25" height="25" fill="#062319" />
+                          <rect x="9" y="9" width="17" height="17" fill="white" />
+                          <rect x="13" y="13" width="9" height="9" fill="#062319" />
+                          
+                          <rect x="70" y="5" width="25" height="25" fill="#062319" />
+                          <rect x="74" y="9" width="17" height="17" fill="white" />
+                          <rect x="78" y="13" width="9" height="9" fill="#062319" />
+
+                          <rect x="5" y="70" width="25" height="25" fill="#062319" />
+                          <rect x="9" y="74" width="17" height="17" fill="white" />
+                          <rect x="13" y="78" width="9" height="9" fill="#062319" />
+
+                          <rect x="35" y="10" width="5" height="15" fill="#062319" />
+                          <rect x="45" y="5" width="10" height="5" fill="#062319" />
+                          <rect x="40" y="25" width="15" height="5" fill="#062319" />
+                          <rect x="10" y="35" width="5" height="20" fill="#062319" />
+                          <rect x="25" y="40" width="10" height="10" fill="#062319" />
+                          <rect x="45" y="45" width="12" height="12" fill="#D4AF37" />
+                          <rect x="65" y="35" width="10" height="20" fill="#062319" />
+                          <rect x="85" y="45" width="5" height="15" fill="#062319" />
+                          <rect x="35" y="70" width="15" height="5" fill="#062319" />
+                          <rect x="40" y="85" width="10" height="10" fill="#062319" />
+                          <rect x="65" y="75" width="15" height="5" fill="#062319" />
+                          <rect x="75" y="85" width="15" height="10" fill="#062319" />
+                        </svg>
+                      </div>
+
+                      <div className="text-xs space-y-0.5">
+                        <span className="font-bold text-slate-800 block">UPI ID: taranganjali@icici</span>
+                        <span className="text-[10px] text-slate-500">Google Pay • PhonePe • Paytm • BHIM</span>
+                      </div>
+
+                      <a
+                        href={`upi://pay?pa=taranganjali@icici&pn=Taranganjali%20Realtech&am=${payAmount}&tn=${payPurpose}&cu=INR`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>Open UPI App to Pay ₹{Number(payAmount).toLocaleString('en-IN')}</span>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-200 text-xs space-y-1.5">
+                      <div className="font-bold text-blue-900 border-b border-blue-200 pb-1 flex justify-between items-center">
+                        <span>Company Official Current A/c:</span>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-bold">PNB</span>
+                      </div>
+                      <p><span className="text-slate-500">Account Name:</span> <strong className="text-slate-800">Tarang Anjali Real Tech Pvt. Ltd.</strong></p>
+                      <p><span className="text-slate-500">Account No:</span> <strong className="font-mono text-slate-900">0123002100045678</strong></p>
+                      <p><span className="text-slate-500">IFSC Code:</span> <strong className="font-mono text-slate-900">PUNB0012300</strong> (Main Branch)</p>
+                    </div>
+                  )}
+
+                  {/* 4. UTR / Reference No. Input */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      UTR / Transaction Reference Number (12 अंक):
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="उदा. 432198765432 या UPI-123456"
+                      value={payUtr}
+                      onChange={(e) => setPayUtr(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Google Pay, PhonePe या बैंक ट्रांसफर के बाद प्राप्त 12-अंकों का UTR नंबर दर्ज करें
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={payProcessing}
+                    className="w-full py-3 bg-[#16a34a] hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{payProcessing ? 'भुगतान दर्ज हो रहा है...' : `Confirm & Record Payment (₹${Number(payAmount).toLocaleString('en-IN')})`}</span>
+                  </button>
+                </form>
+              )}
+
+            </div>
+          </div>
         )}
 
       </main>

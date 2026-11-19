@@ -42,26 +42,26 @@ export default function TarplLogo({
 
   // Full brand header in Sidebar & Navigation
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="bg-white rounded-lg p-0.5 shadow-sm border border-amber-300/50 shrink-0 flex items-center justify-center">
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <div className="bg-white rounded-lg p-1 shadow-sm border border-amber-300/60 shrink-0 flex items-center justify-center">
         <img 
           src={tarplLogoImg} 
-          alt="TARPL" 
+          alt="TARANGANJALI" 
           className="object-contain"
-          style={{ height: 28, width: 48 }}
+          style={{ height: 32, width: 44 }}
         />
       </div>
       <div className="min-w-0 leading-tight">
-        <div className="flex items-center gap-1">
-          <span className="font-black text-xs text-amber-300 font-sans tracking-tight uppercase">
+        <div className="flex items-center gap-1.5">
+          <span className="font-black text-sm tracking-wider text-[#FBBF24] font-sans uppercase">
             TARANGANJALI
           </span>
-          <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-amber-400/20 text-amber-200 border border-amber-400/40">
+          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 border border-amber-400/40">
             CRM
           </span>
         </div>
         {showSubtitle && (
-          <div className="text-[9px] font-medium text-emerald-200/90 truncate">
+          <div className="text-[10px] font-medium text-emerald-200/90 truncate tracking-wide">
             जीत आपके विश्वास की
           </div>
         )}

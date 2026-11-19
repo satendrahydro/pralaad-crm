@@ -20,6 +20,7 @@ import {
   X, 
   Sparkles, 
   ExternalLink,
+  Download,
   MessageSquare,
   Smartphone,
   ChevronDown,
@@ -47,7 +48,11 @@ import {
   BookOpen,
   ArrowUpRight,
   ArrowDownLeft,
-  Send
+  Send,
+  Gem,
+  HandCoins,
+  Home,
+  Briefcase
 } from 'lucide-react';
 
 import Login from './components/Login';
@@ -82,6 +87,8 @@ import AgentRanks from './components/AgentRanks';
 import AgentsList from './components/AgentsList';
 import CollectionCenters from './components/CollectionCenters';
 import LoansAgainstDeposit from './components/LoansAgainstDeposit';
+import GoldLoanList from './components/GoldLoanList';
+import BorrowingsRegister from './components/BorrowingsRegister';
 import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModal';
 import NewRDModal from './components/NewRDModal';
 import NewMISModal from './components/NewMISModal';
@@ -275,6 +282,16 @@ export default function App() {
     }
   }, [token, activeTab]);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setToken(null);
+      setUser(null);
+      setStaffPermissions({});
+    };
+    window.addEventListener('pralaad_auth_expired', handleAuthExpired);
+    return () => window.removeEventListener('pralaad_auth_expired', handleAuthExpired);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('pralaad_fd_token');
     localStorage.removeItem('pralaad_fd_user');
@@ -438,8 +455,17 @@ export default function App() {
         { id: 'mis', label: 'Monthly Income (MIS)', icon: Coins, color: 'bg-teal-600' },
         { id: 'savings', label: 'Savings Accounts (SB)', icon: Wallet, color: 'bg-emerald-600' },
         { id: 'customers', label: 'Customers & KYC 360', icon: Users, color: 'bg-teal-600' },
-        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' },
-        { id: 'loans', label: 'Loan Against Deposit (LAD)', icon: BadgePercent, color: 'bg-indigo-600', badge: 'Secured' }
+        { id: 'schemes', label: 'Deposit Schemes', icon: Sparkles, color: 'bg-amber-600' }
+      ]
+    },
+    {
+      title: 'LOANS & ADVANCES (ऋण विभाग)',
+      items: [
+        { id: 'gold_loan', label: 'Gold Loan (गोल्ड लोन)', icon: Gem, color: 'bg-amber-600', badge: 'Gold' },
+        { id: 'loans', label: 'Loan Against Deposit (LAD)', icon: BadgePercent, color: 'bg-indigo-600', badge: 'Secured' },
+        { id: 'borrowings_udhar', label: 'Udhar Register (उधार खाता)', icon: HandCoins, color: 'bg-purple-600', badge: 'Udhar' },
+        { id: 'mortgage_loan', label: 'Prop. / Mortgage Loan', icon: Home, color: 'bg-blue-600' },
+        { id: 'business_loan', label: 'Business Loan (व्यापार ऋण)', icon: Briefcase, color: 'bg-emerald-600' }
       ]
     },
     {
@@ -453,9 +479,9 @@ export default function App() {
     {
       title: 'ACCOUNTING & FIELD OPS',
       items: [
-        { id: 'day_book', label: 'Day Book (8 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Ledger' },
+        { id: 'day_book', label: 'Day Book (9 Ledgers)', icon: BookOpen, color: 'bg-amber-600', badge: 'Live' },
         { id: 'daily_collection', label: 'Daily Collection', icon: Coins, color: 'bg-emerald-600', badge: 'NEW' },
-        { id: 'payments_to_collect', label: 'Payments to Collect', icon: CreditCard, color: 'bg-orange-600', badge: '15 Fields' },
+        { id: 'payments_to_collect', label: 'Payments to Collect', icon: CreditCard, color: 'bg-orange-600', badge: 'EMI/Dues' },
         { id: 'payments_to_release', label: 'Payments to Release', icon: ArrowUpRight, color: 'bg-rose-600', badge: 'Payouts' }
       ]
     },
@@ -954,7 +980,7 @@ export default function App() {
               )}
             </div>
 
-            {/* 5. Switch to Customer View-Only App Pill */}
+            {/* 5. Switch to Customer View-Only App Pill & Download APK */}
             <button
               onClick={() => setViewMode('customer')}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer"
@@ -963,6 +989,16 @@ export default function App() {
               <Smartphone className="w-3.5 h-3.5" />
               <span>Customer App</span>
             </button>
+
+            <a
+              href="/Taranganjali_Banking.apk"
+              download="Taranganjali_Banking.apk"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
+              title="Download Android APK File for Mobile (Taranganjali)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download APK</span>
+            </a>
 
             {/* 6. User Profile Menu */}
             <div className="relative pl-1 sm:pl-2 border-l border-[#1e2d4d]" ref={profileRef}>
@@ -1202,6 +1238,22 @@ export default function App() {
 
           {activeTab === 'loans' && (
             <LoansAgainstDeposit />
+          )}
+
+          {activeTab === 'gold_loan' && (
+            <GoldLoanList />
+          )}
+
+          {activeTab === 'borrowings_udhar' && (
+            <BorrowingsRegister />
+          )}
+
+          {activeTab === 'mortgage_loan' && (
+            <LoansAgainstDeposit loanType="MORTGAGE" title="Property & Mortgage Loans (प्रॉपर्टी / बंधक ऋण)" />
+          )}
+
+          {activeTab === 'business_loan' && (
+            <LoansAgainstDeposit loanType="BUSINESS" title="Business Loans (व्यापार ऋण)" />
           )}
 
           {activeTab === 'day_book' && (

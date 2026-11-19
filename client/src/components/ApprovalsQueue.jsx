@@ -195,20 +195,62 @@ export default function ApprovalsQueue({ onApproved }) {
                   <tr key={r.id} className="hover:bg-slate-50 transition">
                     <td className="p-4 font-mono font-bold text-slate-900">{r.request_number}</td>
                     <td className="p-4">
-                      <span className="font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px]">
-                        {r.request_type.replace('_', ' ')}
-                      </span>
+                      {r.request_type === 'PROFILE_CORRECTION' ? (
+                        <span className="font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200 text-[10px] uppercase tracking-wide">
+                          ✏️ Profile Correction
+                        </span>
+                      ) : (
+                        <span className="font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px]">
+                          {r.request_type.replace('_', ' ')}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4">
-                      <div className="font-bold text-slate-800">{r.maker_name || r.maker_username}</div>
-                      <div className="text-[10px] text-slate-400">Branch Staff</div>
+                      <div className="font-bold text-slate-800">
+                        {r.request_type === 'PROFILE_CORRECTION' ? (
+                          <span className="text-emerald-700 font-bold">Client Mobile App</span>
+                        ) : (
+                          r.maker_name || r.maker_username || 'Staff Maker'
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {r.request_type === 'PROFILE_CORRECTION' ? 'Customer Self-Service' : 'Branch Staff'}
+                      </div>
                     </td>
                     <td className="p-4">
-                      <div className="font-bold text-slate-800">{r.customer_name || 'N/A'}</div>
-                      <div className="text-[10px] text-slate-400">{r.customer_phone || ''}</div>
+                      <div className="font-bold text-slate-800">
+                        {r.customer_name || r.request_data?.customer_name || 'N/A'}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        {r.request_data?.customer_code || r.customer_phone || ''}
+                      </div>
                     </td>
-                    <td className="p-4 font-bold text-indigo-600">
-                      {r.proposed_amount ? formatINR(r.proposed_amount) : '—'}
+                    <td className="p-4">
+                      {r.request_type === 'PROFILE_CORRECTION' ? (
+                        <div className="space-y-1">
+                          <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                            <span className="text-purple-700 font-black">Field:</span> {r.request_data?.field_label || r.request_data?.field}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
+                            <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 line-through">
+                              {r.request_data?.old_value || '(empty)'}
+                            </span>
+                            <span className="text-slate-400 font-bold text-xs">➔</span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
+                              {r.request_data?.new_value}
+                            </span>
+                          </div>
+                          {r.request_data?.reason && (
+                            <div className="text-[10px] text-slate-500 italic max-w-xs truncate" title={r.request_data.reason}>
+                              कारण: {r.request_data.reason}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="font-bold text-indigo-600">
+                          {r.proposed_amount ? formatINR(r.proposed_amount) : '—'}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-slate-500">{formatDate(r.created_at)}</td>
                     <td className="p-4">

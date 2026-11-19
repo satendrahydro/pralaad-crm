@@ -385,6 +385,39 @@ function initDB() {
       narration TEXT
     );
 
+    -- 13b. Daily Office & Petty Cash Expenses (Tea, Coffee, Stationery, Conveyance, etc.)
+    CREATE TABLE IF NOT EXISTS daily_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_voucher_no TEXT UNIQUE NOT NULL,
+      expense_date DATE NOT NULL,
+      category TEXT NOT NULL,
+      category_name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      payment_mode TEXT NOT NULL,
+      paid_to TEXT NOT NULL,
+      bill_number TEXT,
+      narration TEXT NOT NULL,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 13c. Day Book Inflow & Outflow Entries (Input: Paisa Aana / Output: Paisa Jana)
+    CREATE TABLE IF NOT EXISTS day_book_cash_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      voucher_no TEXT UNIQUE NOT NULL,
+      entry_type TEXT NOT NULL, -- 'INFLOW' (Input/Receipt) or 'OUTFLOW' (Output/Payment)
+      entry_date DATE NOT NULL,
+      category TEXT NOT NULL,
+      category_name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      payment_mode TEXT NOT NULL DEFAULT 'CASH', -- 'CASH' or 'BANK_ONLINE'
+      party_name TEXT NOT NULL, -- Kisko diya / Kisse aaya (Customer, Vendor, Staff, Bank)
+      reference_no TEXT, -- Bill no, Receipt no, Slip no, Cheque/UTR
+      narration TEXT NOT NULL,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- 14. Associate / Advisor Network & Hierarchy Ranks
     CREATE TABLE IF NOT EXISTS agent_ranks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -438,7 +471,7 @@ function initDB() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 16. Loan Against Deposit (LAD / Secured Gold & FD Loans)
+    -- 16. Loan Against Deposit (LAD / Secured FD Loans)
     CREATE TABLE IF NOT EXISTS loans_against_deposit (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       loan_number TEXT UNIQUE NOT NULL,
@@ -458,6 +491,53 @@ function initDB() {
       outstanding_principal REAL NOT NULL,
       total_recovered REAL DEFAULT 0,
       status TEXT DEFAULT 'ACTIVE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 17. Gold Loans Master (गोल्ड लोन - आभूषण मूल्यांकन, वजन, शुद्धता व सुरक्षित लॉकर)
+    CREATE TABLE IF NOT EXISTS gold_loans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      loan_number TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT,
+      gold_items_detail TEXT NOT NULL, -- e.g. "2 Gold Bangles, 1 Mangalsutra, 2 Rings"
+      pouch_number TEXT DEFAULT 'POUCH-001', -- Locker packet / packet bar-code
+      locker_location TEXT DEFAULT 'Vault Locker A-12',
+      gross_weight_grams REAL NOT NULL,
+      net_weight_grams REAL NOT NULL,
+      purity_karat INTEGER DEFAULT 22,
+      valuation_rate_per_gram REAL NOT NULL,
+      total_gold_valuation REAL NOT NULL,
+      ltv_percentage REAL DEFAULT 75.0,
+      sanctioned_amount REAL NOT NULL,
+      disbursed_amount REAL NOT NULL,
+      interest_rate REAL NOT NULL DEFAULT 15.0, -- Monthly interest e.g. 1.25% (15% p.a.)
+      tenure_months INTEGER NOT NULL DEFAULT 12,
+      monthly_interest REAL NOT NULL,
+      outstanding_principal REAL NOT NULL,
+      total_recovered REAL DEFAULT 0,
+      status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE', 'REPAID_RELEASED', 'OVERDUE', 'AUCTION_NOTICE'
+      disbursal_date DATE NOT NULL,
+      maturity_date DATE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 18. Udhar & Borrowings Register (उधार खाता - हाथ उधारी, डायरेक्टर व अन्य से लिया गया कर्ज)
+    CREATE TABLE IF NOT EXISTS borrowings_udhar (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      voucher_no TEXT UNIQUE NOT NULL,
+      lender_name TEXT NOT NULL, -- Kisse udhar liya (Person, Director, Market Lender, Associate)
+      phone TEXT,
+      borrowing_date DATE NOT NULL,
+      amount REAL NOT NULL,
+      interest_rate REAL DEFAULT 0, -- 0% for interest-free hand loan, or % p.a.
+      payment_mode TEXT DEFAULT 'CASH', -- 'CASH' (गल्ले में आया) or 'BANK_ONLINE' (खाते में आया)
+      due_date DATE,
+      amount_repaid REAL DEFAULT 0,
+      outstanding_balance REAL NOT NULL,
+      status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE', 'PARTIALLY_REPAID', 'FULLY_REPAID'
+      narration TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -548,6 +628,117 @@ function initDB() {
     if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0 || !centerCount || centerCount.count === 0) {
       const { seedComplete5ClientData } = require('./seedData');
       seedComplete5ClientData(db);
+    }
+
+    // Seed realistic sample daily expenses & cash in/out entries if empty
+    try {
+      const expCount = db.prepare('SELECT count(*) as count FROM daily_expenses').get();
+      if (!expCount || expCount.count === 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const insExp = db.prepare(`
+          INSERT INTO daily_expenses (expense_voucher_no, expense_date, category, category_name, amount, payment_mode, paid_to, bill_number, narration, created_by_user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        `);
+        insExp.run('EXP-20261118-001', today, 'TEA_REFRESHMENT', 'Tea & Refreshment / Pantry', 180.00, 'CASH', 'Raju Tea & Snacks Stall', 'BILL-104', 'Morning & evening tea, coffee and biscuits for office staff & visitors');
+        insExp.run('EXP-20261118-002', today, 'STATIONERY', 'Office Stationery & Printing', 350.00, 'CASH', 'Kailash Book Depot', 'INV-5521', '2 Paper rims A4, blue pens, stapler pins and register');
+        insExp.run('EXP-20261118-003', today, 'CONVEYANCE', 'Field Conveyance & Fuel', 240.00, 'CASH', 'Sunil Kumar (Field Executive)', 'PETROL-01', 'Petrol reimbursement for client doorstep document collection');
+        insExp.run('EXP-20261118-004', today, 'CLEANING', 'Cleaning & Office Maintenance', 150.00, 'CASH', 'Ramesh Sweeper', 'VCH-03', 'Office floor cleaner liquid, dusters and trash bags');
+        insExp.run('EXP-20261118-005', today, 'UTILITY', 'Electricity, Internet & Mobile', 1199.00, 'BANK_ONLINE', 'Airtel Broadband Office Fibernet', 'AIRTEL-NOV-49', 'Monthly office high-speed internet lease line connection');
+      }
+
+      // Seed realistic Gold Loans if empty
+      try {
+        const glCount = db.prepare('SELECT count(*) as count FROM gold_loans').get();
+        if (!glCount || glCount.count === 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const insGL = db.prepare(`
+            INSERT INTO gold_loans (
+              loan_number, customer_id, customer_name, customer_phone, gold_items_detail,
+              pouch_number, locker_location, gross_weight_grams, net_weight_grams, purity_karat,
+              valuation_rate_per_gram, total_gold_valuation, ltv_percentage, sanctioned_amount,
+              disbursed_amount, interest_rate, tenure_months, monthly_interest, outstanding_principal,
+              total_recovered, status, disbursal_date, maturity_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+
+          insGL.run(
+            'GL-2026-001', 1, 'Prahlad Singh', '9876543210', '2 Gold Bangles + 1 Gold Chain',
+            'POUCH-GL-101', 'Locker Vault A-1', 48.5, 45.0, 22,
+            6800.00, 306000.00, 75.0, 225000.00,
+            225000.00, 15.0, 12, 2812.50, 212500.00,
+            12500.00, 'ACTIVE', today, '2027-11-18'
+          );
+
+          insGL.run(
+            'GL-2026-002', 2, 'Sunita Rani', '9811223344', '1 Mangalsutra + 2 Gold Rings',
+            'POUCH-GL-102', 'Locker Vault A-2', 24.0, 21.5, 22,
+            6800.00, 146200.00, 75.0, 100000.00,
+            100000.00, 15.0, 12, 1250.00, 100000.00,
+            0.0, 'ACTIVE', today, '2027-11-18'
+          );
+        }
+      } catch(e) {
+        console.error('Error seeding gold loans:', e.message);
+      }
+
+      // Seed realistic Udhar & Borrowings if empty
+      try {
+        const udharCount = db.prepare('SELECT count(*) as count FROM borrowings_udhar').get();
+        if (!udharCount || udharCount.count === 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const insUdhar = db.prepare(`
+            INSERT INTO borrowings_udhar (
+              voucher_no, lender_name, phone, borrowing_date, amount, interest_rate,
+              payment_mode, due_date, amount_repaid, outstanding_balance, status, narration
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+
+          insUdhar.run(
+            'UDHAR-2026-001', 'Ramesh Chandra (Director Hand Loan)', '9412000000', today,
+            50000.00, 0.0, 'CASH', '2026-12-18', 0.0, 50000.00, 'ACTIVE',
+            'Interest-free temporary hand loan taken from Director for branch cash vault buffer'
+          );
+
+          insUdhar.run(
+            'UDHAR-2026-002', 'Aggarwal Finance Bijnor', '9837000000', today,
+            100000.00, 12.0, 'BANK_ONLINE', '2027-02-18', 20000.00, 80000.00, 'ACTIVE',
+            'Short-term unsecured borrowing taken via bank transfer for working capital'
+          );
+        }
+      } catch(e) {
+        console.error('Error seeding borrowings:', e.message);
+      }
+
+      // Seed day_book_cash_entries (Both Input / Inflow and Output / Outflow)
+      const cashEntryCount = db.prepare('SELECT count(*) as count FROM day_book_cash_entries').get();
+      if (!cashEntryCount || cashEntryCount.count === 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const insCash = db.prepare(`
+          INSERT INTO day_book_cash_entries (
+            voucher_no, entry_type, entry_date, category, category_name, amount, payment_mode, party_name, reference_no, narration, created_by_user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        `);
+
+        // 1. INPUT (आवक / रुपया आया / Receipts - Collections, Deposits, Gold Loan Recovery, Udhar Liya)
+        insCash.run('IN-20261118-001', 'INFLOW', today, 'DAILY_COLLECTION', 'Daily RD & Deposit Collection', 15000.00, 'CASH', 'Advisor Sunil Kumar (ADV0001)', 'COL-REC-892', 'Daily evening field collection received from market centers');
+        insCash.run('IN-20261118-002', 'INFLOW', today, 'SAVINGS_DEPOSIT', 'Savings A/C Cash Deposit', 25000.00, 'CASH', 'Prahlad Singh (SB-00001)', 'DEP-SLIP-401', 'Counter cash deposit into member savings account');
+        insCash.run('IN-20261118-003', 'INFLOW', today, 'DIRECT_NEFT_DEPOSIT', 'NEFT Online Term Deposit Inflow', 100000.00, 'BANK_ONLINE', 'Narpat Singh (MIS-00203)', 'UTR-PNB2026111801', 'Bank NEFT deposit credit for new Monthly Income Scheme (MIS)');
+        insCash.run('IN-20261118-004', 'INFLOW', today, 'MEMBERSHIP_FEE', 'New Member Share & Admission Fee', 1100.00, 'CASH', 'Mukesh Sharma (M00008)', 'SHR-108', '10 Equity shares @ ₹100 + ₹100 membership admission fee');
+        insCash.run('IN-20261118-005', 'INFLOW', today, 'GOLD_LOAN_RECOVERY', 'Gold Loan EMI / Principal Recovery', 12500.00, 'CASH', 'Prahlad Singh (GL-2026-001)', 'GL-REC-101', 'Monthly interest and principal part recovery for Gold Loan');
+        insCash.run('IN-20261118-006', 'INFLOW', today, 'BORROWING_INFLOW', 'उधार लिया (Money Borrowed / Udhar Inflow)', 50000.00, 'CASH', 'Ramesh Chandra (Director Hand Loan)', 'UDHAR-IN-01', 'Interest-free cash borrowed for branch vault liquidity');
+
+        // 2. OUTPUT (जावक / रुपया गया / Payments & Expenses - Office Expenses, Gold Loan Disbursed, Udhar Lautaya)
+        insCash.run('OUT-20261118-001', 'OUTFLOW', today, 'TEA_REFRESHMENT', 'Tea, Coffee & Pantry', 180.00, 'CASH', 'Raju Tea & Snacks Stall', 'BILL-104', 'Morning & evening tea, coffee and biscuits for office staff & visitors');
+        insCash.run('OUT-20261118-002', 'OUTFLOW', today, 'OFFICE_STATIONERY', 'Office Stationery & Printing', 350.00, 'CASH', 'Kailash Book Depot', 'INV-5521', '2 Paper rims A4, blue pens, stapler pins and register');
+        insCash.run('OUT-20261118-003', 'OUTFLOW', today, 'CONVEYANCE', 'Field Conveyance & Fuel', 240.00, 'CASH', 'Sunil Kumar (Field Executive)', 'PETROL-01', 'Petrol reimbursement for client doorstep document collection');
+        insCash.run('OUT-20261118-004', 'OUTFLOW', today, 'OFFICE_MAINTENANCE', 'Cleaning & Office Maintenance', 150.00, 'CASH', 'Ramesh Sweeper', 'VCH-03', 'Office floor cleaner liquid, dusters and trash bags');
+        insCash.run('OUT-20261118-005', 'OUTFLOW', today, 'UTILITIES', 'Electricity, Internet & Mobile', 1199.00, 'BANK_ONLINE', 'Airtel Broadband Office Fibernet', 'AIRTEL-NOV-49', 'Monthly office high-speed internet lease line connection');
+        insCash.run('OUT-20261118-006', 'OUTFLOW', today, 'SAVINGS_WITHDRAWAL', 'Savings A/C Cash Withdrawal', 12000.00, 'CASH', 'Rahul Sharma (SB-00004)', 'WDL-SLIP-088', 'Counter cash withdrawal by account holder');
+        insCash.run('OUT-20261118-007', 'OUTFLOW', today, 'GOLD_LOAN_DISBURSEMENT', 'Gold Loan Cash Disbursement', 75000.00, 'CASH', 'Sunita Rani (GL-2026-002)', 'GL-DISB-102', 'Gold loan cash disbursed against 22K gold ornaments');
+        insCash.run('OUT-20261118-008', 'OUTFLOW', today, 'BORROWING_REPAYMENT', 'उधार लौटाया (Borrowing Repaid / Outflow)', 20000.00, 'CASH', 'Aggarwal Finance Bijnor', 'UDHAR-OUT-02', 'Hand loan partial repayment returned to lender in cash');
+      }
+    } catch(e) {
+      console.error('Error seeding day book cash entries:', e.message);
     }
   } catch (e) {
     console.error('Auto-seed check error:', e.message);

@@ -12,9 +12,9 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err || user.isCustomer || !user.role) {
-      return res.status(403).json({ 
+      return res.status(401).json({ 
         success: false, 
-        message: 'Invalid or unauthorized session token. Internal CRM credentials required.' 
+        message: 'Invalid or expired session token. Please sign in again.' 
       });
     }
     req.user = user;

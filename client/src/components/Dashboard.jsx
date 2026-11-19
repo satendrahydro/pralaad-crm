@@ -33,7 +33,8 @@ import {
   Percent,
   Banknote,
   Repeat,
-  Coins
+  Coins,
+  LogOut
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -138,35 +139,56 @@ export default function Dashboard({
   }
 
   if (error || !data) {
+    const handleReLogin = () => {
+      localStorage.removeItem('pralaad_fd_token');
+      localStorage.removeItem('pralaad_fd_user');
+      localStorage.removeItem('pralaad_staff_permissions');
+      window.dispatchEvent(new CustomEvent('pralaad_auth_expired'));
+      window.location.reload();
+    };
+
     return (
-      <div className="p-8 max-w-2xl mx-auto mt-12 bg-white rounded-xl border border-rose-200 shadow-sm text-center">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-        <h3 className="text-lg font-bold text-slate-900">Dashboard Unavailable</h3>
-        <p className="text-sm text-slate-600 mt-1 mb-6">{error || 'Could not load data'}</p>
-        <button
-          onClick={fetchDashboardData}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition"
-        >
-          <RefreshCw className="w-4 h-4" /> Try Again
-        </button>
+      <div className="p-8 max-w-2xl mx-auto mt-12 bg-white rounded-2xl border border-rose-200 shadow-lg text-center">
+        <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-rose-100">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">Dashboard Unavailable</h3>
+        <p className="text-sm text-slate-600 mt-2 mb-6 max-w-md mx-auto leading-relaxed">
+          {error || 'Unable to connect to Core Banking server or session has expired.'}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={fetchDashboardData}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition cursor-pointer border border-slate-200"
+          >
+            <RefreshCw className="w-4 h-4" /> Try Again
+          </button>
+          <button
+            onClick={handleReLogin}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A5C36] hover:bg-[#08482a] text-white rounded-xl text-sm font-bold transition cursor-pointer shadow-md"
+          >
+            <LogOut className="w-4 h-4" /> Re-Login / Sign In Again
+          </button>
+        </div>
       </div>
     );
   }
 
   const { metrics, upcomingMaturities, pendingPayouts, frequencyBreakdown, monthlyProjection, recentFds, subscription } = data;
+  const safeMetrics = metrics || {};
 
   // Chart Data Preparation: Principal vs Interest
   const liabilityPieData = [
-    { name: 'Active Principal', value: metrics.totalPrincipal || 0 },
-    { name: 'Projected Interest', value: metrics.totalInterest || 0 }
+    { name: 'Active Principal', value: safeMetrics.totalPrincipal || 0 },
+    { name: 'Projected Interest', value: safeMetrics.totalInterest || 0 }
   ];
 
   // Multi-Product Asset Mix (Real Database Figures in Green & Gold)
   const portfolioMixData = [
-    { name: 'Monthly Income (MIS)', value: metrics.mis?.totalDeposit || 0, color: '#D4AF37' },
-    { name: 'Fixed Deposits (FD)', value: metrics.totalPrincipal || 0, color: '#0A5C36' },
-    { name: 'Savings Accounts (SB)', value: metrics.savings?.totalBalance || 0, color: '#10b981' },
-    { name: 'Recurring (RD)', value: metrics.rd?.totalDeposited || 0, color: '#f59e0b' }
+    { name: 'Monthly Income (MIS)', value: safeMetrics.mis?.totalDeposit || 0, color: '#D4AF37' },
+    { name: 'Fixed Deposits (FD)', value: safeMetrics.totalPrincipal || 0, color: '#0A5C36' },
+    { name: 'Savings Accounts (SB)', value: safeMetrics.savings?.totalBalance || 0, color: '#10b981' },
+    { name: 'Recurring (RD)', value: safeMetrics.rd?.totalDeposited || 0, color: '#f59e0b' }
   ].filter(p => p.value > 0);
 
   // Frequency Chart Data

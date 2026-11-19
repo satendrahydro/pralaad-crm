@@ -700,4 +700,194 @@ router.post('/change-password', authenticateCustomer, (req, res) => {
   }
 });
 
+// ========================================================
+// 1. IN-APP MOBILE PAYMENTS (UPI / QR / NET BANKING)
+// ========================================================
+router.post('/make-payment', authenticateCustomer, (req, res) => {
+  try {
+    const customerId = req.customer?.id || req.user?.id || req.body.customer_id;
+    const { purpose, amount, payment_mode, utr_reference, account_id, notes } = req.body;
+
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid payment amount is required.' });
+    }
+
+    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer account not found.' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const voucherNo = `IN-MOB-${Date.now().toString().slice(-6)}`;
+    const receiptNo = `REC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const mode = payment_mode === 'CASH_REQUEST' ? 'CASH' : 'BANK_ONLINE';
+    const purposeLabel = purpose === 'RD_INSTALLMENT' ? 'RD Installment Payment' :
+                         purpose === 'SAVINGS_DEPOSIT' ? 'Savings Account Deposit' :
+                         purpose === 'LOAN_EMI' ? 'Loan EMI Repayment' : 'New Deposit Investment';
+
+    // 1. Record in Day Book cash entries (INFLOW / आवक - रुपया आया)
+    try {
+      db.prepare(`
+        INSERT INTO day_book_cash_entries (
+          voucher_no, entry_date, entry_type, category, amount, payment_mode, party_name, reference_no, narration, created_by
+        ) VALUES (?, ?, 'INFLOW', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        voucherNo,
+        today,
+        purpose || 'CUSTOMER_DEPOSIT',
+        numAmount,
+        mode,
+        customer.full_name,
+        utr_reference || `UPI-${Date.now().toString().slice(-6)}`,
+        `Mobile App Inward: ${purposeLabel} by ${customer.full_name} (${customer.customer_code}). Ref: ${utr_reference || 'UPI Direct'}`,
+        customer.customer_code
+      );
+    } catch (e) {
+      console.error('Error inserting day_book_cash_entry:', e);
+    }
+
+    // 2. If savings deposit, credit savings balance if account exists
+    if (purpose === 'SAVINGS_DEPOSIT') {
+      try {
+        const sb = db.prepare('SELECT id, balance FROM savings_accounts WHERE customer_id = ?').get(customerId);
+        if (sb) {
+          const newBal = (sb.balance || 0) + numAmount;
+          db.prepare('UPDATE savings_accounts SET balance = ? WHERE id = ?').run(newBal, sb.id);
+        }
+      } catch (e) {}
+    }
+
+    // 3. Return official Digital E-Receipt
+    res.json({
+      success: true,
+      message: `भुगतान सफलतापूर्वक दर्ज हो गया है! रसीद संख्या: ${receiptNo}`,
+      receipt: {
+        receipt_no: receiptNo,
+        voucher_no: voucherNo,
+        date: new Date().toISOString(),
+        customer_name: customer.full_name,
+        customer_code: customer.customer_code,
+        phone: customer.phone,
+        amount: numAmount,
+        purpose: purposeLabel,
+        payment_mode: payment_mode || 'UPI',
+        utr_reference: utr_reference || `UPI-${Date.now().toString().slice(-6)}`,
+        notes: notes || 'Taranganjali Mobile Banking Instant Payment',
+        company_name: 'Tarang Anjali Real Tech Pvt. Ltd.',
+        tagline: 'जीत आपके विश्वास की',
+        status: 'SUCCESS'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ========================================================
+// 2. PROFILE & NAME CORRECTION REQUEST (SUPER ADMIN APPROVAL)
+// ========================================================
+router.post('/correction-request', authenticateCustomer, (req, res) => {
+  try {
+    const customerId = req.customer?.id || req.user?.id || req.body.customer_id;
+    const { field, field_label, new_value, reason } = req.body;
+
+    if (!field || !new_value || !new_value.trim()) {
+      return res.status(400).json({ success: false, message: 'Field name and new corrected value are required.' });
+    }
+
+    const validFields = [
+      'full_name', 'phone', 'father_name', 'nominee_name', 
+      'nominee_relation', 'address', 'email', 'pan_card', 
+      'bank_name', 'account_no', 'ifsc_code'
+    ];
+
+    if (!validFields.includes(field)) {
+      return res.status(400).json({ success: false, message: 'Invalid profile correction field.' });
+    }
+
+    const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer account not found.' });
+    }
+
+    const oldValue = customer[field] || '';
+    if (oldValue === new_value.trim()) {
+      return res.status(400).json({ success: false, message: 'New value is the same as existing value.' });
+    }
+
+    const requestNumber = `CORR-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+    const requestData = JSON.stringify({
+      field,
+      field_label: field_label || field,
+      old_value: oldValue,
+      new_value: new_value.trim(),
+      reason: reason ? reason.trim() : 'Requested by customer via Mobile App',
+      customer_id: customerId,
+      customer_code: customer.customer_code,
+      customer_name: customer.full_name,
+      customer_phone: customer.phone,
+      submitted_at: new Date().toISOString()
+    });
+
+    db.prepare(`
+      INSERT INTO approval_requests (
+        request_number, request_type, maker_id, customer_id, proposed_amount, request_data, status
+      ) VALUES (?, 'PROFILE_CORRECTION', 1, ?, 0, ?, 'PENDING_APPROVAL')
+    `).run(requestNumber, customerId, requestData);
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (?, 'CUSTOMER_CORRECTION_REQUEST', 'APPROVAL_REQUEST', ?, ?)
+      `).run(customerId, requestNumber, `Customer ${customer.full_name} (${customer.customer_code}) submitted correction for ${field}: "${oldValue}" -> "${new_value.trim()}". Pending Super Admin approval.`);
+    } catch(e) {}
+
+    res.json({
+      success: true,
+      message: `संशोधन अनुरोध (${requestNumber}) सफलतापूर्वक सुपर एडमिन सत्यापन हेतु भेज दिया गया है! अनुमोदन के पश्चात नया विवरण लागू हो जाएगा।`,
+      request_number: requestNumber
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/customer-portal/correction-requests - History of correction requests
+router.get('/correction-requests', authenticateCustomer, (req, res) => {
+  try {
+    const customerId = req.customer?.id || req.user?.id || req.query.customer_id;
+    const list = db.prepare(`
+      SELECT 
+        id, request_number, request_type, request_data, status, decision_notes, actioned_at, created_at
+      FROM approval_requests
+      WHERE customer_id = ? AND request_type = 'PROFILE_CORRECTION'
+      ORDER BY id DESC
+    `).all(customerId);
+
+    const formatted = list.map(item => {
+      let data = {};
+      try { data = JSON.parse(item.request_data); } catch(e){}
+      return {
+        id: item.id,
+        request_number: item.request_number,
+        field: data.field,
+        field_label: data.field_label || data.field,
+        old_value: data.old_value,
+        new_value: data.new_value,
+        reason: data.reason,
+        status: item.status,
+        decision_notes: item.decision_notes,
+        actioned_at: item.actioned_at,
+        created_at: item.created_at
+      };
+    });
+
+    res.json({ success: true, data: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

@@ -83,6 +83,8 @@ export default function MISList({ onOpenNewMIS, isEmployee = false }) {
 
   const openDetails = async (mis) => {
     setSelectedMIS(mis);
+    setActiveModalTab('passbook');
+    setPassbookFilter('ALL');
     try {
       setDetailsLoading(true);
       const res = await apiRequest(`/mis/${mis.id}`);
@@ -303,28 +305,28 @@ export default function MISList({ onOpenNewMIS, isEmployee = false }) {
 
               {/* Sub-Tabs: Passbook & Transactions Ledger vs Payout Schedule */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-slate-200">
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold gap-1">
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold gap-1 shadow-inner">
                   <button
                     onClick={() => setActiveModalTab('passbook')}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer ${
                       activeModalTab === 'passbook'
-                        ? 'bg-white text-indigo-700 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80 font-black'
+                        : 'text-slate-600 hover:text-slate-900 font-semibold'
                     }`}
                   >
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                    Account Passbook & Transactions (9-Col Ledger)
+                    <BookOpen className="w-4 h-4 text-indigo-600" />
+                    <span>📖 पासबुक खाता विवरण (Passbook Transactions Ledger)</span>
                   </button>
                   <button
                     onClick={() => setActiveModalTab('schedules')}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition cursor-pointer ${
                       activeModalTab === 'schedules'
-                        ? 'bg-white text-emerald-700 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/80 font-black'
+                        : 'text-slate-600 hover:text-slate-900 font-semibold'
                     }`}
                   >
-                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                    Monthly Payout Schedule ({misDetails?.schedules?.length || 0})
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                    <span>📅 60-Month Interest Schedule ({misDetails?.schedules?.length || 0})</span>
                   </button>
                 </div>
 

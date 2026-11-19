@@ -266,7 +266,7 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
     const executeApproval = db.transaction(() => {
       // 3.1 NEW FD APPROVAL
       if (request.request_type === 'NEW_FD') {
-        const customerId = payload.customerId || payload.customer_id;
+        const customerId = payload.customerId || payload.customer_id || request.customer_id;
         const principal = parseFloat(payload.principal || payload.principal_amount) || 0;
         const annualRate = parseFloat(payload.annualRate || payload.annual_rate) || 0;
         const tenureMonths = parseInt(payload.tenureMonths || payload.tenure_months) || 12;
@@ -993,15 +993,55 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
         executionResult = { accountId, newBalance, amountWithdrawn: amount };
       }
 
+      // 3.X PROFILE / NAME CORRECTION APPROVAL (Requested from Mobile App or Maker)
+      if (request.request_type === 'PROFILE_CORRECTION') {
+        const customerId = request.customer_id || payload.customer_id;
+        const field = payload.field;
+        const newValue = payload.new_value;
+        const validFields = [
+          'full_name', 'phone', 'father_name', 'nominee_name', 
+          'nominee_relation', 'address', 'email', 'pan_card', 
+          'bank_name', 'account_no', 'ifsc_code'
+        ];
+
+        if (!validFields.includes(field)) {
+          throw new Error(`Invalid correction field: ${field}`);
+        }
+
+        db.prepare(`UPDATE customers SET ${field} = ? WHERE id = ?`).run(newValue, customerId);
+
+        // Keep users table in sync if phone or full_name changed
+        if (field === 'phone') {
+          try {
+            db.prepare(`UPDATE users SET phone = ? WHERE customer_id = ?`).run(newValue, customerId);
+          } catch(e) {}
+        }
+        if (field === 'full_name') {
+          try {
+            db.prepare(`UPDATE users SET full_name = ? WHERE customer_id = ?`).run(newValue, customerId);
+          } catch(e) {}
+        }
+
+        executionResult = {
+          customerId,
+          field,
+          newValue,
+          message: `Customer ${payload.field_label || field} updated to "${newValue}" successfully`
+        };
+      }
+
       // Mark Request as APPROVED
       db.prepare(`
         UPDATE approval_requests 
         SET status = 'APPROVED',
             checker_id = ?,
             decision_remarks = ?,
-            decided_at = CURRENT_TIMESTAMP
+            decision_notes = ?,
+            decision_date = CURRENT_TIMESTAMP,
+            decided_at = CURRENT_TIMESTAMP,
+            actioned_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(req.user.id, decision_remarks || 'Approved by Administrator', reqId);
+      `).run(req.user.id, decision_remarks || 'Approved by Administrator', decision_remarks || 'Approved by Administrator', reqId);
 
       // Audit Log for Approval
       try {
@@ -1051,9 +1091,12 @@ router.post('/:id/reject', authenticateToken, requireAdmin, (req, res) => {
       SET status = 'REJECTED',
           checker_id = ?,
           decision_remarks = ?,
-          decided_at = CURRENT_TIMESTAMP
+          decision_notes = ?,
+          decision_date = CURRENT_TIMESTAMP,
+          decided_at = CURRENT_TIMESTAMP,
+          actioned_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(req.user.id, reason, reqId);
+    `).run(req.user.id, reason, reason, reqId);
 
     // Reset customer app access status if rejecting an app access request
     if (request.request_type === 'CUSTOMER_APP_ACCESS' && request.customer_id) {

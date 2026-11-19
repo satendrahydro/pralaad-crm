@@ -17,7 +17,10 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
-export default function LoansAgainstDeposit() {
+export default function LoansAgainstDeposit({ 
+  loanType = 'DEPOSIT', 
+  title = 'Loan Against Deposit (फिक्स डिपॉजिट पर ऋण)' 
+}) {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -150,13 +153,17 @@ export default function LoansAgainstDeposit() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                Loan Against Deposit (LAD)
+                {title || 'Loan Against Deposit (LAD)'}
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Secured FD Credit
+                  {loanType === 'MORTGAGE' ? 'Collateralized Property' : loanType === 'BUSINESS' ? 'Commercial Credit' : 'Secured FD Credit'}
                 </span>
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Instant credit advances up to 85% LTV against active Fixed Deposits with zero collateral risk
+                {loanType === 'MORTGAGE' 
+                  ? 'Property and mortgage advances with title deeds and physical valuation tracking' 
+                  : loanType === 'BUSINESS' 
+                    ? 'Working capital and trade loans for local businesses, enterprises & shops' 
+                    : 'Instant credit advances up to 85% LTV against active Fixed Deposits with zero collateral risk'}
               </p>
             </div>
           </div>

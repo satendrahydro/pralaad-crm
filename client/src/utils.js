@@ -1,16 +1,12 @@
 export const getDefaultServerUrl = () => {
   const saved = localStorage.getItem('pralaad_server_url');
-  if (saved && !saved.includes('trycloudflare.com') && !saved.includes('loca.lt')) {
-    return saved.replace(/\/$/, '');
-  }
-  // Clear any old obsolete tunnel URL from previous session
   if (saved) {
-    localStorage.removeItem('pralaad_server_url');
+    return saved.replace(/\/$/, '');
   }
 
   // If running inside Native Android App (Capacitor WebView)
   if (window.Capacitor || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
-    return 'https://pralaad-fd-crm.onrender.com';
+    return 'http://192.168.0.150:5000';
   }
 
   // In regular web browser (localhost or onrender.com) use relative /api
@@ -56,18 +52,6 @@ export async function apiRequest(endpoint, options = {}) {
     headers
   });
 
-  if (response.status === 401) {
-    localStorage.removeItem('pralaad_fd_token');
-    localStorage.removeItem('pralaad_fd_user');
-    window.location.reload();
-    throw new Error('Session expired. Please login again.');
-  }
-
-  if (response.status === 423) {
-    window.dispatchEvent(new CustomEvent('commercial_lock_triggered', { detail: data }));
-    throw new Error(data.message || 'System access suspended due to pending commercial settlement.');
-  }
-
   let data;
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
@@ -75,6 +59,27 @@ export async function apiRequest(endpoint, options = {}) {
   } else {
     const text = await response.text();
     data = { success: false, message: text || `Server error (${response.status})` };
+  }
+
+  const isAuthFailure = response.status === 401 || (
+    response.status === 403 && 
+    data && 
+    typeof data.message === 'string' && 
+    (data.message.toLowerCase().includes('token') || data.message.toLowerCase().includes('session') || data.message.toLowerCase().includes('credentials'))
+  );
+
+  if (isAuthFailure) {
+    localStorage.removeItem('pralaad_fd_token');
+    localStorage.removeItem('pralaad_fd_user');
+    localStorage.removeItem('pralaad_staff_permissions');
+    window.dispatchEvent(new CustomEvent('pralaad_auth_expired'));
+    window.location.reload();
+    throw new Error(data.message || 'Session expired. Please sign in again.');
+  }
+
+  if (response.status === 423) {
+    window.dispatchEvent(new CustomEvent('commercial_lock_triggered', { detail: data }));
+    throw new Error(data.message || 'System access suspended due to pending commercial settlement.');
   }
 
   if (!response.ok) {
