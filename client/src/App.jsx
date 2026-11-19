@@ -1044,9 +1044,9 @@ export default function App() {
         </header>
 
         {/* ======================================================== */}
-        {/* 3. DYNAMIC CONTENT AREA                                  */}
+        {/* 3. DYNAMIC CONTENT AREA (FULL-WIDTH FLUID LAYOUT)         */}
         {/* ======================================================== */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-16">
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 w-full pb-16">
           
           {/* Render Creatio Full Entity View if activeTab is an FD record */}
           {activeTab.startsWith('fd-') && (
