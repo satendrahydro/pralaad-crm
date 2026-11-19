@@ -190,7 +190,7 @@ export default function FDList({
       </div>
 
       {/* Filter and Search Bar with Interactive Dropdowns */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-3 items-center justify-between">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-3 items-center justify-between relative z-20">
         
         {/* Search */}
         <div className="relative w-full lg:w-80">
@@ -246,7 +246,7 @@ export default function FDList({
             </button>
 
             {schemeDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 animate-dropdown text-xs">
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 animate-dropdown text-xs ring-1 ring-black/10">
                 <button
                   onClick={() => {
                     setSchemeFilter('ALL');
@@ -295,7 +295,7 @@ export default function FDList({
             </button>
 
             {sortDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 animate-dropdown text-xs">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[60] animate-dropdown text-xs ring-1 ring-black/10">
                 {[
                   { id: 'newest', label: 'Newest Booked' },
                   { id: 'principal_desc', label: 'Principal (Highest)' },
@@ -359,7 +359,7 @@ export default function FDList({
                   const isNearMaturity = fd.status === 'ACTIVE' && new Date(fd.maturity_date) <= new Date(Date.now() + 30 * 86400000);
 
                   return (
-                    <tr key={fd.id} className="hover:bg-slate-50/80 transition table-row-hover">
+                    <tr key={fd.id} className={`hover:bg-slate-50/80 transition table-row-hover ${activeRowMenu === fd.id ? 'relative z-30' : ''}`}>
                       <td className="py-3.5 px-4">
                         <span className="font-mono font-bold text-indigo-600 block">{fd.fd_number}</span>
                         <span className="text-[10px] text-slate-400 font-semibold">{fd.customer_code}</span>
@@ -460,7 +460,7 @@ export default function FDList({
                             </button>
 
                             {activeRowMenu === fd.id && (
-                              <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 text-left animate-dropdown text-xs">
+                              <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[100] text-left animate-dropdown text-xs ring-1 ring-black/10">
                                 
                                 <button
                                   onClick={() => {

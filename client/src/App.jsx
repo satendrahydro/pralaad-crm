@@ -676,14 +676,14 @@ export default function App() {
       {/* 2. DARK FOREST GREEN TOP APPLICATION BAR                  */}
       {/* ======================================================== */}
       <div className={`
-        flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden transition-all duration-300 ease-in-out
+        flex-1 flex flex-col min-w-0 max-w-full transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}
       `}>
         
         {/* Deep Forest Green Header Bar */}
-        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-40 px-3 sm:px-4 flex items-center justify-between gap-2 shadow-xs max-w-full overflow-hidden">
+        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-50 px-3 sm:px-4 flex items-center justify-between gap-2 shadow-md max-w-full">
           
-          {/* Left: Mobile Toggle, Quick Booking & Primary Ledgers */}
+          {/* Left: Mobile Toggle, Quick Booking, Search Bar & Primary Ledgers */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -704,6 +704,23 @@ export default function App() {
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Booking</span>
             </button>
+
+            {/* Global Search Bar - Positioned immediately after New Booking as requested */}
+            <div className="hidden sm:flex items-center relative min-w-[130px] max-w-[200px] xl:max-w-xs shrink-0">
+              <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-2.5 top-2.5 pointer-events-none" />
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                placeholder="Search contracts, PAN..."
+                className="w-full text-xs pl-7 pr-11 py-1.5 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
+              />
+              <span className="absolute right-1.5 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
+                Ctrl K
+              </span>
+            </div>
 
             {/* Direct DAY BOOK Navigation Button */}
             <button
@@ -746,7 +763,7 @@ export default function App() {
               </button>
 
               {accountsDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[100] text-xs text-slate-800 animate-fadeIn ring-1 ring-black/10">
                   <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Core Banking Ledgers & Tools
                   </div>
@@ -806,29 +823,12 @@ export default function App() {
 
             {/* Breadcrumb Navigation - on wide screens */}
             <div className="hidden 2xl:flex items-center gap-1.5 text-xs font-medium text-slate-300">
-              <span className="text-emerald-300 font-semibold">TARPL</span>
+              <span className="text-emerald-300 font-semibold truncate max-w-[180px]">Taranganjali Private Limited</span>
               <span>/</span>
               <span className="text-[#FBBF24] font-bold bg-[#062319] px-2 py-0.5 rounded border border-[#1a5d43]">
                 {activeModuleLabel}
               </span>
             </div>
-          </div>
-
-          {/* Center: Global Search Bar */}
-          <div className="hidden sm:flex items-center relative flex-1 min-w-[120px] max-w-[220px] xl:max-w-xs mx-1">
-            <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
-            <input
-              type="text"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              placeholder="Search contracts, depositors, PAN, mobile..."
-              className="w-full text-xs pl-8 pr-12 py-1.5 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
-            />
-            <span className="absolute right-2 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
-              Ctrl K
-            </span>
           </div>
 
           {/* Right: Branch Selector, FY Selector, Notifications, Customer App, Profile */}
@@ -847,7 +847,7 @@ export default function App() {
               </button>
 
               {branchDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[100] text-xs text-slate-800 animate-fadeIn ring-1 ring-black/10">
                   <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Select Branch
                   </div>
@@ -882,7 +882,7 @@ export default function App() {
               </button>
 
               {fyDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[100] text-xs text-slate-800 animate-fadeIn ring-1 ring-black/10">
                   <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Fiscal Cycle
                   </div>
@@ -929,7 +929,7 @@ export default function App() {
               </button>
 
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 z-[100] text-xs text-slate-800 animate-fadeIn ring-1 ring-black/10">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <span className="font-bold text-slate-900">Notifications & Alerts</span>
                     <span className="text-[10px] bg-amber-50 text-amber-800 font-semibold px-2 py-0.5 rounded-full border border-amber-200">
@@ -1012,7 +1012,7 @@ export default function App() {
               </button>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-[100] text-xs text-slate-800 animate-fadeIn ring-1 ring-black/10">
                   <div className="px-3 py-2 border-b border-slate-100">
                     <div className="font-bold text-slate-900">{user?.full_name || 'Admin'}</div>
                     <div className="text-[11px] text-slate-400">{user?.username || 'admin'}</div>

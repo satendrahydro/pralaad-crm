@@ -684,16 +684,16 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                 />
               </div>
             </div>
-            <div className="flex items-center justify-center gap-1.5">
-              <h1 className="text-2xl font-black text-[#062319] tracking-wider uppercase font-sans">
-                TARANGANJALI
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black text-[#062319] tracking-wider uppercase font-sans">
+                TARANGANJALI PRIVATE LIMITED
               </h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                 APP
               </span>
             </div>
             <div className="text-xs font-bold text-[#0A5C36] mt-0.5">
-              जीत आपके विश्वास की • Tarang Anjali Real Tech Pvt. Ltd.
+              जीत आपके विश्वास की • Taranganjali Private Limited
             </div>
             <p className="text-xs text-slate-500 mt-1">
               ग्राहक डिजिटल पासबुक एवं सुरक्षित मोबाइल बैंकिंग

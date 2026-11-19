@@ -259,254 +259,158 @@ export default function Login({ onLoginSuccess }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#062319] via-[#082e20] to-[#041a12] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#062319] via-[#082e20] to-[#041a12] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
       
-      {/* Main Container: 2-Column Responsive Institutional Layout */}
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      {/* Background Subtle Ambient Glow */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Main Container: Centered Clean Institutional Banking Card */}
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 flex flex-col justify-between relative z-10 animate-fadeIn">
         
-        {/* ======================================================== */}
-        {/* LEFT COLUMN: ACTIVE SECURITY SYSTEM SHOWCASE (7 cols)    */}
-        {/* ======================================================== */}
-        <div className="lg:col-span-7 bg-[#062319]/90 border border-[#1a5d43]/80 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl flex flex-col justify-between text-white relative overflow-hidden">
-          
-          {/* Subtle Background Watermark / Accent */}
-          <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div>
-            {/* Brand Header */}
-            <div className="flex items-center gap-3 pb-5 border-b border-[#1a5d43]/80">
-              <TarplLogo variant="icon" size={48} />
-              <div>
-                <div className="text-sm font-black tracking-wide text-white flex items-center gap-2">
-                  <span>TARANG ANJALI REAL TECH PVT. LTD.</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40">
-                    ISO Certified
-                  </span>
-                </div>
-                <div className="text-xs text-[#FBBF24] font-bold">
-                  जीत आपके विश्वास की • Institutional Core Banking & Wealth CRM
-                </div>
-              </div>
+        <div>
+          {/* Top Brand Header */}
+          <div className="text-center mb-5">
+            <div className="flex justify-center mb-3">
+              <TarplLogo variant="badge" size={68} />
             </div>
-
-            {/* Security Architecture Header */}
-            <div className="mt-5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold mb-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>6-Tier Active Cyber & Financial Defense Shield</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                संस्थागत सुरक्षा एवं संरक्षा प्रणाली (Security Systems in Action)
-              </h2>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                तरंगांजलि कोर बैंकिंग में आपकी पूंजी, ग्राहक रिकॉर्ड और बहीखातों की अखंडता सुनिश्चित करने के लिए निम्नलिखित 6 उच्च-स्तरीय सुरक्षा प्रणालियां चौबीसों घंटे सक्रिय रूप से कार्य करती हैं:
-              </p>
-            </div>
-
-            {/* 6 Security System Highlights Grid */}
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {securitySystems.map((sec) => {
-                const Icon = sec.icon;
-                return (
-                  <div 
-                    key={sec.id}
-                    onClick={() => {
-                      setActiveSecurityTab(sec.id);
-                      setShowSecurityModal(true);
-                    }}
-                    className="p-3 rounded-2xl bg-[#082e20]/80 border border-[#1a5d43] hover:border-[#D4AF37]/60 hover:bg-[#0a3d2b] transition cursor-pointer group flex flex-col justify-between"
-                    title="क्लिक करके विस्तृत कार्यप्रणाली देखें"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400/80 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40">
-                          {sec.tag}
-                        </span>
-                      </div>
-                      <div className="text-xs font-bold text-white group-hover:text-[#FBBF24] transition leading-tight">
-                        {sec.hindiTitle}
-                      </div>
-                      <div className="text-[11px] text-slate-300 mt-1 leading-snug line-clamp-2">
-                        {sec.summary}
-                      </div>
-                    </div>
-
-                    <div className="mt-2 pt-1.5 border-t border-[#134e38] flex items-center justify-between text-[10px] text-emerald-300 font-semibold">
-                      <span>कार्यप्रणाली विवरण पढ़ें</span>
-                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <h1 className="text-lg font-black text-[#062319] tracking-tight">
+              कर्मचारी एवं प्रबंधक लॉगिन
+            </h1>
+            <p className="text-xs text-[#0A5C36] font-bold mt-0.5">
+              Taranganjali Private Limited • Secure Core Portal
+            </p>
           </div>
 
-          {/* Bottom Security Footer Strip */}
-          <div className="mt-5 pt-4 border-t border-[#1a5d43]/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-slate-300">
-              <Lock className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span className="text-[11px]">256-Bit SSL/TLS Certified • Zero-Trust Policy Active</span>
+          {/* Quick Role Select Tabs */}
+          <div className="grid grid-cols-2 gap-2 mb-3 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => handleQuickFill('superadmin', 'admin123')}
+              className={`py-2 rounded-lg transition cursor-pointer text-center ${
+                username === 'superadmin' || username === 'admin'
+                  ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Super Admin (Checker)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('staff', 'staff123')}
+              className={`py-2 rounded-lg transition cursor-pointer text-center ${
+                username === 'staff' || username === 'staff1'
+                  ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Staff (Maker)
+            </button>
+          </div>
+          <div className="text-[11px] text-slate-500 mb-4 px-1 flex items-center justify-between font-mono">
+            <span>Admin: <strong className="text-slate-700">superadmin</strong> / <strong className="text-slate-700">admin123</strong></span>
+            <span>Staff: <strong className="text-slate-700">staff</strong> / <strong className="text-slate-700">staff123</strong></span>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Login ID / Username
+              </label>
+              <div className="relative">
+                <User className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
+                  placeholder="Enter username or mobile"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotIdentifier(username);
+                    setForgotStep(1);
+                    setForgotError('');
+                    setForgotSuccess('');
+                    setShowForgotModal(true);
+                  }}
+                  className="text-xs font-bold text-[#0A5C36] hover:text-[#08482a] cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
+                  placeholder="Enter password"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
+              <ShieldCheck className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-bold">सक्रिय सुरक्षा अधिकार:</span>{' '}
+                {username === 'admin' || username === 'superadmin'
+                  ? 'Super Admin (चेकर एवं अंतिम वित्तीय अनुमोदन प्राधिकारी)' 
+                  : 'Staff Maker (प्रविष्टि ऑपरेटर - केवल प्रस्तावकर्ता)'}
+              </div>
             </div>
 
             <button
-              type="button"
-              onClick={() => setShowSecurityModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#FBBF24] border border-[#D4AF37]/30 font-bold text-xs transition cursor-pointer"
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 bg-[#D4AF37] hover:bg-[#C59B27] active:bg-[#B38C1F] text-[#062319] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
             >
-              <Info className="w-3.5 h-3.5" />
-              <span>संपूर्ण सुरक्षा नियमावली देखें (Full Policy)</span>
+              {loading ? (
+                <span className="inline-block w-5 h-5 border-2 border-[#062319] border-t-transparent rounded-full animate-spin"></span>
+              ) : (
+                <>
+                  Sign In to Portal (प्रवेश करें)
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
-          </div>
-
+          </form>
         </div>
 
-        {/* ======================================================== */}
-        {/* RIGHT COLUMN: LOGIN FORM & AUTHENTICATION (5 cols)       */}
-        {/* ======================================================== */}
-        <div className="lg:col-span-5 bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 flex flex-col justify-between">
-          
-          <div>
-            {/* Top Brand Header for Mobile / Tablet */}
-            <div className="text-center mb-5">
-              <div className="flex justify-center mb-2.5">
-                <TarplLogo variant="badge" size={72} />
-              </div>
-              <h1 className="text-lg font-black text-[#062319] tracking-tight">
-                कर्मचारी एवं प्रबंधक लॉगिन
-              </h1>
-              <p className="text-xs text-[#0A5C36] font-bold">
-                Authorized Personnel Only • Secure Portal
-              </p>
-            </div>
-
-            {/* Quick Role Select Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-3 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('superadmin', 'admin123')}
-                className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                  username === 'superadmin' || username === 'admin'
-                    ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Super Admin (Checker)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('staff', 'staff123')}
-                className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                  username === 'staff' || username === 'staff1'
-                    ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Staff (Maker)
-              </button>
-            </div>
-            <div className="text-[11px] text-slate-500 mb-4 px-1 flex items-center justify-between font-mono">
-              <span>Admin: <strong className="text-slate-700">superadmin</strong> / <strong className="text-slate-700">admin123</strong></span>
-              <span>Staff: <strong className="text-slate-700">staff</strong> / <strong className="text-slate-700">staff123</strong></span>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Login ID / Username
-                </label>
-                <div className="relative">
-                  <User className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
-                    placeholder="Enter username or mobile"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotIdentifier(username);
-                      setForgotStep(1);
-                      setForgotError('');
-                      setForgotSuccess('');
-                      setShowForgotModal(true);
-                    }}
-                    className="text-xs font-bold text-[#0A5C36] hover:text-[#08482a] cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
-                    placeholder="Enter password"
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
-                <ShieldCheck className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
-                <div className="leading-relaxed">
-                  <span className="font-bold">सक्रिय सुरक्षा अधिकार:</span>{' '}
-                  {username === 'admin' || username === 'superadmin'
-                    ? 'Super Admin (चेकर एवं अंतिम वित्तीय अनुमोदन प्राधिकारी)' 
-                    : 'Staff Maker (प्रविष्टि ऑपरेटर - केवल प्रस्तावकर्ता)'}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 px-4 bg-[#D4AF37] hover:bg-[#C59B27] active:bg-[#B38C1F] text-[#062319] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
-              >
-                {loading ? (
-                  <span className="inline-block w-5 h-5 border-2 border-[#062319] border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <>
-                    Sign In to Portal (प्रवेश करें)
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
+        {/* Compact 6-Layer Security Badge requested by user */}
+        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col items-center gap-2 text-center">
+          <button
+            type="button"
+            onClick={() => setShowSecurityModal(true)}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition cursor-pointer shadow-xs group"
+            title="क्लिक करके 6-स्तरीय सुरक्षा प्रणाली विवरण देखें"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition shrink-0" />
+            <span>Secured by 6-Layer Banking Encryption</span>
+            <span className="text-[10px] text-emerald-600 font-mono bg-emerald-100/80 px-1 rounded">256-Bit SSL</span>
+          </button>
+          <div className="text-[10px] text-slate-500 font-medium">
+            Taranganjali Private Limited • 24x7 Multi-Tier Zero-Trust Audit
           </div>
-
-          {/* Security Certifications Strip at Bottom */}
-          <div className="mt-5 pt-4 border-t border-slate-100 space-y-2 text-center">
-            <div className="text-[11px] font-bold text-slate-600 flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>दोहरा प्राधिकरण एवं 256-बिट SSL सुरक्षा से सुरक्षित</span>
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Taranganjali Real Tech Pvt. Ltd. • All Session Logged & Audited
-            </div>
-          </div>
-
         </div>
 
       </div>
