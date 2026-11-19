@@ -383,12 +383,12 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             {/* Quick Role Select Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-5 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+            <div className="grid grid-cols-2 gap-2 mb-3 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => handleQuickFill('admin', 'admin123')}
+                onClick={() => handleQuickFill('superadmin', 'admin123')}
                 className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                  username === 'admin'
+                  username === 'superadmin' || username === 'admin'
                     ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -397,15 +397,19 @@ export default function Login({ onLoginSuccess }) {
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickFill('staff1', 'staff123')}
+                onClick={() => handleQuickFill('staff', 'staff123')}
                 className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                  username === 'staff1'
+                  username === 'staff' || username === 'staff1'
                     ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Staff (Maker)
               </button>
+            </div>
+            <div className="text-[11px] text-slate-500 mb-4 px-1 flex items-center justify-between font-mono">
+              <span>Admin: <strong className="text-slate-700">superadmin</strong> / <strong className="text-slate-700">admin123</strong></span>
+              <span>Staff: <strong className="text-slate-700">staff</strong> / <strong className="text-slate-700">staff123</strong></span>
             </div>
 
             {error && (
@@ -469,7 +473,7 @@ export default function Login({ onLoginSuccess }) {
                 <ShieldCheck className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
                   <span className="font-bold">सक्रिय सुरक्षा अधिकार:</span>{' '}
-                  {username === 'admin' 
+                  {username === 'admin' || username === 'superadmin'
                     ? 'Super Admin (चेकर एवं अंतिम वित्तीय अनुमोदन प्राधिकारी)' 
                     : 'Staff Maker (प्रविष्टि ऑपरेटर - केवल प्रस्तावकर्ता)'}
                 </div>

@@ -235,11 +235,11 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
     }
   };
 
-  const handleQuickDemoLogin = (phone) => {
-    setIdentifier(phone);
-    setPin('1234');
+  const handleQuickDemoLogin = (ident) => {
+    setIdentifier(ident);
+    setPin('client123');
     setTimeout(() => {
-      handleLoginDirect(phone, '1234');
+      handleLoginDirect(ident, 'client123');
     }, 50);
   };
 
@@ -742,7 +742,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-600"
-                placeholder="e.g. M00001 or 9897463367"
+                placeholder="e.g. client or 9897463367"
               />
             </div>
 
@@ -771,9 +771,11 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-600"
-                placeholder="Enter client password"
+                placeholder="Enter client password (default: client123)"
               />
-              <p className="text-[11px] text-slate-400 mt-1">डिफ़ॉल्ट क्लाइंट पासवर्ड: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono font-bold text-slate-700">client123</code></p>
+              <p className="text-[11px] text-slate-500 mt-1 font-mono">
+                डिफ़ॉल्ट आईडी/पासवर्ड: <code className="bg-slate-100 px-1 py-0.5 rounded font-bold text-slate-800">client</code> / <code className="bg-slate-100 px-1 py-0.5 rounded font-bold text-slate-800">client123</code>
+              </p>
             </div>
 
             <button
@@ -798,12 +800,12 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('M00001')}
+                onClick={() => handleQuickDemoLogin('client')}
                 className="w-full p-2.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-xs flex justify-between items-center transition cursor-pointer"
               >
                 <div className="text-left">
-                  <div className="font-bold text-slate-800">PRAHLAD SINGH HIRANWAL (M00001)</div>
-                  <div className="text-[10px] text-slate-500">Member ID: M00001 • Pass: M00001@123</div>
+                  <div className="font-bold text-slate-800">PRAHLAD SINGH HIRANWAL</div>
+                  <div className="text-[10px] text-slate-500 font-mono">ID: <strong className="text-slate-800">client</strong> • Pass: <strong className="text-slate-800">client123</strong></div>
                 </div>
                 <span className="font-bold text-indigo-600 text-xs">Login &rarr;</span>
               </button>
@@ -1260,10 +1262,11 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
             </button>
             <button
               onClick={handleLogout}
-              title="Logout"
-              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg cursor-pointer"
+              title="Logout from Customer App"
+              className="flex items-center gap-1 text-[11px] font-bold bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-xs"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
           </div>
         </div>

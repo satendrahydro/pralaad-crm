@@ -1000,6 +1000,16 @@ export default function App() {
               <span>Download APK</span>
             </a>
 
+            {/* Direct Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-xs"
+              title="Logout from CRM"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+
             {/* 6. User Profile Menu */}
             <div className="relative pl-1 sm:pl-2 border-l border-[#1e2d4d]" ref={profileRef}>
               <button
