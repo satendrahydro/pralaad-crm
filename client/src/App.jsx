@@ -537,7 +537,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-slate-900 flex font-sans selection:bg-[#D4AF37] selection:text-[#062319]">
+    <div className="min-h-screen max-w-full overflow-x-hidden bg-[#FAF8F5] text-slate-900 flex font-sans selection:bg-[#D4AF37] selection:text-[#062319]">
       
       {/* ======================================================== */}
       {/* 1. ENTERPRISE FINTECH DARK FOREST GREEN SIDEBAR           */}
@@ -676,18 +676,18 @@ export default function App() {
       {/* 2. DARK FOREST GREEN TOP APPLICATION BAR                  */}
       {/* ======================================================== */}
       <div className={`
-        flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out
+        flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}
       `}>
         
         {/* Deep Forest Green Header Bar */}
-        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-40 px-4 sm:px-6 flex items-center justify-between shadow-xs">
+        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-40 px-3 sm:px-4 flex items-center justify-between gap-2 shadow-xs max-w-full overflow-hidden">
           
-          {/* Left: Mobile Toggle, Quick Booking & Breadcrumb */}
-          <div className="flex items-center gap-3">
+          {/* Left: Mobile Toggle, Quick Booking & Primary Ledgers */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-lg text-slate-300 hover:bg-[#0a3d2b]"
+              className="md:hidden p-1.5 rounded-lg text-slate-300 hover:bg-[#0a3d2b] cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -698,17 +698,17 @@ export default function App() {
                 setNewFDInitialData(null);
                 setNewFDModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#C59B27] text-[#062319] font-bold text-xs shadow-xs transition cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#C59B27] text-[#062319] font-bold text-xs shadow-xs transition cursor-pointer shrink-0"
               title="Quick New Deposit Booking"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">New Booking</span>
             </button>
 
-            {/* Direct DAY BOOK Navigation Button (Always Visible in Top Bar) */}
+            {/* Direct DAY BOOK Navigation Button */}
             <button
               onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
                 activeTab === 'day_book'
                   ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37] shadow-xs'
                   : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-amber-300'
@@ -716,126 +716,107 @@ export default function App() {
               title="Open Day Book (Daily Cash & Bank Ledgers)"
             >
               <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span>Day Book</span>
+              <span className="hidden md:inline">Day Book</span>
             </button>
 
-            {/* Breadcrumb Navigation */}
-            <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-300">
-              <span className="text-emerald-300 font-semibold">TARPL CRM</span>
-              <span>/</span>
-              <span className="text-[#FBBF24] font-bold bg-[#062319] px-2.5 py-1 rounded-md border border-[#1a5d43]">
-                {activeModuleLabel}
-              </span>
+            {/* Direct DAILY COLLECTION button with NEW badge */}
+            <button
+              onClick={() => handleSwitchTab('daily_collection', 'Daily Collection', Coins, 'bg-emerald-600')}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
+                activeTab === 'daily_collection'
+                  ? 'bg-emerald-600 text-white border-emerald-400'
+                  : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
+              }`}
+              title="Daily Field Collection"
+            >
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden lg:inline">Daily Collection</span>
+              <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded">NEW</span>
+            </button>
+
+            {/* ACCOUNTS Dropdown (Houses Journal Entry, SMS, General Ledger, Reports) */}
+            <div className="relative" ref={accountsRef}>
+              <button
+                onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer shrink-0"
+                title="Banking Accounts & Ledgers"
+              >
+                <span>Accounts</span>
+                <ChevronDown className="w-3 h-3 text-amber-400" />
+              </button>
+
+              {accountsDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Core Banking Ledgers & Tools
+                  </div>
+                  <button
+                    onClick={() => {
+                      setJournalEntryModalOpen(true);
+                      setAccountsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>New Journal Entry</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600');
+                      setAccountsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Day Book (8 Ledgers)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setScheduleSmsModalOpen(true);
+                      setAccountsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Schedule SMS Alert</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSwitchTab('transactions', 'Transactions Ledger', Receipt, 'bg-teal-600');
+                      setAccountsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Receipt className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>General Ledger</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSwitchTab('reports', 'Reports & Analytics', BarChart3, 'bg-rose-600');
+                      setAccountsDropdownOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Trial Balance & Balance Sheet</span>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Quick Navigation Modules */}
-            <div className="hidden md:flex items-center gap-1.5 ml-1">
-              {/* ACCOUNTS Dropdown */}
-              <div className="relative" ref={accountsRef}>
-                <button
-                  onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer"
-                  title="Banking Accounts & Ledgers"
-                >
-                  <span>Accounts</span>
-                  <ChevronDown className="w-3 h-3 text-amber-400" />
-                </button>
-
-                {accountsDropdownOpen && (
-                  <div className="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 z-50 text-xs text-slate-800 animate-fadeIn">
-                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Core Banking Ledgers
-                    </div>
-                    <button
-                      onClick={() => {
-                        handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600');
-                        setAccountsDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
-                    >
-                      <BookOpen className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Day Book (8 Ledgers)</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setJournalEntryModalOpen(true);
-                        setAccountsDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>New Journal Entry</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleSwitchTab('transactions', 'Transactions Ledger', Receipt, 'bg-teal-600');
-                        setAccountsDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Receipt className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>General Ledger</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleSwitchTab('reports', 'Reports & Analytics', BarChart3, 'bg-rose-600');
-                        setAccountsDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium text-slate-700 flex items-center gap-2 cursor-pointer"
-                    >
-                      <BarChart3 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Trial Balance & Balance Sheet</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Direct NEW JOURNAL ENTRY button */}
-              <button
-                onClick={() => setJournalEntryModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer whitespace-nowrap"
-              >
-                New Journal Entry
-              </button>
-
-              {/* Direct DAY BOOK button */}
-              <button
-                onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
-                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
-                  activeTab === 'day_book'
-                    ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37]'
-                    : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-white'
-                }`}
-              >
-                Day Book
-              </button>
-
-              {/* Direct SCHEDULE SMS button */}
-              <button
-                onClick={() => setScheduleSmsModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white uppercase tracking-wider transition cursor-pointer whitespace-nowrap"
-              >
-                Schedule SMS
-              </button>
-
-              {/* Direct DAILY COLLECTION button with NEW badge */}
-              <button
-                onClick={() => handleSwitchTab('daily_collection', 'Daily Collection', Coins, 'bg-emerald-600')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition cursor-pointer whitespace-nowrap ${
-                  activeTab === 'daily_collection'
-                    ? 'bg-emerald-600 text-white border-emerald-400'
-                    : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
-                }`}
-              >
-                <span>Daily Collection</span>
-                <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded">NEW</span>
-              </button>
+            {/* Breadcrumb Navigation - on wide screens */}
+            <div className="hidden 2xl:flex items-center gap-1.5 text-xs font-medium text-slate-300">
+              <span className="text-emerald-300 font-semibold">TARPL</span>
+              <span>/</span>
+              <span className="text-[#FBBF24] font-bold bg-[#062319] px-2 py-0.5 rounded border border-[#1a5d43]">
+                {activeModuleLabel}
+              </span>
             </div>
           </div>
 
           {/* Center: Global Search Bar */}
-          <div className="hidden lg:flex items-center relative max-w-xs xl:max-w-md w-full mx-2">
-            <Search className="w-4 h-4 text-emerald-400 absolute left-3.5 top-2.5 pointer-events-none" />
+          <div className="hidden sm:flex items-center relative flex-1 min-w-[120px] max-w-[220px] xl:max-w-xs mx-1">
+            <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
             <input
               type="text"
               value={globalSearch}
@@ -843,25 +824,25 @@ export default function App() {
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
               placeholder="Search contracts, depositors, PAN, mobile..."
-              className="w-full text-xs pl-10 pr-12 py-2 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
+              className="w-full text-xs pl-8 pr-12 py-1.5 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
             />
-            <span className="absolute right-3 top-2 text-[10px] font-mono text-amber-300 bg-[#082e20] px-1.5 py-0.5 rounded border border-[#1a5d43]">
+            <span className="absolute right-2 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
               Ctrl K
             </span>
           </div>
 
           {/* Right: Branch Selector, FY Selector, Notifications, Customer App, Profile */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
 
             {/* 1. Branch Selector */}
             <div className="relative" ref={branchRef}>
               <button
                 onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
                 title="Select Operating Branch"
               >
                 <Building2 className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                <span className="hidden sm:inline max-w-[120px] truncate">{selectedBranch}</span>
+                <span className="hidden xl:inline max-w-[90px] truncate">{selectedBranch}</span>
                 <ChevronDown className="w-3 h-3 text-emerald-300" />
               </button>
 
@@ -893,10 +874,10 @@ export default function App() {
             <div className="relative" ref={fyRef}>
               <button
                 onClick={() => setFyDropdownOpen(!fyDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
                 title="Financial Year Filter"
               >
-                <span className="font-mono text-[#FBBF24] font-bold">{selectedFY}</span>
+                <span className="font-mono text-[#FBBF24] font-bold text-xs">{selectedFY}</span>
                 <ChevronDown className="w-3 h-3 text-emerald-300" />
               </button>
 
@@ -928,7 +909,7 @@ export default function App() {
             <button
               id="topbar-language-toggle-btn"
               onClick={() => setLanguage(prev => prev === 'EN' ? 'HI' : 'EN')}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white transition cursor-pointer"
+              className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white transition cursor-pointer"
               title="Toggle Language (English / Hindi)"
             >
               <span className={language === 'EN' ? 'text-[#FBBF24] font-black' : 'text-slate-400'}>EN</span>
@@ -981,50 +962,51 @@ export default function App() {
               )}
             </div>
 
-            {/* 5. Switch to Customer View-Only App Pill & Download APK */}
+            {/* 5. Switch to Customer View-Only App */}
             <button
               onClick={() => setViewMode('customer')}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer"
               title="Preview Customer Digital Passbook"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span>Customer App</span>
+              <span className="hidden xl:inline">App</span>
             </button>
 
+            {/* 6. Download APK */}
             <a
               href="/Taranganjali_Banking.apk"
               download="Taranganjali_Banking.apk"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
-              title="Download Android APK File for Mobile (Taranganjali)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
+              title="Download Android APK File for Mobile"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download APK</span>
+              <span className="hidden xl:inline">APK</span>
             </a>
 
-            {/* Direct Logout Button */}
+            {/* 7. Direct Logout Button */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-xs"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold transition cursor-pointer shadow-xs"
               title="Logout from CRM"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Logout</span>
             </button>
 
-            {/* 6. User Profile Menu */}
-            <div className="relative pl-1 sm:pl-2 border-l border-[#1e2d4d]" ref={profileRef}>
+            {/* 8. User Profile Menu */}
+            <div className="relative pl-1 border-l border-[#1a5d43]" ref={profileRef}>
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-800/60 transition cursor-pointer"
+                className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-800/60 transition cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-indigo-400/30">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-indigo-400/30">
                   {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : 'AD'}
                 </div>
-                <div className="hidden md:block text-left">
+                <div className="hidden xl:block text-left">
                   <div className="text-xs font-bold text-white leading-tight">
                     {user?.full_name || 'Admin'}
                   </div>
-                  <div className="text-[10px] text-teal-400 font-semibold">{isEmployee ? 'Staff Maker' : 'Super Admin'}</div>
+                  <div className="text-[9px] text-teal-400 font-semibold">{isEmployee ? 'Staff' : 'Super Admin'}</div>
                 </div>
                 <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
               </button>
