@@ -212,6 +212,461 @@ export default function Dashboard({
         { month: '2026-10', Principal: 1000000, MaturityLiability: 1085000, Count: 1 }
       ];
 
+  // Filtered KPIs depending on selected product filter
+  const kpis = (() => {
+    switch (quickFilter) {
+      case 'RD':
+        return {
+          productLabel: 'Recurring Deposits (RD)',
+          badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+          deskTab: 'rds',
+          deskLabel: 'Open Full RD Desk & Passbooks',
+          cards: [
+            {
+              title: 'Active RD Deposited',
+              amount: formatINR(metrics.rd?.totalDeposited || 0),
+              badge: `${metrics.rd?.activeCount || 0} Active RD Accounts`,
+              sub: 'Cumulative Monthly Inflow',
+              icon: Repeat,
+              color: 'text-amber-600 bg-amber-50 border-amber-100 group-hover:bg-amber-600 group-hover:text-white',
+              hoverBorder: 'hover:border-amber-300',
+              badgeColor: 'text-amber-700 bg-amber-50'
+            },
+            {
+              title: 'Projected Maturity Liability',
+              amount: formatINR(metrics.rd?.totalMaturity || 0),
+              badge: 'Maturity Target',
+              sub: 'Principal + RD Compound Yield',
+              icon: Banknote,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            },
+            {
+              title: 'Projected RD Interest',
+              amount: formatINR(Math.max(0, (metrics.rd?.totalMaturity || 0) - (metrics.rd?.totalDeposited || 0))),
+              badge: 'Accrued RD Interest',
+              sub: 'Contracted Compound Terms',
+              icon: Percent,
+              color: 'text-orange-600 bg-orange-50 border-orange-100 group-hover:bg-orange-600 group-hover:text-white',
+              hoverBorder: 'hover:border-orange-300',
+              badgeColor: 'text-orange-700 bg-orange-50'
+            },
+            {
+              title: 'Active RD Savers',
+              amount: metrics.rd?.activeCount || 0,
+              badge: 'RD Depositors',
+              sub: 'Enrolled Members',
+              icon: Users,
+              color: 'text-sky-600 bg-sky-50 border-sky-100 group-hover:bg-sky-600 group-hover:text-white',
+              hoverBorder: 'hover:border-sky-300',
+              badgeColor: 'text-sky-700 bg-sky-50'
+            },
+            {
+              title: 'Installments Due (30 Days)',
+              amount: metrics.rd?.upcomingInstallments?.length || 0,
+              badge: 'Action Required',
+              sub: 'Upcoming Dues This Month',
+              icon: Clock,
+              color: 'text-rose-600 bg-rose-50 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
+              hoverBorder: 'hover:border-rose-300',
+              badgeColor: 'text-rose-700 bg-rose-50'
+            },
+            {
+              title: 'Monthly Collection Target',
+              amount: formatINR(metrics.rd?.totalDeposited ? Math.round(metrics.rd.totalDeposited / 6) : 0),
+              badge: 'Active Run-Rate',
+              sub: 'Regular Monthly Savings',
+              icon: CreditCard,
+              color: 'text-violet-600 bg-violet-50 border-violet-100 group-hover:bg-violet-600 group-hover:text-white',
+              hoverBorder: 'hover:border-violet-300',
+              badgeColor: 'text-violet-700 bg-violet-50'
+            },
+            {
+              title: 'Total Active Contracts',
+              amount: metrics.rd?.activeCount || 0,
+              badge: '100% Active Status',
+              sub: 'Regular Installments',
+              icon: FileCheck2,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'Core Product Scheme',
+              amount: 'Recurring Deposit (RD)',
+              badge: 'ACTIVE SCHEME',
+              sub: 'Monthly Recurring Savings',
+              icon: ShieldCheck,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            }
+          ]
+        };
+
+      case 'MIS':
+        return {
+          productLabel: 'Monthly Income Scheme (MIS)',
+          badgeColor: 'bg-yellow-100 text-yellow-900 border-yellow-300',
+          deskTab: 'mis',
+          deskLabel: 'Open Full MIS Desk & Payout Schedules',
+          cards: [
+            {
+              title: 'Active MIS Principal',
+              amount: formatINR(metrics.mis?.totalDeposit || 0),
+              badge: `${metrics.mis?.activeCount || 0} Active MIS Accounts`,
+              sub: 'Lump-Sum Monthly Servicing',
+              icon: Wallet,
+              color: 'text-yellow-600 bg-yellow-50 border-yellow-100 group-hover:bg-yellow-600 group-hover:text-white',
+              hoverBorder: 'hover:border-yellow-300',
+              badgeColor: 'text-yellow-700 bg-yellow-50'
+            },
+            {
+              title: 'Monthly Payout Obligation',
+              amount: formatINR(metrics.mis?.totalMonthlyPayout || 0),
+              badge: 'Per Month Servicing',
+              sub: 'Direct Customer NEFT / Bank Payout',
+              icon: Banknote,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            },
+            {
+              title: 'Annual Interest Outflow',
+              amount: formatINR((metrics.mis?.totalMonthlyPayout || 0) * 12),
+              badge: '12-Month Projection',
+              sub: 'Contracted Pension Servicing',
+              icon: Percent,
+              color: 'text-amber-600 bg-amber-50 border-amber-100 group-hover:bg-amber-600 group-hover:text-white',
+              hoverBorder: 'hover:border-amber-300',
+              badgeColor: 'text-amber-700 bg-amber-50'
+            },
+            {
+              title: 'Active MIS Customers',
+              amount: metrics.mis?.activeCount || 0,
+              badge: 'Monthly Income Earners',
+              sub: 'Senior Citizens & Depositors',
+              icon: Users,
+              color: 'text-sky-600 bg-sky-50 border-sky-100 group-hover:bg-sky-600 group-hover:text-white',
+              hoverBorder: 'hover:border-sky-300',
+              badgeColor: 'text-sky-700 bg-sky-50'
+            },
+            {
+              title: 'Payouts Due (30 Days)',
+              amount: metrics.mis?.upcomingPayouts?.length || 0,
+              badge: 'Pending Payouts',
+              sub: 'Scheduled This Month',
+              icon: Clock,
+              color: 'text-rose-600 bg-rose-50 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
+              hoverBorder: 'hover:border-rose-300',
+              badgeColor: 'text-rose-700 bg-rose-50'
+            },
+            {
+              title: 'Effective Return Rate',
+              amount: '~9.5% - 10.5% p.a.',
+              badge: 'Monthly Credited',
+              sub: 'Non-Cumulative High Yield',
+              icon: CreditCard,
+              color: 'text-violet-600 bg-violet-50 border-violet-100 group-hover:bg-violet-600 group-hover:text-white',
+              hoverBorder: 'hover:border-violet-300',
+              badgeColor: 'text-violet-700 bg-violet-50'
+            },
+            {
+              title: 'Active MIS Contracts',
+              amount: metrics.mis?.activeCount || 0,
+              badge: 'Monthly Income Contracts',
+              sub: 'Principal Repaid at Maturity',
+              icon: FileCheck2,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'Core Product Scheme',
+              amount: 'Monthly Income (MIS)',
+              badge: 'ACTIVE SCHEME',
+              sub: 'Fixed Regular Monthly Income',
+              icon: ShieldCheck,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            }
+          ]
+        };
+
+      case 'SAVINGS':
+        return {
+          productLabel: 'Savings Accounts (SB)',
+          badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          deskTab: 'savings',
+          deskLabel: 'Open Full Savings Accounts Desk',
+          cards: [
+            {
+              title: 'Total Liquid SB Balance',
+              amount: formatINR(metrics.savings?.totalBalance || 0),
+              badge: `${metrics.savings?.activeCount || 0} Active Accounts`,
+              sub: 'Demand Deposit Liabilities (CASA)',
+              icon: Wallet,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            },
+            {
+              title: 'Annual Interest Liability',
+              amount: formatINR(Math.round((metrics.savings?.totalBalance || 0) * 0.04)),
+              badge: '@ 4.0% p.a.',
+              sub: 'Daily Balance / Quarterly Credit',
+              icon: Banknote,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            },
+            {
+              title: 'Minimum Reserve Requirement',
+              amount: formatINR((metrics.savings?.activeCount || 0) * 1000),
+              badge: 'Min ₹1,000 / A/C',
+              sub: 'Mandatory Liquidity Floor',
+              icon: Percent,
+              color: 'text-amber-600 bg-amber-50 border-amber-100 group-hover:bg-amber-600 group-hover:text-white',
+              hoverBorder: 'hover:border-amber-300',
+              badgeColor: 'text-amber-700 bg-amber-50'
+            },
+            {
+              title: 'Savings Account Holders',
+              amount: metrics.savings?.activeCount || 0,
+              badge: 'Active Members',
+              sub: 'Core Banking Customers',
+              icon: Users,
+              color: 'text-sky-600 bg-sky-50 border-sky-100 group-hover:bg-sky-600 group-hover:text-white',
+              hoverBorder: 'hover:border-sky-300',
+              badgeColor: 'text-sky-700 bg-sky-50'
+            },
+            {
+              title: 'Average Balance / Member',
+              amount: formatINR(metrics.savings?.activeCount ? Math.round((metrics.savings?.totalBalance || 0) / metrics.savings.activeCount) : 0),
+              badge: 'Float / Account',
+              sub: 'Active Liquidity Reserve',
+              icon: Clock,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'Demand Liquidity Ratio',
+              amount: '100% On-Demand',
+              badge: 'Instant Withdrawal',
+              sub: 'Zero Lock-in CASA Deposit',
+              icon: CreditCard,
+              color: 'text-violet-600 bg-violet-50 border-violet-100 group-hover:bg-violet-600 group-hover:text-white',
+              hoverBorder: 'hover:border-violet-300',
+              badgeColor: 'text-violet-700 bg-violet-50'
+            },
+            {
+              title: 'Active SB Accounts',
+              amount: metrics.savings?.activeCount || 0,
+              badge: 'Passbook Enabled',
+              sub: 'Interest Servicing Active',
+              icon: FileCheck2,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'Core Product Scheme',
+              amount: 'Savings Accounts (SB)',
+              badge: 'ACTIVE SCHEME',
+              sub: 'Core Member Savings Accounts',
+              icon: ShieldCheck,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            }
+          ]
+        };
+
+      case 'FD':
+        return {
+          productLabel: 'Fixed Deposits (FD)',
+          badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          deskTab: 'fds',
+          deskLabel: 'Open Full Fixed Deposits Desk',
+          cards: [
+            {
+              title: 'Active Principal',
+              amount: formatINR(metrics.totalPrincipal),
+              badge: `${metrics.activeCount} Active FDs`,
+              sub: 'Across portfolio',
+              icon: Wallet,
+              color: 'text-indigo-600 bg-indigo-50 border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white',
+              hoverBorder: 'hover:border-indigo-300',
+              badgeColor: 'text-indigo-600 bg-indigo-50'
+            },
+            {
+              title: 'Total Maturity Liability',
+              amount: formatINR(metrics.totalMaturityValue),
+              badge: 'Principal + Interest',
+              sub: '100% Reserve',
+              icon: Banknote,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-600 bg-emerald-50'
+            },
+            {
+              title: 'Projected Interest',
+              amount: formatINR(metrics.totalInterest),
+              badge: 'Accrued Yield',
+              sub: 'Contracted terms',
+              icon: Percent,
+              color: 'text-amber-600 bg-amber-50 border-amber-100 group-hover:bg-amber-600 group-hover:text-white',
+              hoverBorder: 'hover:border-amber-300',
+              badgeColor: 'text-amber-700 bg-amber-50'
+            },
+            {
+              title: 'Total Customers',
+              amount: metrics.totalCustomers,
+              badge: 'KYC Registered',
+              sub: 'Active Depositors',
+              icon: Users,
+              color: 'text-sky-600 bg-sky-50 border-sky-100 group-hover:bg-sky-600 group-hover:text-white',
+              hoverBorder: 'hover:border-sky-300',
+              badgeColor: 'text-sky-700 bg-sky-50'
+            },
+            {
+              title: 'Maturities in 30 Days',
+              amount: upcomingMaturities.length,
+              badge: 'Action Required',
+              sub: 'Next 30 calendar days',
+              icon: Clock,
+              color: 'text-rose-600 bg-rose-50 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
+              hoverBorder: 'hover:border-rose-300',
+              badgeColor: 'text-rose-700 bg-rose-50'
+            },
+            {
+              title: 'Interest Payouts Due',
+              amount: pendingPayouts.length,
+              badge: 'Non-cumulative',
+              sub: 'Bank transfers due',
+              icon: CreditCard,
+              color: 'text-violet-600 bg-violet-50 border-violet-100 group-hover:bg-violet-600 group-hover:text-white',
+              hoverBorder: 'hover:border-violet-300',
+              badgeColor: 'text-violet-700 bg-violet-50'
+            },
+            {
+              title: 'Total Contracts Booked',
+              amount: metrics.totalFds,
+              badge: `${metrics.maturedCount} Matured`,
+              sub: `${metrics.prematureClosedCount} Premature`,
+              icon: FileCheck2,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'CRM License Status',
+              amount: subscription ? subscription.plan_name.split('(')[0] : 'Enterprise License',
+              badge: 'ACTIVE',
+              sub: `Valid till ${subscription ? subscription.valid_until : '2027'}`,
+              icon: ShieldCheck,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+              hoverBorder: 'hover:border-indigo-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            }
+          ]
+        };
+
+      default: // 'ALL'
+        return {
+          productLabel: 'Consolidated Portfolio (All 4 Products)',
+          badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+          deskTab: null,
+          deskLabel: null,
+          cards: [
+            {
+              title: 'Total Institutional AUM',
+              amount: formatINR(metrics.totalInstitutionalDeposits || metrics.totalPrincipal),
+              badge: `${metrics.totalActiveAccounts || metrics.activeCount} Total Accounts`,
+              sub: 'Consolidated Across 4 Products',
+              icon: Wallet,
+              color: 'text-indigo-600 bg-indigo-50 border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white',
+              hoverBorder: 'hover:border-indigo-300',
+              badgeColor: 'text-indigo-600 bg-indigo-50'
+            },
+            {
+              title: 'Total Maturity & Demand Liability',
+              amount: formatINR((metrics.totalMaturityValue || 0) + (metrics.rd?.totalMaturity || 0) + (metrics.mis?.totalDeposit || 0) + (metrics.savings?.totalBalance || 0)),
+              badge: 'Consolidated Liabilities',
+              sub: 'FD + RD + MIS + Savings',
+              icon: Banknote,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white',
+              hoverBorder: 'hover:border-emerald-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            },
+            {
+              title: 'Projected Total Interest',
+              amount: formatINR((metrics.totalInterest || 0) + Math.max(0, (metrics.rd?.totalMaturity || 0) - (metrics.rd?.totalDeposited || 0))),
+              badge: 'Contracted Yield',
+              sub: 'FD & RD Accrued Obligations',
+              icon: Percent,
+              color: 'text-amber-600 bg-amber-50 border-amber-100 group-hover:bg-amber-600 group-hover:text-white',
+              hoverBorder: 'hover:border-amber-300',
+              badgeColor: 'text-amber-700 bg-amber-50'
+            },
+            {
+              title: 'Total Customers',
+              amount: metrics.totalCustomers,
+              badge: 'KYC Registered',
+              sub: 'Consolidated Depositors',
+              icon: Users,
+              color: 'text-sky-600 bg-sky-50 border-sky-100 group-hover:bg-sky-600 group-hover:text-white',
+              hoverBorder: 'hover:border-sky-300',
+              badgeColor: 'text-sky-700 bg-sky-50'
+            },
+            {
+              title: 'Maturities & Dues (30 Days)',
+              amount: (upcomingMaturities?.length || 0) + (metrics.rd?.upcomingInstallments?.length || 0),
+              badge: 'Action Required',
+              sub: 'FD Maturities & RD Dues',
+              icon: Clock,
+              color: 'text-rose-600 bg-rose-50 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
+              hoverBorder: 'hover:border-rose-300',
+              badgeColor: 'text-rose-700 bg-rose-50'
+            },
+            {
+              title: 'Monthly Servicing Payouts Due',
+              amount: (pendingPayouts?.length || 0) + (metrics.mis?.upcomingPayouts?.length || 0),
+              badge: 'Scheduled Outflow',
+              sub: 'FD & MIS Bank Transfers',
+              icon: CreditCard,
+              color: 'text-violet-600 bg-violet-50 border-violet-100 group-hover:bg-violet-600 group-hover:text-white',
+              hoverBorder: 'hover:border-violet-300',
+              badgeColor: 'text-violet-700 bg-violet-50'
+            },
+            {
+              title: 'Total Active Contracts',
+              amount: metrics.totalActiveAccounts || metrics.activeCount,
+              badge: 'All 4 Products',
+              sub: `${metrics.activeCount} FD • ${metrics.rd?.activeCount || 0} RD • ${metrics.mis?.activeCount || 0} MIS • ${metrics.savings?.activeCount || 0} SB`,
+              icon: FileCheck2,
+              color: 'text-teal-600 bg-teal-50 border-teal-100 group-hover:bg-teal-600 group-hover:text-white',
+              hoverBorder: 'hover:border-teal-300',
+              badgeColor: 'text-teal-700 bg-teal-50'
+            },
+            {
+              title: 'CRM License Status',
+              amount: subscription ? subscription.plan_name.split('(')[0] : 'Enterprise License',
+              badge: 'ACTIVE',
+              sub: `Valid till ${subscription ? subscription.valid_until : '2027'}`,
+              icon: ShieldCheck,
+              color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+              hoverBorder: 'hover:border-indigo-300',
+              badgeColor: 'text-emerald-700 bg-emerald-50'
+            }
+          ]
+        };
+    }
+  })();
+
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
 
@@ -467,176 +922,57 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* 2. Primary 8 Financial KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Card 1: Active Principal */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-indigo-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Principal</span>
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
-              <Wallet className="w-5 h-5" />
-            </div>
+      {/* 2. Primary 8 Financial KPI Cards (Dynamically Filtered by Product) */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Metrics Overview:</span>
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-xs ${kpis.badgeColor}`}>
+              {kpis.productLabel}
+            </span>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {formatINR(metrics.totalPrincipal)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                {metrics.activeCount} Active FDs
-              </span>
-              <span>Across portfolio</span>
-            </div>
-          </div>
+          {kpis.deskTab && (
+            <button
+              onClick={() => onNavigate && onNavigate(kpis.deskTab)}
+              className="text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1.5 cursor-pointer self-start sm:self-auto bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-lg border border-emerald-200 transition"
+            >
+              <span>{kpis.deskLabel}</span> <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Card 2: Total Maturity Liability */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-emerald-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Maturity Liability</span>
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition">
-              <Banknote className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {formatINR(metrics.totalMaturityValue)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                Principal + Interest
-              </span>
-              <span>100% Reserve</span>
-            </div>
-          </div>
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpis.cards.map((card, idx) => {
+            const IconComponent = card.icon;
+            return (
+              <div 
+                key={idx} 
+                className={`bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs ${card.hoverBorder} hover:shadow-sm transition group flex flex-col justify-between`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{card.title}</span>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition border ${card.color}`}>
+                      <IconComponent className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl font-bold tracking-tight text-slate-900 truncate">
+                      {card.amount}
+                    </div>
+                  </div>
+                </div>
 
-        {/* Card 3: Projected Interest Liability */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-amber-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Projected Interest</span>
-            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition">
-              <Percent className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {formatINR(metrics.totalInterest)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-                Accrued Yield
-              </span>
-              <span>Contracted terms</span>
-            </div>
-          </div>
+                <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-2 border-t border-slate-50 gap-2">
+                  <span className={`font-medium px-2 py-0.5 rounded truncate ${card.badgeColor}`}>
+                    {card.badge}
+                  </span>
+                  <span className="truncate text-right text-[11px]">{card.sub}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* Card 4: Registered Customers */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-sky-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Customers</span>
-            <div className="w-10 h-10 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 group-hover:bg-sky-600 group-hover:text-white transition">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {metrics.totalCustomers}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-sky-700 bg-sky-50 px-2 py-0.5 rounded">
-                KYC Registered
-              </span>
-              <span>Active Depositors</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 5: Upcoming Maturities (30 Days) */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-rose-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Maturities in 30 Days</span>
-            <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition">
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {upcomingMaturities.length}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded">
-                Action Required
-              </span>
-              <span>Next 30 calendar days</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 6: Pending Interest Payouts */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-violet-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Interest Payouts Due</span>
-            <div className="w-10 h-10 rounded-lg bg-violet-50 border border-violet-100 flex items-center justify-center text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition">
-              <CreditCard className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {pendingPayouts.length}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="font-medium text-violet-700 bg-violet-50 px-2 py-0.5 rounded">
-                Non-cumulative
-              </span>
-              <span>Bank transfers due</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 7: Total Lifetime FDs */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-teal-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Contracts Booked</span>
-            <div className="w-10 h-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition">
-              <FileCheck2 className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">
-              {metrics.totalFds}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span>{metrics.maturedCount} Matured</span>
-              <span>{metrics.prematureClosedCount} Premature</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 8: Subscription License */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs hover:border-indigo-300 hover:shadow-sm transition group">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">CRM License Status</span>
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-slate-900 truncate">
-              {subscription ? subscription.plan_name.split('(')[0] : 'Enterprise License'}
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-              <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                ACTIVE
-              </span>
-              <span>Valid till {subscription ? subscription.valid_until : '2027'}</span>
-            </div>
-          </div>
-        </div>
-
       </div>
 
       {/* 3. Financial Analytics Charts Grid (4 Rich Visualizations) */}
