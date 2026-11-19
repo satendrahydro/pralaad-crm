@@ -21,10 +21,14 @@ import {
   Info,
   Fingerprint,
   LockKeyhole,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 import { apiRequest } from '../utils';
 import TarplLogo from './TarplLogo';
+import tarplLogoJpg from '../assets/LOGO_OF_TARPL.jpg';
+import securityImg from '../assets/security-img.jpeg';
+import bgAdminJpg from '../assets/bg-admin.jpg';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('admin');
@@ -259,157 +263,157 @@ export default function Login({ onLoginSuccess }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#062319] via-[#082e20] to-[#041a12] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
+    <div 
+      className="min-h-screen w-full flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `url(${bgAdminJpg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
       
-      {/* Background Subtle Ambient Glow */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Semi-transparent dark overlay for great contrast */}
+      <div className="absolute inset-0 bg-slate-900/15 pointer-events-none"></div>
 
-      {/* Main Container: Centered Clean Institutional Banking Card */}
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 flex flex-col justify-between relative z-10 animate-fadeIn">
+      {/* Main Login Box - 1:1 Pixel Match to Admin Portal Screenshot */}
+      <div className="w-full max-w-[370px] bg-white rounded-lg shadow-2xl p-6 sm:p-7 relative z-10 text-center border border-slate-200/80 animate-fadeIn">
         
-        <div>
-          {/* Top Brand Header */}
-          <div className="text-center mb-5">
-            <div className="flex justify-center mb-3">
-              <TarplLogo variant="badge" size={68} />
-            </div>
-            <h1 className="text-lg font-black text-[#062319] tracking-tight">
-              कर्मचारी एवं प्रबंधक लॉगिन
-            </h1>
-            <p className="text-xs text-[#0A5C36] font-bold mt-0.5">
-              Taranganjali Private Limited • Secure Core Portal
-            </p>
+        {/* Top Brand Logo */}
+        <div className="mb-2">
+          <img 
+            src={tarplLogoJpg} 
+            alt="Tarang Anjali Real Tech Pvt. Ltd. - जीत आपके विश्वास की" 
+            className="mx-auto max-w-[240px] h-auto object-contain mb-1" 
+          />
+          <div className="text-[11px] font-black text-[#062319] tracking-wider uppercase">
+            TARANGANJALI PRIVATE LIMITED
           </div>
-
-          {/* Quick Role Select Tabs */}
-          <div className="grid grid-cols-2 gap-2 mb-3 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('superadmin', 'admin123')}
-              className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                username === 'superadmin' || username === 'admin'
-                  ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Super Admin (Checker)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('staff', 'staff123')}
-              className={`py-2 rounded-lg transition cursor-pointer text-center ${
-                username === 'staff' || username === 'staff1'
-                  ? 'bg-[#062319] text-[#FBBF24] shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Staff (Maker)
-            </button>
-          </div>
-          <div className="text-[11px] text-slate-500 mb-4 px-1 flex items-center justify-between font-mono">
-            <span>Admin: <strong className="text-slate-700">superadmin</strong> / <strong className="text-slate-700">admin123</strong></span>
-            <span>Staff: <strong className="text-slate-700">staff</strong> / <strong className="text-slate-700">staff123</strong></span>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Login ID / Username
-              </label>
-              <div className="relative">
-                <User className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
-                  placeholder="Enter username or mobile"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotIdentifier(username);
-                    setForgotStep(1);
-                    setForgotError('');
-                    setForgotSuccess('');
-                    setShowForgotModal(true);
-                  }}
-                  className="text-xs font-bold text-[#0A5C36] hover:text-[#08482a] cursor-pointer"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A5C36] focus:bg-white text-slate-800 transition text-sm font-medium"
-                  placeholder="Enter password"
-                />
-              </div>
-            </div>
-
-            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2.5 text-xs text-amber-900">
-              <ShieldCheck className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-bold">सक्रिय सुरक्षा अधिकार:</span>{' '}
-                {username === 'admin' || username === 'superadmin'
-                  ? 'Super Admin (चेकर एवं अंतिम वित्तीय अनुमोदन प्राधिकारी)' 
-                  : 'Staff Maker (प्रविष्टि ऑपरेटर - केवल प्रस्तावकर्ता)'}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 px-4 bg-[#D4AF37] hover:bg-[#C59B27] active:bg-[#B38C1F] text-[#062319] font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-sm"
-            >
-              {loading ? (
-                <span className="inline-block w-5 h-5 border-2 border-[#062319] border-t-transparent rounded-full animate-spin"></span>
-              ) : (
-                <>
-                  Sign In to Portal (प्रवेश करें)
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
         </div>
 
-        {/* Compact 6-Layer Security Badge requested by user */}
-        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col items-center gap-2 text-center">
+        {/* Warning notification matching Hubco Admin exactly */}
+        <p className="text-xs text-[#a94442] font-semibold mb-3.5">
+          You need to sign in or sign up before continuing.
+        </p>
+
+        {/* Quick Role Switcher for seamless access */}
+        <div className="grid grid-cols-2 gap-1.5 mb-3 p-1 bg-slate-100 rounded text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setShowSecurityModal(true)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition cursor-pointer shadow-xs group"
-            title="क्लिक करके 6-स्तरीय सुरक्षा प्रणाली विवरण देखें"
+            onClick={() => handleQuickFill('superadmin', 'admin123')}
+            className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
+              username === 'superadmin' || username === 'admin'
+                ? 'bg-[#00a65a] text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900 bg-white/70'
+            }`}
           >
-            <ShieldCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition shrink-0" />
-            <span>Secured by 6-Layer Banking Encryption</span>
-            <span className="text-[10px] text-emerald-600 font-mono bg-emerald-100/80 px-1 rounded">256-Bit SSL</span>
+            Super Admin
           </button>
-          <div className="text-[10px] text-slate-500 font-medium">
-            Taranganjali Private Limited • 24x7 Multi-Tier Zero-Trust Audit
+          <button
+            type="button"
+            onClick={() => handleQuickFill('staff', 'staff123')}
+            className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
+              username === 'staff' || username === 'staff1'
+                ? 'bg-[#00a65a] text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900 bg-white/70'
+            }`}
+          >
+            Staff Maker
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded text-left flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-left">
+          
+          {/* User Name Input with Envelope Icon on Right */}
+          <div className="relative">
+            <input
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value.replace(/ +/g, ''))}
+              placeholder="Enter User Name"
+              className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a65a] focus:ring-1 focus:ring-[#00a65a] transition font-medium"
+            />
+            <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Password Input with Lock Icon on Right */}
+          <div className="relative">
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value.replace(/ +/g, ''))}
+              placeholder="Enter Your Password"
+              className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a65a] focus:ring-1 focus:ring-[#00a65a] transition font-medium"
+            />
+            <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setForgotIdentifier(username);
+                setForgotStep(1);
+                setForgotError('');
+                setForgotSuccess('');
+                setShowForgotModal(true);
+              }}
+              className="text-[#00a65a] hover:underline font-semibold cursor-pointer"
+            >
+              Forgot Password?
+            </button>
+            <span className="font-mono text-[10px] text-slate-400">
+              {username === 'admin' || username === 'superadmin' ? 'Checker' : 'Maker'}
+            </span>
+          </div>
+
+          {/* Green "LOG IN" Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-[#00a65a] hover:bg-[#008d4c] active:bg-[#00733e] text-white font-bold text-xs uppercase tracking-wider rounded transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              'LOG IN'
+            )}
+          </button>
+        </form>
+
+        {/* Footer: Powered by Hubco.in & Security Badges */}
+        <div className="mt-5 pt-3.5 border-t border-slate-100 text-center">
+          <div className="text-xs text-slate-600">
+            <strong>Powered by <b className="text-blue-600 font-bold">Hubco.in ®</b></strong>. All rights reserved.
+          </div>
+
+          {/* Security Badge - Sectigo Image + 6-Layer Banking Encryption pill */}
+          <div className="mt-3 flex flex-col items-center gap-2">
+            <img 
+              src={securityImg} 
+              alt="Secured by Sectigo" 
+              className="w-32 h-auto object-contain" 
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowSecurityModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[10px] font-bold transition cursor-pointer shadow-2xs group"
+              title="क्लिक करके 6-स्तरीय सुरक्षा संरचना देखें"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition shrink-0" />
+              <span>Secured by 6-Layer Banking Encryption</span>
+              <Info className="w-3 h-3 text-emerald-600 ml-0.5" />
+            </button>
           </div>
         </div>
 
