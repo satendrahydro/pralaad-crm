@@ -705,19 +705,19 @@ export default function App() {
               <span className="hidden sm:inline">New Booking</span>
             </button>
 
-            {/* Global Search Bar - Positioned immediately after New Booking as requested */}
-            <div className="hidden sm:flex items-center relative min-w-[130px] max-w-[200px] xl:max-w-xs shrink-0">
-              <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-2.5 top-2.5 pointer-events-none" />
+            {/* Global Search Bar - Positioned immediately after New Booking with generous breathing room */}
+            <div className="hidden md:flex items-center relative w-64 lg:w-72 shrink-0">
+              <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                placeholder="Search contracts, PAN..."
-                className="w-full text-xs pl-7 pr-11 py-1.5 bg-[#062319] text-white placeholder-emerald-300/50 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] transition"
+                placeholder="Search contracts, depositors, PAN..."
+                className="w-full text-xs pl-8 pr-12 py-1.5 bg-[#062319] text-white placeholder-emerald-300/60 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/50 transition"
               />
-              <span className="absolute right-1.5 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
+              <span className="absolute right-2 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1.5 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
                 Ctrl K
               </span>
             </div>
@@ -819,15 +819,6 @@ export default function App() {
                   </button>
                 </div>
               )}
-            </div>
-
-            {/* Breadcrumb Navigation - on wide screens */}
-            <div className="hidden 2xl:flex items-center gap-1.5 text-xs font-medium text-slate-300">
-              <span className="text-emerald-300 font-semibold truncate max-w-[180px]">Taranganjali Private Limited</span>
-              <span>/</span>
-              <span className="text-[#FBBF24] font-bold bg-[#062319] px-2 py-0.5 rounded border border-[#1a5d43]">
-                {activeModuleLabel}
-              </span>
             </div>
           </div>
 
