@@ -816,7 +816,7 @@ export default function Dashboard({
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-5">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#FDE68A] bg-[#062319]/90 px-2.5 py-0.5 rounded-full border border-[#D4AF37]/40 flex items-center gap-1.5">
@@ -829,7 +829,7 @@ export default function Dashboard({
             </div>
             <div className="mt-3">
               <span className="text-xs font-semibold text-emerald-200 uppercase tracking-widest block">Total Assets Under Management (AUM)</span>
-              <div className="text-3xl md:text-4xl font-black mt-1 tracking-tight text-[#FBBF24] font-mono flex items-baseline gap-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-black mt-1 tracking-tight text-[#FBBF24] font-mono flex items-baseline gap-2">
                 <span>{formatINR(metrics.totalInstitutionalDeposits || metrics.totalPrincipal)}</span>
                 <span className="text-xs font-semibold text-emerald-300 font-sans tracking-normal bg-[#062319] px-2 py-0.5 rounded border border-[#1a5d43]">
                   +100% Solvency
@@ -841,53 +841,53 @@ export default function Dashboard({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 w-full 2xl:w-auto shrink-0 pt-2 2xl:pt-0">
             <div 
               onClick={() => onNavigate && onNavigate('fds')}
-              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50"
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3 sm:p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50 min-w-0 overflow-hidden"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-200">Fixed Deposits</span>
-                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition"></span>
+                <span className="text-[11px] font-semibold text-emerald-200 truncate">Fixed Deposits</span>
+                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition shrink-0 ml-1"></span>
               </div>
-              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.totalPrincipal)}</span>
-              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium">{metrics.activeCount} Active Accounts</span>
+              <span className="text-xs sm:text-sm lg:text-base font-bold text-[#FBBF24] block mt-1 font-mono truncate">{formatINR(metrics.totalPrincipal)}</span>
+              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium truncate">{metrics.activeCount} Active Accounts</span>
             </div>
 
             <div 
               onClick={() => onNavigate && onNavigate('rds')}
-              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-amber-400/50"
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3 sm:p-3.5 border border-[#1a5d43] transition group hover:border-amber-400/50 min-w-0 overflow-hidden"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-200">Recurring (RD)</span>
-                <span className="w-2 h-2 rounded-full bg-[#f59e0b] group-hover:scale-125 transition"></span>
+                <span className="text-[11px] font-semibold text-emerald-200 truncate">Recurring (RD)</span>
+                <span className="w-2 h-2 rounded-full bg-[#f59e0b] group-hover:scale-125 transition shrink-0 ml-1"></span>
               </div>
-              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.rd?.totalDeposited || 0)}</span>
-              <span className="text-[10px] text-amber-300 block mt-0.5 font-medium">{metrics.rd?.activeCount || 0} Active Accounts</span>
+              <span className="text-xs sm:text-sm lg:text-base font-bold text-[#FBBF24] block mt-1 font-mono truncate">{formatINR(metrics.rd?.totalDeposited || 0)}</span>
+              <span className="text-[10px] text-amber-300 block mt-0.5 font-medium truncate">{metrics.rd?.activeCount || 0} Active Accounts</span>
             </div>
 
             <div 
               onClick={() => onNavigate && onNavigate('mis')}
-              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50"
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3 sm:p-3.5 border border-[#1a5d43] transition group hover:border-[#D4AF37]/50 min-w-0 overflow-hidden"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-200">Monthly (MIS)</span>
-                <span className="w-2 h-2 rounded-full bg-[#D4AF37] group-hover:scale-125 transition"></span>
+                <span className="text-[11px] font-semibold text-emerald-200 truncate">Monthly (MIS)</span>
+                <span className="w-2 h-2 rounded-full bg-[#D4AF37] group-hover:scale-125 transition shrink-0 ml-1"></span>
               </div>
-              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.mis?.totalDeposit || 0)}</span>
-              <span className="text-[10px] text-[#FDE68A] block mt-0.5 font-medium">₹{formatINR(metrics.mis?.totalMonthlyPayout || 0)}/mo</span>
+              <span className="text-xs sm:text-sm lg:text-base font-bold text-[#FBBF24] block mt-1 font-mono truncate">{formatINR(metrics.mis?.totalDeposit || 0)}</span>
+              <span className="text-[10px] text-[#FDE68A] block mt-0.5 font-medium truncate">{formatINR(metrics.mis?.totalMonthlyPayout || 0)}/mo</span>
             </div>
 
             <div 
               onClick={() => onNavigate && onNavigate('savings')}
-              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3.5 border border-[#1a5d43] transition group hover:border-emerald-400/50"
+              className="bg-[#062319]/90 hover:bg-[#0a3d2b] cursor-pointer rounded-xl p-3 sm:p-3.5 border border-[#1a5d43] transition group hover:border-emerald-400/50 min-w-0 overflow-hidden"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-200">Savings (SB)</span>
-                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition"></span>
+                <span className="text-[11px] font-semibold text-emerald-200 truncate">Savings (SB)</span>
+                <span className="w-2 h-2 rounded-full bg-[#10b981] group-hover:scale-125 transition shrink-0 ml-1"></span>
               </div>
-              <span className="text-sm font-bold text-[#FBBF24] block mt-1.5 font-mono">{formatINR(metrics.savings?.totalBalance || 0)}</span>
-              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium">{metrics.savings?.activeCount || 0} Accounts</span>
+              <span className="text-xs sm:text-sm lg:text-base font-bold text-[#FBBF24] block mt-1 font-mono truncate">{formatINR(metrics.savings?.totalBalance || 0)}</span>
+              <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium truncate">{metrics.savings?.activeCount || 0} Accounts</span>
             </div>
           </div>
         </div>
@@ -963,11 +963,11 @@ export default function Dashboard({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-2 border-t border-slate-50 gap-2">
-                  <span className={`font-medium px-2 py-0.5 rounded truncate ${card.badgeColor}`}>
+                <div className="flex items-center justify-between text-xs text-slate-500 mt-3 pt-2 border-t border-slate-50 gap-1.5">
+                  <span className={`font-semibold px-1.5 py-0.5 rounded text-[10px] shrink-0 ${card.badgeColor}`}>
                     {card.badge}
                   </span>
-                  <span className="truncate text-right text-[11px]">{card.sub}</span>
+                  <span className="truncate text-right text-[11px] text-slate-400">{card.sub}</span>
                 </div>
               </div>
             );

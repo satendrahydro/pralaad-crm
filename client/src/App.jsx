@@ -681,10 +681,10 @@ export default function App() {
       `}>
         
         {/* Deep Forest Green Header Bar */}
-        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-50 px-3 sm:px-4 flex items-center justify-between gap-2 shadow-md max-w-full">
+        <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-50 px-2 sm:px-3 md:px-4 flex items-center justify-between gap-1.5 sm:gap-2 shadow-md max-w-full">
           
           {/* Left: Mobile Toggle, Quick Booking, Search Bar & Primary Ledgers */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden p-1.5 rounded-lg text-slate-300 hover:bg-[#0a3d2b] cursor-pointer"
@@ -705,19 +705,19 @@ export default function App() {
               <span className="hidden sm:inline">New Booking</span>
             </button>
 
-            {/* Global Search Bar - Positioned immediately after New Booking with generous breathing room */}
-            <div className="hidden md:flex items-center relative w-64 lg:w-72 shrink-0">
-              <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-3 top-2.5 pointer-events-none" />
+            {/* Global Search Bar - Responsive fluid width that expands on focus */}
+            <div className="hidden md:flex items-center relative w-36 lg:w-44 xl:w-56 focus-within:w-64 transition-all duration-200 shrink-0">
+              <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-2.5 top-2.5 pointer-events-none" />
               <input
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                placeholder="Search contracts, depositors, PAN..."
-                className="w-full text-xs pl-8 pr-12 py-1.5 bg-[#062319] text-white placeholder-emerald-300/60 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/50 transition"
+                placeholder="Search contracts..."
+                className="w-full text-xs pl-7 pr-9 py-1.5 bg-[#062319] text-white placeholder-emerald-300/60 border border-[#1a5d43] rounded-lg focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/50 transition"
               />
-              <span className="absolute right-2 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1.5 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
+              <span className="absolute right-1.5 top-1.5 text-[9px] font-mono text-amber-300 bg-[#082e20] px-1 py-0.5 rounded border border-[#1a5d43] pointer-events-none">
                 Ctrl K
               </span>
             </div>
@@ -725,7 +725,7 @@ export default function App() {
             {/* Direct DAY BOOK Navigation Button */}
             <button
               onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
+              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
                 activeTab === 'day_book'
                   ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37] shadow-xs'
                   : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-amber-300'
@@ -733,13 +733,13 @@ export default function App() {
               title="Open Day Book (Daily Cash & Bank Ledgers)"
             >
               <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span className="hidden md:inline">Day Book</span>
+              <span className="hidden xl:inline">Day Book</span>
             </button>
 
             {/* Direct DAILY COLLECTION button with NEW badge */}
             <button
               onClick={() => handleSwitchTab('daily_collection', 'Daily Collection', Coins, 'bg-emerald-600')}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
+              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
                 activeTab === 'daily_collection'
                   ? 'bg-emerald-600 text-white border-emerald-400'
                   : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
@@ -747,7 +747,7 @@ export default function App() {
               title="Daily Field Collection"
             >
               <Coins className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden lg:inline">Daily Collection</span>
+              <span className="hidden xl:inline">Collection</span>
               <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded">NEW</span>
             </button>
 
@@ -755,7 +755,7 @@ export default function App() {
             <div className="relative" ref={accountsRef}>
               <button
                 onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer shrink-0"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer shrink-0"
                 title="Banking Accounts & Ledgers"
               >
                 <span>Accounts</span>
@@ -833,7 +833,7 @@ export default function App() {
                 title="Select Operating Branch"
               >
                 <Building2 className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                <span className="hidden xl:inline max-w-[90px] truncate">{selectedBranch}</span>
+                <span className="hidden 2xl:inline max-w-[85px] truncate">{selectedBranch}</span>
                 <ChevronDown className="w-3 h-3 text-emerald-300" />
               </button>
 
@@ -865,10 +865,10 @@ export default function App() {
             <div className="relative" ref={fyRef}>
               <button
                 onClick={() => setFyDropdownOpen(!fyDropdownOpen)}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
+                className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-semibold text-white transition cursor-pointer"
                 title="Financial Year Filter"
               >
-                <span className="font-mono text-[#FBBF24] font-bold text-xs">{selectedFY}</span>
+                <span className="font-mono text-[#FBBF24] font-bold text-xs">{selectedFY.replace('FY ', '')}</span>
                 <ChevronDown className="w-3 h-3 text-emerald-300" />
               </button>
 
@@ -900,7 +900,7 @@ export default function App() {
             <button
               id="topbar-language-toggle-btn"
               onClick={() => setLanguage(prev => prev === 'EN' ? 'HI' : 'EN')}
-              className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white transition cursor-pointer"
+              className="flex items-center gap-0.5 px-1.5 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-white transition cursor-pointer"
               title="Toggle Language (English / Hindi)"
             >
               <span className={language === 'EN' ? 'text-[#FBBF24] font-black' : 'text-slate-400'}>EN</span>
@@ -960,18 +960,18 @@ export default function App() {
               title="Preview Customer Digital Passbook"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">App</span>
+              <span className="hidden 2xl:inline">App</span>
             </button>
 
             {/* 6. Download APK */}
             <a
               href="/Taranganjali_Banking.apk"
               download="Taranganjali_Banking.apk"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
               title="Download Android APK File for Mobile"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">APK</span>
+              <span className="hidden 2xl:inline">APK</span>
             </a>
 
             {/* 7. Direct Logout Button */}
@@ -981,7 +981,7 @@ export default function App() {
               title="Logout from CRM"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden xl:inline">Logout</span>
             </button>
 
             {/* 8. User Profile Menu */}
@@ -993,7 +993,7 @@ export default function App() {
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-indigo-400/30">
                   {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : 'AD'}
                 </div>
-                <div className="hidden xl:block text-left">
+                <div className="hidden 2xl:block text-left">
                   <div className="text-xs font-bold text-white leading-tight">
                     {user?.full_name || 'Admin'}
                   </div>
