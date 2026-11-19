@@ -98,6 +98,7 @@ function initDB() {
   try { db.exec("ALTER TABLE users ADD COLUMN last_login_at TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN branch_id INTEGER;"); } catch(e){}
+  try { db.exec("ALTER TABLE users ADD COLUMN permissions TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN branch_id INTEGER;"); } catch(e){}
   try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN scheme_id INTEGER;"); } catch(e){}
 
