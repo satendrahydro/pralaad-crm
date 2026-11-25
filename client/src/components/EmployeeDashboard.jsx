@@ -71,13 +71,13 @@ export default function EmployeeDashboard({
       )}
 
       {/* 1. Header Banner */}
-      <div className="bg-[#082e20] rounded-2xl border border-[#1a5d43] shadow-md p-5 md:p-6 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+      <div className="bg-[#082e20] rounded-2xl border border-[#1a5d43] shadow-md p-5 md:p-6 text-white flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white whitespace-nowrap">
               Maker Operations Desk
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-[#FBBF24] border border-[#D4AF37]/40">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-[#FBBF24] border border-[#D4AF37]/40 shrink-0">
               Data Entry & Verification
             </span>
           </div>
@@ -87,10 +87,10 @@ export default function EmployeeDashboard({
         </div>
 
         {/* Maker Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
             onClick={() => onNavigate && onNavigate('calculator')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg bg-[#062319] text-emerald-200 hover:bg-[#0a3d2b] transition border border-[#1a5d43] cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg bg-[#062319] text-emerald-200 hover:bg-[#0a3d2b] transition border border-[#1a5d43] cursor-pointer whitespace-nowrap"
           >
             <Calculator className="w-4 h-4 text-[#D4AF37]" />
             FD Calculator
@@ -101,7 +101,7 @@ export default function EmployeeDashboard({
             onClick={() => onNavigate && onNavigate('customers')}
             disabled={permissions.cust_registration === false}
             title={permissions.cust_registration === false ? 'Customer Registration disabled by Super Admin' : '+ Customer KYC'}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border transition ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-lg border transition whitespace-nowrap ${
               permissions.cust_registration === false
                 ? 'bg-slate-800/40 text-slate-500 border-slate-800 cursor-not-allowed opacity-60'
                 : 'bg-[#062319] text-emerald-200 hover:bg-[#0a3d2b] border-[#1a5d43] cursor-pointer'
@@ -116,7 +116,7 @@ export default function EmployeeDashboard({
             onClick={onOpenNewFD}
             disabled={permissions.fd_creation === false}
             title={permissions.fd_creation === false ? 'FD Creation disabled by Super Admin' : 'Submit New FD Entry'}
-            className={`inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-lg shadow-sm transition ${
+            className={`inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-lg shadow-sm transition whitespace-nowrap ${
               permissions.fd_creation === false
                 ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
                 : 'bg-[#D4AF37] text-[#062319] hover:bg-[#C59B27] cursor-pointer'
@@ -297,7 +297,7 @@ export default function EmployeeDashboard({
 
       {/* Submission Detail Modal */}
       {selectedReq && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-[200] flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 text-xs animate-fadeIn">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
@@ -332,14 +332,86 @@ export default function EmployeeDashboard({
                 <span className="font-medium text-slate-700">{selectedReq.decision_remarks || 'Pending verification'}</span>
               </div>
 
-              {/* JSON Payload preview */}
+              {/* Formatted Application Parameters */}
               <div className="mt-3">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Submitted Parameters
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Application Parameters (दर्ज किए गए विवरण)</span>
+                  <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Form Data
+                  </span>
                 </div>
-                <pre className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-[11px] font-mono overflow-x-auto max-h-40">
-                  {JSON.stringify(selectedReq.request_data, null, 2)}
-                </pre>
+                <div className="bg-slate-50 rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden text-xs">
+                  {selectedReq.request_data && typeof selectedReq.request_data === 'object' && Object.keys(selectedReq.request_data).length > 0 ? (
+                    Object.entries(selectedReq.request_data).map(([key, val]) => {
+                      const labels = {
+                        customerId: 'Customer ID',
+                        customer_id: 'Customer ID',
+                        principal: 'Principal Amount (मूलधन)',
+                        principal_amount: 'Principal Amount (मूलधन)',
+                        annualRate: 'Annual Interest Rate (सालाना ब्याज)',
+                        annual_rate: 'Annual Interest Rate (सालाना ब्याज)',
+                        tenureMonths: 'Tenure (अवधि)',
+                        tenure_months: 'Tenure (अवधि)',
+                        tenureDays: 'Tenure Days (अतिरिक्त दिन)',
+                        tenure_days: 'Tenure Days (अतिरिक्त दिन)',
+                        compoundingFrequency: 'Compounding Frequency (चक्रवृद्धि)',
+                        compounding_frequency: 'Compounding Frequency (चक्रवृद्धि)',
+                        startDate: 'Start Date (शुरू होने की तिथि)',
+                        start_date: 'Start Date (शुरू होने की तिथि)',
+                        paymentMode: 'Payment Mode (भुगतान माध्यम)',
+                        payment_mode: 'Payment Mode (भुगतान माध्यम)',
+                        paymentReference: 'Reference No (रेफरेंस नंबर)',
+                        payment_reference: 'Reference No (रेफरेंस नंबर)',
+                        monthlyInstallment: 'Monthly Installment (मासिक किस्त)',
+                        monthly_installment: 'Monthly Installment (मासिक किस्त)',
+                        depositAmount: 'Deposit Amount (जमा राशि)',
+                        deposit_amount: 'Deposit Amount (जमा राशि)',
+                        openingBalance: 'Opening Balance (आरंभिक बैलेंस)',
+                        minimumBalance: 'Minimum Balance (न्यूनतम बैलेंस)',
+                        remarks: 'Notes / Remarks (टिप्पणी)'
+                      };
+
+                      const label = labels[key] || key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                      
+                      let displayVal = val;
+                      if (val === null || val === undefined || val === '') {
+                        displayVal = '—';
+                      } else if (['principal', 'principal_amount', 'depositAmount', 'deposit_amount', 'openingBalance', 'minimumBalance', 'monthlyInstallment', 'monthly_installment'].includes(key)) {
+                        displayVal = formatINR(val);
+                      } else if (['annualRate', 'annual_rate'].includes(key)) {
+                        displayVal = `${val}% p.a.`;
+                      } else if (['tenureMonths', 'tenure_months'].includes(key)) {
+                        displayVal = `${val} Months`;
+                      } else if (['startDate', 'start_date'].includes(key)) {
+                        displayVal = formatDate(val);
+                      } else if (['compoundingFrequency', 'compounding_frequency'].includes(key)) {
+                        const freqNames = {
+                          quarterly: 'Quarterly (त्रैमासिक चक्रवृद्धि)',
+                          monthly: 'Monthly (मासिक)',
+                          half_yearly: 'Half Yearly (अर्धवार्षिक)',
+                          yearly: 'Yearly (वार्षिक)',
+                          simple: 'Simple (साधारण ब्याज)'
+                        };
+                        displayVal = freqNames[val] || String(val);
+                      } else if (typeof val === 'boolean') {
+                        displayVal = val ? 'Yes' : 'No';
+                      } else if (typeof val === 'object') {
+                        displayVal = JSON.stringify(val);
+                      } else {
+                        displayVal = String(val);
+                      }
+
+                      return (
+                        <div key={key} className="flex items-center justify-between px-3.5 py-2">
+                          <span className="text-slate-500 font-medium">{label}</span>
+                          <span className="text-slate-900 font-bold">{displayVal}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-3 text-center text-slate-400">No additional parameters recorded.</div>
+                  )}
+                </div>
               </div>
             </div>
 

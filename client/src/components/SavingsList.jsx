@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, 
   Search, 
@@ -15,11 +16,15 @@ import {
   Eye,
   X,
   Wallet,
-  Building2
+  Building2,
+  Download,
+  FileSpreadsheet,
+  Sparkles
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import { exportToExcel } from '../utils/excelExport';
 
-export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
+export default function SavingsList({ onOpenNewSavings, isEmployee = false, onViewCustomerProfile }) {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -27,13 +32,39 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [accountDetails, setAccountDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-
   // Voucher modal state: 'DEPOSIT' | 'WITHDRAWAL' | null
   const [voucherModalType, setVoucherModalType] = useState(null);
   const [voucherAmount, setVoucherAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('CASH');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [narration, setNarration] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (voucherModalType) setVoucherModalType(null);
+        else if (selectedAccount) setSelectedAccount(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedAccount, voucherModalType]);
+
+  const handleExportExcel = () => {
+    if (!accounts.length) return alert('No Savings records to export');
+    const rows = accounts.map(s => ({
+      'Account Number': s.account_number || '',
+      'Customer Name': s.customer_name || '',
+      'Phone': s.customer_phone || '',
+      'Current Balance (₹)': s.current_balance,
+      'Opening Balance (₹)': s.opening_balance,
+      'Minimum Balance (₹)': s.minimum_balance,
+      'Interest Rate (% p.a.)': s.annual_interest_rate,
+      'Nominee': s.nominee_name || '',
+      'Status': s.status || ''
+    }));
+    exportToExcel(rows, 'TARPL_Savings_Accounts', 'Savings Accounts');
+  };
 
   const handleExportCSV = () => {
     if (!accounts.length) return alert('No Savings records to export');
@@ -157,14 +188,27 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
             <RotateCw className="w-4 h-4" />
           </button>
 
-          <button
-            id="savings-export-csv-btn"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
-            title="Export Savings to CSV"
-          >
-            Export CSV
-          </button>
+          {/* Dual Export: Excel (.xlsx) & CSV */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-2xs">
+            <button
+              id="savings-export-excel-btn"
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+              title="Export to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button
+              id="savings-export-csv-btn"
+              onClick={handleExportCSV}
+              className="px-2.5 py-1.5 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
+              title="Export to CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>CSV</span>
+            </button>
+          </div>
 
           <button
             onClick={onOpenNewSavings}
@@ -235,8 +279,26 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
                   <tr key={acc.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">{acc.account_number}</td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{acc.customer_name}</div>
-                      <div className="text-[11px] text-slate-400">{acc.customer_phone}</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewCustomerProfile && onViewCustomerProfile(acc.customer_id)}
+                          className="font-bold text-slate-900 hover:text-emerald-700 hover:underline text-left cursor-pointer truncate max-w-[150px]"
+                          title="Click to view Customer 360 Profile"
+                        >
+                          {acc.customer_name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onViewCustomerProfile && onViewCustomerProfile(acc.customer_id)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-md transition shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                          title="Customer 360: View all active accounts & services"
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                          <span>360°</span>
+                        </button>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">{acc.customer_phone}</div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="text-sm font-black text-slate-900">{formatINR(acc.current_balance)}</div>
@@ -294,34 +356,53 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
       </div>
 
       {/* 4. Passbook Statement Drawer */}
-      {selectedAccount && accountDetails && !voucherModalType && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 relative max-h-[90vh] flex flex-col animate-fadeIn">
+      {selectedAccount && accountDetails && !voucherModalType && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 overflow-hidden"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedAccount(null); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[88vh] flex flex-col overflow-hidden animate-fadeIn relative">
             
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black">
+            {/* Pinned Top Header */}
+            <div className="shrink-0 px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between gap-3 shadow-xs z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black shrink-0">
                   <Wallet className="w-5 h-5" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    {selectedAccount.account_number} — {selectedAccount.customer_name}
-                  </h2>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900 truncate">
+                      {selectedAccount.account_number} — {selectedAccount.customer_name}
+                    </h2>
+                    {onViewCustomerProfile && (
+                      <button
+                        type="button"
+                        onClick={() => onViewCustomerProfile(selectedAccount.customer_id)}
+                        className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1 shrink-0"
+                        title="View Complete Customer 360° Profile & All Services"
+                      >
+                        👤 360° All Services
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">
                     Savings Passbook • Current Balance: <strong className="text-slate-900">{formatINR(selectedAccount.current_balance)}</strong>
                   </p>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedAccount(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-300 hover:border-rose-200 rounded-xl font-bold text-xs transition cursor-pointer active:scale-95 shrink-0"
+                title="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 
-            <div className="py-4 overflow-y-auto flex-1 space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 min-h-0">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-400 block text-[11px]">Available Balance</span>
@@ -384,13 +465,19 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
               </div>
             </div>
 
+            {/* Pinned Bottom Footer */}
+            <div className="shrink-0 px-6 py-2.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500 z-10">
+              <span>Press <kbd className="px-1.5 py-0.5 bg-slate-200 rounded text-[11px] font-mono text-slate-700">Esc</kbd> or click outside to close</span>
+            </div>
+
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 5. Deposit / Withdrawal Voucher Modal */}
-      {voucherModalType && selectedAccount && (
-        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {voucherModalType && selectedAccount && createPortal(
+        <div className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-fadeIn">
             <h3 className="text-base font-bold text-slate-900">
               {voucherModalType === 'DEPOSIT' ? 'Deposit Voucher' : 'Withdrawal Voucher'}
@@ -480,8 +567,10 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false }) {
                 </button>
               </div>
             </form>
+
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

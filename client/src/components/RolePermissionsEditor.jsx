@@ -21,7 +21,7 @@ export default function RolePermissionsEditor({ onCancel }) {
   const [permissionType, setPermissionType] = useState('both'); // 'admin' | 'agent' | 'both'
   const [isActive, setIsActive] = useState('yes');
 
-  // Main Category Tab (11 categories from Hubco)
+  // Main Category Tab (11 Core Banking Categories)
   const [activeCategory, setActiveCategory] = useState('MANAGEMENT');
 
   // Subtab under MANAGEMENT
@@ -51,7 +51,7 @@ export default function RolePermissionsEditor({ onCancel }) {
     }
   };
 
-  // Main 11 Hubco Categories
+  // Main 11 System Categories
   const mainCategories = [
     'MANAGEMENT',
     'DEPOSITS',
@@ -77,7 +77,7 @@ export default function RolePermissionsEditor({ onCancel }) {
     { name: 'Collection Centers', badge: 0, color: 'bg-amber-500' }
   ];
 
-  // Dashboard Settings Checkboxes (36 exact items from Hubco)
+  // Dashboard Settings Checkboxes
   const dashboardLeft = [
     'Show SMS Balance',
     'Activate SMS Service',
@@ -343,7 +343,7 @@ export default function RolePermissionsEditor({ onCancel }) {
         </div>
       </div>
 
-      {/* Main 11 Hubco Category Tabs */}
+      {/* Main 11 System Category Tabs */}
       <div className="bg-white rounded-t-xl border border-b-0 border-slate-200 overflow-x-auto shadow-xs">
         <div className="flex border-b border-slate-200 min-w-max">
           {mainCategories.map(cat => {

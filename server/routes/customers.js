@@ -168,6 +168,81 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
 
 // PUT /api/customers/:id - Update customer (requires cust_edit)
 router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res) => {
+  const isSuperAdmin = req.user.role === 'admin';
+  const currentCust = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+  if (!currentCust) return res.status(404).json({ success: false, message: 'Customer not found' });
+
+  // If user is Staff (NOT Super Admin), enforce Maker-Checker Dual Custody Approval
+  if (!isSuperAdmin) {
+    const allowedFields = [
+      'full_name', 'father_name', 'branch', 'phone', 'email', 'pan_card',
+      'aadhaar_no', 'address', 'bank_name', 'account_no', 'ifsc_code',
+      'nominee_name', 'nominee_relation', 'is_senior_citizen', 'login_id',
+      'login_password', 'app_access_enabled', 'status'
+    ];
+
+    const changes = {};
+    allowedFields.forEach(f => {
+      if (req.body[f] !== undefined && req.body[f] !== null) {
+        let newVal = req.body[f];
+        if (typeof newVal === 'string') newVal = newVal.trim();
+        if (f === 'pan_card' || f === 'ifsc_code') newVal = newVal.toUpperCase();
+        if (f === 'is_senior_citizen' || f === 'app_access_enabled') newVal = newVal ? 1 : 0;
+
+        let oldVal = currentCust[f];
+        if (typeof oldVal === 'string') oldVal = oldVal.trim();
+
+        if (String(newVal) !== String(oldVal || '')) {
+          changes[f] = { old: oldVal, new: newVal };
+        }
+      }
+    });
+
+    if (Object.keys(changes).length === 0) {
+      return res.json({ success: true, message: 'No changes detected in customer profile.' });
+    }
+
+    const reqNumber = `REQ-CUSTEDIT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const ins = db.prepare(`
+      INSERT INTO approval_requests (
+        request_number, request_type, maker_id, customer_id, proposed_amount, request_data, status, decision_remarks
+      ) VALUES (?, 'CUSTOMER_EDIT', ?, ?, 0, ?, 'PENDING_APPROVAL', ?)
+    `).run(
+      reqNumber,
+      req.user.id,
+      currentCust.id,
+      JSON.stringify({
+        customerId: currentCust.id,
+        customerName: currentCust.full_name,
+        customerCode: currentCust.customer_code,
+        changes,
+        proposedValues: req.body,
+        makerName: req.user.full_name || req.user.username
+      }),
+      `Staff Maker (${req.user.username}) requested edit on customer ${currentCust.full_name}`
+    );
+
+    // Immutable Digital Audit Trail
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (?, 'SUBMIT_CUSTOMER_EDIT_REQUEST', 'APPROVAL_REQUEST', ?, ?)
+      `).run(
+        req.user.id,
+        reqNumber,
+        `Staff maker (${req.user.username}) submitted customer edit request for ${currentCust.full_name} (${currentCust.customer_code}). Modified fields: ${Object.keys(changes).join(', ')}`
+      );
+    } catch (e) {}
+
+    return res.status(200).json({
+      success: true,
+      makerApprovalRequired: true,
+      requestNumber: reqNumber,
+      message: 'कस्टमर प्रोफाइल में बदलाव Super Admin अप्रूवल के लिए सबमिट कर दिया गया है। Super Admin द्वारा अप्रूव होने के बाद ही यह लागू होगा।'
+    });
+  }
+
+  // Direct Execution for Super Admin
   const {
     full_name,
     father_name,
@@ -225,6 +300,22 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
     status || null,
     req.params.id
   );
+
+  // Sync users table if phone or full_name changed
+  if (phone) {
+    try { db.prepare(`UPDATE users SET phone = ? WHERE customer_id = ?`).run(phone, req.params.id); } catch(e){}
+  }
+  if (full_name) {
+    try { db.prepare(`UPDATE users SET full_name = ? WHERE customer_id = ?`).run(full_name, req.params.id); } catch(e){}
+  }
+
+  // Audit Log for Super Admin Direct Update
+  try {
+    db.prepare(`
+      INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+      VALUES (?, 'UPDATE_CUSTOMER_DIRECT', 'CUSTOMER', ?, ?)
+    `).run(req.user.id, String(req.params.id), `Super Admin directly updated profile of customer ${full_name || currentCust.full_name}`);
+  } catch(e){}
 
   const updated = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
   res.json({ success: true, message: 'Customer updated successfully', customer: updated });
@@ -313,21 +404,44 @@ router.get('/:id/portfolio', authenticateToken, (req, res) => {
       savings = db.prepare('SELECT * FROM savings_accounts WHERE customer_id = ? ORDER BY id DESC').all(customer.id);
     } catch(e){}
 
+    let loans = [];
+    try {
+      loans = db.prepare('SELECT * FROM loans WHERE customer_id = ? ORDER BY id DESC').all(customer.id);
+    } catch(e){}
+
+    let goldLoans = [];
+    try {
+      goldLoans = db.prepare('SELECT * FROM gold_loans WHERE customer_id = ? OR customer_name = ? ORDER BY id DESC').all(customer.id, customer.full_name);
+    } catch(e){}
+
     // Aggregate calculations
     const activeFdPrincipal = fds.filter(f => f.status === 'ACTIVE').reduce((sum, f) => sum + (f.principal_amount || 0), 0);
     const activeFdInterest = fds.filter(f => f.status === 'ACTIVE').reduce((sum, f) => sum + (f.total_interest || 0), 0);
+    const closedFdCount = fds.filter(f => f.status !== 'ACTIVE').length;
 
     const activeRdDeposited = rds.filter(r => r.status === 'ACTIVE').reduce((sum, r) => sum + (r.amount_deposited || 0), 0);
     const activeRdInterest = rds.filter(r => r.status === 'ACTIVE').reduce((sum, r) => sum + (r.total_interest || 0), 0);
+    const closedRdCount = rds.filter(r => r.status !== 'ACTIVE').length;
 
     const activeMisDeposit = mis.filter(m => m.status === 'ACTIVE').reduce((sum, m) => sum + (m.deposit_amount || 0), 0);
     const activeMisPayout = mis.filter(m => m.status === 'ACTIVE').reduce((sum, m) => sum + (m.total_payout_amount || 0), 0);
+    const closedMisCount = mis.filter(m => m.status !== 'ACTIVE').length;
 
     const activeSavingsBalance = savings.filter(s => s.status === 'ACTIVE').reduce((sum, s) => sum + (s.current_balance || 0), 0);
 
+    const activeLoanPrincipal = loans.filter(l => l.status === 'ACTIVE').reduce((sum, l) => sum + (l.sanctioned_amount || 0), 0);
+    const activeGoldLoanPrincipal = goldLoans.filter(g => g.status === 'ACTIVE').reduce((sum, g) => sum + (g.sanctioned_amount || 0), 0);
+
     const totalDeposits = activeFdPrincipal + activeRdDeposited + activeMisDeposit + activeSavingsBalance;
     const totalInterest = activeFdInterest + activeRdInterest + activeMisPayout;
-    const totalAccounts = fds.length + rds.length + mis.length + savings.length;
+    const totalAccounts = fds.length + rds.length + mis.length + savings.length + loans.length + goldLoans.length;
+    const activeAccounts = fds.filter(f => f.status === 'ACTIVE').length + 
+                           rds.filter(r => r.status === 'ACTIVE').length + 
+                           mis.filter(m => m.status === 'ACTIVE').length + 
+                           savings.filter(s => s.status === 'ACTIVE').length +
+                           loans.filter(l => l.status === 'ACTIVE').length +
+                           goldLoans.filter(g => g.status === 'ACTIVE').length;
+    const closedAccounts = totalAccounts - activeAccounts;
 
     res.json({
       success: true,
@@ -336,17 +450,22 @@ router.get('/:id/portfolio', authenticateToken, (req, res) => {
         fds,
         rds,
         mis,
-        savings
+        savings,
+        loans,
+        goldLoans
       },
       summary: {
         totalDeposits: Math.round(totalDeposits * 100) / 100,
         totalInterest: Math.round(totalInterest * 100) / 100,
         totalAccounts,
+        activeAccounts,
+        closedAccounts,
         productBreakdown: {
-          fd: { count: fds.length, activeDeposits: activeFdPrincipal, totalInterest: activeFdInterest },
-          rd: { count: rds.length, activeDeposits: activeRdDeposited, totalInterest: activeRdInterest },
-          mis: { count: mis.length, activeDeposits: activeMisDeposit, totalInterest: activeMisPayout },
-          savings: { count: savings.length, currentBalance: activeSavingsBalance }
+          fd: { count: fds.length, active: fds.filter(f => f.status === 'ACTIVE').length, closed: closedFdCount, activeDeposits: activeFdPrincipal, totalInterest: activeFdInterest },
+          rd: { count: rds.length, active: rds.filter(r => r.status === 'ACTIVE').length, closed: closedRdCount, activeDeposits: activeRdDeposited, totalInterest: activeRdInterest },
+          mis: { count: mis.length, active: mis.filter(m => m.status === 'ACTIVE').length, closed: closedMisCount, activeDeposits: activeMisDeposit, totalInterest: activeMisPayout },
+          savings: { count: savings.length, active: savings.filter(s => s.status === 'ACTIVE').length, currentBalance: activeSavingsBalance },
+          loans: { count: loans.length + goldLoans.length, activeSanctioned: activeLoanPrincipal + activeGoldLoanPrincipal }
         }
       }
     });

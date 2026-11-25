@@ -917,7 +917,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
 
         {/* Footer */}
         <div className="text-center text-xs text-slate-500 py-3">
-          Safe & Encrypted 256-Bit Financial Client Portal
+          Safe & Encrypted 256-Bit Financial Client Portal • Powered by <strong className="text-slate-700">Crafted Reach ®</strong>
         </div>
 
         {/* Customer Forgot Password Modal */}
@@ -2211,7 +2211,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                       </div>
 
                       <a
-                        href={`upi://pay?pa=taranganjali@icici&pn=Taranganjali%20Realtech&am=${payAmount}&tn=${payPurpose}&cu=INR`}
+                        href={`upi://pay?pa=taranganjali@icici&pn=Taranganjali%20Private%20Limited&am=${payAmount}&tn=${payPurpose}&cu=INR`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
                       >
                         <Smartphone className="w-3.5 h-3.5" />
@@ -2224,7 +2224,7 @@ export default function CustomerApp({ onSwitchToStaffCRM, onPrintCertificate }) 
                         <span>Company Official Current A/c:</span>
                         <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-bold">PNB</span>
                       </div>
-                      <p><span className="text-slate-500">Account Name:</span> <strong className="text-slate-800">Tarang Anjali Real Tech Pvt. Ltd.</strong></p>
+                      <p><span className="text-slate-500">Account Name:</span> <strong className="text-slate-800">Taranganjali Private Limited</strong></p>
                       <p><span className="text-slate-500">Account No:</span> <strong className="font-mono text-slate-900">0123002100045678</strong></p>
                       <p><span className="text-slate-500">IFSC Code:</span> <strong className="font-mono text-slate-900">PUNB0012300</strong> (Main Branch)</p>
                     </div>

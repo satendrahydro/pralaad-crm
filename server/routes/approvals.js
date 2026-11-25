@@ -295,8 +295,9 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           isSeniorCitizen: customer.is_senior_citizen === 1
         });
 
-        const nextNum = db.prepare('SELECT COUNT(*) as count FROM fixed_deposits').get().count + 1;
-        const fdNumber = `FD-${new Date().getFullYear()}-${String(nextNum).padStart(3, '0')}`;
+        const lastFd = db.prepare('SELECT id FROM fixed_deposits ORDER BY id DESC LIMIT 1').get();
+        const nextNum = (lastFd ? lastFd.id + 1 : 1);
+        const fdNumber = `FD-${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
 
         // Create Active FD
         const fdResult = db.prepare(`
@@ -527,8 +528,9 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           isSeniorCitizen: customer.is_senior_citizen === 1
         });
 
-        const nextNum = db.prepare('SELECT COUNT(*) as count FROM fixed_deposits').get().count + 1;
-        const newFdNumber = `FD-${new Date().getFullYear()}-${String(nextNum).padStart(3, '0')}`;
+        const lastFd = db.prepare('SELECT id FROM fixed_deposits ORDER BY id DESC LIMIT 1').get();
+        const nextNum = (lastFd ? lastFd.id + 1 : 1);
+        const newFdNumber = `FD-${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
 
         const newFdInsert = db.prepare(`
           INSERT INTO fixed_deposits (
@@ -661,8 +663,9 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           isSeniorCitizen: customer.is_senior_citizen === 1
         });
 
-        const countRow = db.prepare("SELECT count(*) as count FROM recurring_deposits").get();
-        const rdNumber = `RD-${new Date().getFullYear()}-${String(countRow.count + 1).padStart(3, '0')}`;
+        const lastRd = db.prepare('SELECT id FROM recurring_deposits ORDER BY id DESC LIMIT 1').get();
+        const nextRdNum = (lastRd ? lastRd.id + 1 : 1);
+        const rdNumber = `RD-${new Date().getFullYear()}-${String(nextRdNum).padStart(4, '0')}`;
 
         const insRd = db.prepare(`
           INSERT INTO recurring_deposits (
@@ -703,13 +706,14 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
 
         const totalAmount = inst.installment_amount + lateFee;
         const today = new Date().toISOString().split('T')[0];
+        const effectivePaidDate = payload.paid_date || payload.collection_date || today;
 
         db.prepare(`
           UPDATE rd_installments
           SET status = 'COLLECTED', paid_date = ?, late_fee = ?, total_collected = ?,
               payment_mode = ?, transaction_ref = ?, collector_user_id = ?
           WHERE id = ?
-        `).run(today, lateFee, totalAmount, paymentMode, transactionRef, req.user.id, installmentId);
+        `).run(effectivePaidDate, lateFee, totalAmount, paymentMode, transactionRef, req.user.id, installmentId);
 
         db.prepare(`
           UPDATE recurring_deposits
@@ -764,8 +768,9 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           isSeniorCitizen: customer.is_senior_citizen === 1
         });
 
-        const countRow = db.prepare("SELECT count(*) as count FROM mis_accounts").get();
-        const misNumber = `MIS-${new Date().getFullYear()}-${String(countRow.count + 1).padStart(3, '0')}`;
+        const lastMis = db.prepare('SELECT id FROM mis_accounts ORDER BY id DESC LIMIT 1').get();
+        const nextMisNum = (lastMis ? lastMis.id + 1 : 1);
+        const misNumber = `MIS-${new Date().getFullYear()}-${String(nextMisNum).padStart(4, '0')}`;
 
         const insMis = db.prepare(`
           INSERT INTO mis_accounts (
@@ -820,7 +825,7 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
         const sched = db.prepare('SELECT * FROM mis_payout_schedules WHERE id = ? AND mis_id = ?').get(scheduleId, misId);
         if (!sched) throw new Error('MIS schedule not found');
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = payload.paidDate || payload.paid_date || new Date().toISOString().split('T')[0];
         db.prepare(`
           UPDATE mis_payout_schedules
           SET status = 'PAID', paid_date = ?, payment_reference = ?
@@ -858,8 +863,9 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
         const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
         if (!customer) throw new Error('Customer does not exist');
 
-        const countRow = db.prepare("SELECT count(*) as count FROM savings_accounts").get();
-        const accountNumber = `SB-${new Date().getFullYear()}-${String(1001 + countRow.count)}`;
+        const lastSb = db.prepare('SELECT id FROM savings_accounts ORDER BY id DESC LIMIT 1').get();
+        const nextSbNum = (lastSb ? lastSb.id + 1 : 1);
+        const accountNumber = `SB-${new Date().getFullYear()}-${String(1000 + nextSbNum)}`;
         const today = new Date().toISOString().split('T')[0];
 
         const insAccount = db.prepare(`
@@ -1027,6 +1033,61 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           field,
           newValue,
           message: `Customer ${payload.field_label || field} updated to "${newValue}" successfully`
+        };
+      }
+
+      // 3.Y CUSTOMER_EDIT APPROVAL (Staff Maker Profile Updates)
+      if (request.request_type === 'CUSTOMER_EDIT') {
+        const customerId = payload.customerId || request.customer_id;
+        const updates = payload.proposedValues || {};
+
+        const stmt = db.prepare(`
+          UPDATE customers SET
+            full_name = COALESCE(?, full_name),
+            father_name = COALESCE(?, father_name),
+            branch = COALESCE(?, branch),
+            phone = COALESCE(?, phone),
+            email = COALESCE(?, email),
+            pan_card = COALESCE(?, pan_card),
+            aadhaar_no = COALESCE(?, aadhaar_no),
+            address = COALESCE(?, address),
+            bank_name = COALESCE(?, bank_name),
+            account_no = COALESCE(?, account_no),
+            ifsc_code = COALESCE(?, ifsc_code),
+            nominee_name = COALESCE(?, nominee_name),
+            nominee_relation = COALESCE(?, nominee_relation),
+            is_senior_citizen = COALESCE(?, is_senior_citizen),
+            login_id = COALESCE(?, login_id),
+            login_password = COALESCE(?, login_password),
+            app_access_enabled = COALESCE(?, app_access_enabled),
+            status = COALESCE(?, status)
+          WHERE id = ?
+        `);
+
+        stmt.run(
+          updates.full_name, updates.father_name, updates.branch, updates.phone, updates.email,
+          updates.pan_card ? updates.pan_card.toUpperCase() : null,
+          updates.aadhaar_no, updates.address, updates.bank_name, updates.account_no,
+          updates.ifsc_code ? updates.ifsc_code.toUpperCase() : null,
+          updates.nominee_name, updates.nominee_relation,
+          updates.is_senior_citizen !== undefined ? (updates.is_senior_citizen ? 1 : 0) : null,
+          updates.login_id ? updates.login_id.trim() : null,
+          updates.login_password ? updates.login_password.trim() : null,
+          updates.app_access_enabled !== undefined ? (updates.app_access_enabled ? 1 : 0) : null,
+          updates.status || null,
+          customerId
+        );
+
+        if (updates.phone) {
+          try { db.prepare(`UPDATE users SET phone = ? WHERE customer_id = ?`).run(updates.phone, customerId); } catch(e){}
+        }
+        if (updates.full_name) {
+          try { db.prepare(`UPDATE users SET full_name = ? WHERE customer_id = ?`).run(updates.full_name, customerId); } catch(e){}
+        }
+
+        executionResult = {
+          customerId,
+          message: `Customer profile updated successfully upon Super Admin approval.`
         };
       }
 

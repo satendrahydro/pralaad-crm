@@ -247,12 +247,19 @@ router.post('/:id/collect-installment', authenticateToken, (req, res) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
+    const effectivePaidDate = req.body.paid_date || req.body.collection_date || today;
+    if (effectivePaidDate > today) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Collection date cannot be in the future. Deposit must be recorded on or before today.' 
+      });
+    }
     db.prepare(`
       UPDATE rd_installments
       SET status = 'COLLECTED', paid_date = ?, late_fee = ?, total_collected = ?,
           payment_mode = ?, transaction_ref = ?, collector_user_id = ?
       WHERE id = ?
-    `).run(today, parseFloat(late_fee || 0), totalAmount, payment_mode, reference_number || `COLL-RD-${Date.now()}`, req.user.id, installment_id);
+    `).run(effectivePaidDate, parseFloat(late_fee || 0), totalAmount, payment_mode, reference_number || `COLL-RD-${Date.now()}`, req.user.id, installment_id);
 
     db.prepare(`
       UPDATE recurring_deposits
@@ -320,12 +327,19 @@ router.post('/:id/installments/:instId/collect', authenticateToken, (req, res) =
 
     // Direct Admin Execution
     const today = new Date().toISOString().split('T')[0];
+    const effectivePaidDate = req.body.paid_date || req.body.collection_date || today;
+    if (effectivePaidDate > today) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Collection date cannot be in the future. Deposit must be recorded on or before today.' 
+      });
+    }
     db.prepare(`
       UPDATE rd_installments
       SET status = 'COLLECTED', paid_date = ?, late_fee = ?, total_collected = ?,
           payment_mode = ?, transaction_ref = ?, collector_user_id = ?
       WHERE id = ?
-    `).run(today, parseFloat(late_fee || 0), amount, payment_mode, transaction_ref || `COLL-RD-${Date.now()}`, req.user.id, instId);
+    `).run(effectivePaidDate, parseFloat(late_fee || 0), amount, payment_mode, transaction_ref || `COLL-RD-${Date.now()}`, req.user.id, instId);
 
     db.prepare(`
       UPDATE recurring_deposits
@@ -336,6 +350,39 @@ router.post('/:id/installments/:instId/collect', authenticateToken, (req, res) =
     `).run(inst.installment_amount, parseFloat(late_fee || 0), id);
 
     res.json({ success: true, message: 'Installment collected successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/rd/:id/close - Premature / Normal Close RD
+router.post('/:id/close', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body;
+    const rd = db.prepare('SELECT * FROM recurring_deposits WHERE id = ?').get(id);
+    if (!rd) return res.status(404).json({ success: false, message: 'RD not found' });
+    if (rd.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Only active RDs can be closed' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    db.prepare(`
+      UPDATE recurring_deposits
+      SET status = 'CLOSED_PREMATURE',
+          premature_closed_date = ?,
+          remarks = ?
+      WHERE id = ?
+    `).run(today, remarks || `Closed prematurely on ${today}`, id);
+
+    // Cancel remaining pending installments
+    db.prepare(`
+      UPDATE rd_installments
+      SET status = 'CANCELLED'
+      WHERE rd_id = ? AND status = 'PENDING'
+    `).run(id);
+
+    res.json({ success: true, message: 'Recurring Deposit closed successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

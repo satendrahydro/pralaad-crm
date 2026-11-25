@@ -193,7 +193,7 @@ export default function Dashboard({
 
   // Frequency Chart Data
   const freqChartData = (frequencyBreakdown || []).map(f => ({
-    name: f.compounding_frequency.replace('payout_', 'Payout ').replace('_', ' ').toUpperCase(),
+    name: (f.compounding_frequency || 'Standard').replace('payout_', 'Payout ').replace('_', ' ').toUpperCase(),
     count: f.count,
     amount: f.total_amount
   }));
@@ -355,7 +355,7 @@ export default function Dashboard({
             {
               title: 'Payouts Due (30 Days)',
               amount: metrics.mis?.upcomingPayouts?.length || 0,
-              badge: 'Pending Payouts',
+              badge: 'Due Payouts',
               sub: 'Scheduled This Month',
               icon: Clock,
               color: 'text-rose-600 bg-rose-50 border-rose-100 group-hover:bg-rose-600 group-hover:text-white',
@@ -1301,7 +1301,7 @@ export default function Dashboard({
                       </span>
                     </div>
                     <div className="text-xs text-slate-500 mt-1 truncate">
-                      {fd.customer_name} • {fd.tenure_months}M ({fd.compounding_frequency.replace('payout_', 'Payout ')})
+                      {fd.customer_name} • {fd.tenure_months}M ({(fd.compounding_frequency || 'Standard').replace('payout_', 'Payout ')})
                     </div>
                   </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, AlertCircle, UserPlus } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
 
-export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = false }) {
+export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -23,7 +23,9 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
   const loadCustomers = async () => {
     try {
       const res = await apiRequest('/customers');
-      if (res.success) setCustomers(res.customers || []);
+      if (res.success && res.customers) {
+        setCustomers(res.customers);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -32,8 +34,15 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
   useEffect(() => {
     if (isOpen) {
       loadCustomers();
+      if (initialCustomerId) {
+        setCustomerId(String(initialCustomerId));
+        setCustomerSearch('');
+      }
+    } else {
+      setCustomerSearch('');
+      setQuickError('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialCustomerId]);
 
   const handleQuickAddSubmit = async (e) => {
     e.preventDefault();
@@ -49,8 +58,10 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
         body: JSON.stringify(quickCust)
       });
       if (res.success && res.customer) {
-        await loadCustomers();
-        setCustomerId(String(res.customer.id));
+        const newC = res.customer;
+        setCustomers(prev => [newC, ...prev.filter(c => c.id !== newC.id)]);
+        setCustomerId(String(newC.id));
+        setCustomerSearch('');
         setQuickAddOpen(false);
         setQuickCust({ full_name: '', phone: '', email: '', pan_card: '' });
       }
@@ -108,7 +119,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10001] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-fadeIn">
         
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -116,8 +127,13 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
             <h2 className="text-base font-bold text-slate-900">Start Recurring Deposit (RD)</h2>
             <p className="text-xs text-slate-500">Monthly systematic installment deposit</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
+          <button 
+            onClick={onClose} 
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
 
@@ -336,7 +352,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, isEmployee = fa
 
         {/* Quick Add Customer Modal */}
         {quickAddOpen && (
-          <div className="fixed inset-0 z-60 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[10020] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
               <button
                 type="button"

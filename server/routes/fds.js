@@ -459,9 +459,46 @@ router.post('/:id/renew', authenticateToken, (req, res) => {
   });
 });
 
+// GET /api/fds/payouts - Full periodic interest payouts register (PENDING, PAID, ALL)
+router.get('/payouts', authenticateToken, (req, res) => {
+  try {
+    const { status = 'PENDING', search } = req.query;
+    let query = `
+      SELECT s.*, fd.fd_number, c.full_name as customer_name, c.phone as customer_phone, c.bank_name, c.account_no, c.ifsc_code
+      FROM fd_schedules s
+      JOIN fixed_deposits fd ON s.fd_id = fd.id
+      JOIN customers c ON fd.customer_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (status && status !== 'ALL') {
+      query += ` AND s.status = ?`;
+      params.push(status);
+    }
+    if (search) {
+      query += ` AND (fd.fd_number LIKE ? OR c.full_name LIKE ? OR c.phone LIKE ? OR s.payment_reference LIKE ?)`;
+      const term = `%${search}%`;
+      params.push(term, term, term, term);
+    }
+    query += ` ORDER BY s.payout_date DESC LIMIT 150`;
+    const payouts = db.prepare(query).all(...params);
+    res.json({ success: true, payouts });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/fds/schedule/:scheduleId/mark-paid
 router.post('/schedule/:scheduleId/mark-paid', authenticateToken, (req, res) => {
-  const { payment_reference = 'BANK-TRF-' + Date.now(), paid_date = new Date().toISOString().split('T')[0] } = req.body;
+  const today = new Date().toISOString().split('T')[0];
+  const { payment_reference = 'BANK-TRF-' + Date.now(), paid_date = today } = req.body;
+
+  if (paid_date > today) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Disbursal date cannot be in the future. Payment must be recorded on or before today.' 
+    });
+  }
 
   db.prepare(`
     UPDATE fd_schedules SET

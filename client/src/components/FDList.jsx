@@ -16,16 +16,19 @@ import {
   MessageSquare,
   ChevronDown,
   ArrowUpDown,
-  Sparkles
+  Sparkles,
+  FileSpreadsheet
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import { exportToExcel } from '../utils/excelExport';
 
 export default function FDList({ 
   onOpenNewFD, 
   onViewFD, 
   onPrintCertificate,
   onPrematureClose,
-  onRenewFD
+  onRenewFD,
+  onViewCustomerProfile
 }) {
   const [fds, setFds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +46,23 @@ export default function FDList({
   const schemeRef = useRef(null);
   const sortRef = useRef(null);
   const tableRef = useRef(null);
+
+  const handleExportExcel = () => {
+    if (!filteredAndSortedFDs.length) return alert('No records to export');
+    const rows = filteredAndSortedFDs.map(fd => ({
+      'FD Number': fd.fd_number || '',
+      'Customer Name': fd.customer_name || '',
+      'Customer Code': fd.customer_code || '',
+      'Phone': fd.customer_phone || '',
+      'Principal Amount (₹)': fd.principal_amount,
+      'Interest Rate (% p.a.)': fd.annual_rate,
+      'Tenure (Months)': fd.tenure_months,
+      'Maturity Amount (₹)': fd.maturity_amount,
+      'Maturity Date': fd.maturity_date || '',
+      'Account Status': fd.status || ''
+    }));
+    exportToExcel(rows, 'TARPL_FD_Portfolio', 'Fixed Deposits');
+  };
 
   const handleExportCSV = () => {
     if (!filteredAndSortedFDs.length) return alert('No records to export');
@@ -169,15 +189,27 @@ export default function FDList({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            id="fd-export-csv-btn"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-2 border border-slate-200 transition cursor-pointer"
-            title="Export to CSV"
-          >
-            <Download className="w-4 h-4 text-indigo-600" />
-            <span>Export CSV</span>
-          </button>
+          {/* Dual Export: Excel (.xlsx) & CSV */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-2xs">
+            <button
+              id="fd-export-excel-btn"
+              onClick={handleExportExcel}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+              title="Export to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button
+              id="fd-export-csv-btn"
+              onClick={handleExportCSV}
+              className="px-2.5 py-2 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
+              title="Export to CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>CSV</span>
+            </button>
+          </div>
 
           <button
             onClick={onOpenNewFD}
@@ -366,8 +398,26 @@ export default function FDList({
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800">{fd.customer_name}</div>
-                        <div className="text-[11px] text-slate-500">{fd.customer_phone}</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onViewCustomerProfile && onViewCustomerProfile(fd.customer_id)}
+                            className="font-bold text-slate-900 hover:text-emerald-700 hover:underline text-left cursor-pointer truncate max-w-[150px]"
+                            title="Click to view Customer 360 Profile"
+                          >
+                            {fd.customer_name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onViewCustomerProfile && onViewCustomerProfile(fd.customer_id)}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-md transition shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                            title="Customer 360: View all active accounts & services"
+                          >
+                            <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                            <span>360°</span>
+                          </button>
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">{fd.customer_phone}</div>
                       </td>
 
                       <td className="py-3.5 px-4 text-right font-black text-slate-900 text-sm">

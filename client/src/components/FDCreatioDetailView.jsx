@@ -24,6 +24,8 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
+  ChevronRight,
+  Sparkles,
   Search,
   Plus,
   RefreshCw,
@@ -37,6 +39,7 @@ import {
   Banknote
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import UnifiedCustomerProfileModal from './UnifiedCustomerProfileModal';
 
 export default function FDCreatioDetailView({ 
   fdId, 
@@ -53,6 +56,7 @@ export default function FDCreatioDetailView({
   const [newTagInput, setNewTagInput] = useState('');
   const [addingTag, setAddingTag] = useState(false);
   const [nextStepCompleted, setNextStepCompleted] = useState(false);
+  const [showCustomer360Modal, setShowCustomer360Modal] = useState(false);
 
   const fetchDetails = async () => {
     if (!fdId) return;
@@ -406,6 +410,22 @@ export default function FDCreatioDetailView({
                 <span className="truncate">{customer?.address || fd?.customer_address || '—'}</span>
               </div>
             </div>
+
+            {/* Customer 360 & Other Services Quick Action Button */}
+            <div className="pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowCustomer360Modal(true)}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-between cursor-pointer active:scale-98 group"
+                title="View Complete Customer 360 Portfolio (Savings, RD, MIS, Loans)"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
+                  <span>Other Services (अन्य सेवाएं)</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-emerald-200 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
 
         </div>
@@ -553,9 +573,17 @@ export default function FDCreatioDetailView({
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                                   PAID
                                 </span>
+                              ) : s.due_date > new Date().toISOString().split('T')[0] ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-800 border border-sky-200">
+                                  SCHEDULED
+                                </span>
+                              ) : s.due_date === new Date().toISOString().split('T')[0] ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                  DUE TODAY
+                                </span>
                               ) : (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                  PENDING
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                  OVERDUE
                                 </span>
                               )}
                             </td>
@@ -565,7 +593,7 @@ export default function FDCreatioDetailView({
                                   onClick={() => handleMarkSchedulePaid(s.id)}
                                   className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
                                 >
-                                  Disburse
+                                  {s.due_date > new Date().toISOString().split('T')[0] ? 'Advance Disburse' : 'Disburse'}
                                 </button>
                               )}
                               {s.status === 'PAID' && (
@@ -787,6 +815,18 @@ export default function FDCreatioDetailView({
         </div>
 
       </div>
+
+      {/* 360 Customer Profile / Other Services Modal */}
+      {showCustomer360Modal && (
+        <UnifiedCustomerProfileModal
+          customerId={customer?.id || fd?.customer_id}
+          isOpen={showCustomer360Modal}
+          onClose={() => setShowCustomer360Modal(false)}
+          onPrintCertificate={onPrintCertificate}
+          onPrematureClose={onPrematureClose}
+          onRenewFD={onRenewFD}
+        />
+      )}
 
     </div>
   );

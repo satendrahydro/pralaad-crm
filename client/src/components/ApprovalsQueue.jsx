@@ -195,9 +195,13 @@ export default function ApprovalsQueue({ onApproved }) {
                   <tr key={r.id} className="hover:bg-slate-50 transition">
                     <td className="p-4 font-mono font-bold text-slate-900">{r.request_number}</td>
                     <td className="p-4">
-                      {r.request_type === 'PROFILE_CORRECTION' ? (
+                      {r.request_type === 'CUSTOMER_EDIT' ? (
+                        <span className="font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-200 text-[10px] uppercase tracking-wide">
+                          ✏️ Client Profile Edit
+                        </span>
+                      ) : r.request_type === 'PROFILE_CORRECTION' ? (
                         <span className="font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200 text-[10px] uppercase tracking-wide">
-                          ✏️ Profile Correction
+                          📱 App Profile Correction
                         </span>
                       ) : (
                         <span className="font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px]">
@@ -207,26 +211,46 @@ export default function ApprovalsQueue({ onApproved }) {
                     </td>
                     <td className="p-4">
                       <div className="font-bold text-slate-800">
-                        {r.request_type === 'PROFILE_CORRECTION' ? (
+                        {r.request_type === 'CUSTOMER_EDIT' ? (
+                          <span className="text-blue-700 font-bold">{r.request_data?.makerName || r.maker_name || 'Staff Maker'}</span>
+                        ) : r.request_type === 'PROFILE_CORRECTION' ? (
                           <span className="text-emerald-700 font-bold">Client Mobile App</span>
                         ) : (
                           r.maker_name || r.maker_username || 'Staff Maker'
                         )}
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {r.request_type === 'PROFILE_CORRECTION' ? 'Customer Self-Service' : 'Branch Staff'}
+                        {r.request_type === 'CUSTOMER_EDIT' ? (r.request_data?.source === 'MOBILE_APP' ? 'Customer Self-Service' : 'Branch Staff Maker') : r.request_type === 'PROFILE_CORRECTION' ? 'Customer Self-Service' : 'Branch Staff'}
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="font-bold text-slate-800">
-                        {r.customer_name || r.request_data?.customer_name || 'N/A'}
+                        {r.customer_name || r.request_data?.customerName || r.request_data?.customer_name || 'N/A'}
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        {r.request_data?.customer_code || r.customer_phone || ''}
+                        {r.request_data?.customerCode || r.request_data?.customer_code || r.customer_phone || ''}
                       </div>
                     </td>
                     <td className="p-4">
-                      {r.request_type === 'PROFILE_CORRECTION' ? (
+                      {r.request_type === 'CUSTOMER_EDIT' ? (
+                        <div className="space-y-1.5 max-w-sm">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Modified Client Fields:</div>
+                          <div className="space-y-1 text-xs">
+                            {Object.entries(r.request_data?.changes || {}).map(([key, diff]) => (
+                              <div key={key} className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-slate-700 capitalize text-[11px]">{key.replace('_', ' ')}:</span>
+                                <span className="px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 line-through text-[11px]">
+                                  {String(diff.old || '(empty)')}
+                                </span>
+                                <span className="text-slate-400 font-bold text-[10px]">➔</span>
+                                <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px]">
+                                  {String(diff.new)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : r.request_type === 'PROFILE_CORRECTION' ? (
                         <div className="space-y-1">
                           <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
                             <span className="text-purple-700 font-black">Field:</span> {r.request_data?.field_label || r.request_data?.field}
@@ -301,7 +325,7 @@ export default function ApprovalsQueue({ onApproved }) {
 
       {/* Rejection Modal */}
       {rejectionModalOpen && selectedReq && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-[200] flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 text-xs animate-fadeIn">
             <h3 className="text-base font-bold text-slate-900 mb-1">
               Return / Reject Submission ({selectedReq.request_number})

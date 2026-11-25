@@ -285,7 +285,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
         </div>
       </div>
 
-      {/* 4. Table matching Hubco's exact headers & structure */}
+      {/* 4. Advisor Ranks Table Structure */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -422,7 +422,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
 
       {/* 5. Add / Edit Rank Modal */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 animate-fadeIn relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -550,7 +550,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
 
       {/* 6. Rank Associates List Modal */}
       {viewAssociatesModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 animate-fadeIn relative max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">

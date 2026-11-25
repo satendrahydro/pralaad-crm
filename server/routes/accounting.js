@@ -536,18 +536,18 @@ router.post('/journal-entry', authenticateToken, (req, res) => {
     const numAmount = parseFloat(amount);
 
     const stmt = db.prepare(`
-      INSERT INTO transactions (voucher_number, voucher_date, voucher_type, total_amount, narration, created_by)
-      VALUES (?, ?, 'JOURNAL', ?, ?, ?)
+      INSERT INTO transactions (transaction_number, transaction_type, customer_id, amount, transaction_date, payment_mode, reference_number, remarks, created_by)
+      VALUES (?, 'JOURNAL', 1, ?, ?, 'JOURNAL', ?, ?, ?)
     `);
-    const info = stmt.run(voucher_number, date, numAmount, narration || 'Manual Journal Voucher', req.user?.id || 1);
+    const info = stmt.run(voucher_number, numAmount, date, voucher_number, narration || 'Manual Journal Voucher', req.user?.id || 1);
 
     // Insert Dr & Cr entries
     const entryStmt = db.prepare(`
-      INSERT INTO transaction_entries (transaction_id, account_type, entry_type, amount, narration)
+      INSERT INTO transaction_entries (transaction_id, account_name, entry_type, amount, notes)
       VALUES (?, ?, ?, ?, ?)
     `);
-    entryStmt.run(info.lastInsertRowid, debit_ledger, 'DEBIT', numAmount, narration);
-    entryStmt.run(info.lastInsertRowid, credit_ledger, 'CREDIT', numAmount, narration);
+    entryStmt.run(info.lastInsertRowid, debit_ledger, 'DEBIT', numAmount, narration || '');
+    entryStmt.run(info.lastInsertRowid, credit_ledger, 'CREDIT', numAmount, narration || '');
 
     res.json({
       success: true,
@@ -563,7 +563,7 @@ router.post('/journal-entry', authenticateToken, (req, res) => {
 // 3. GET /api/accounting/payments-to-collect
 router.get('/payments-to-collect', authenticateToken, (req, res) => {
   try {
-    // 15 Hubco fields: Branch, Group, Center, Advisor, Customer Name, Member ID, Account No, Product Type, Due Amount, Due Date, Overdue Days, Savings Balance, Mobile, Status
+    // 15 fields: Branch, Group, Center, Advisor, Customer Name, Member ID, Account No, Product Type, Due Amount, Due Date, Overdue Days, Savings Balance, Mobile, Status
     const items = [
       {
         id: 1,

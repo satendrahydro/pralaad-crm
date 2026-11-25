@@ -80,12 +80,111 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Global Live Search Endpoint across all Members & Multi-Product Accounts
+app.get('/api/global-search', (req, res) => {
+  try {
+    const db = require('./db');
+    const { q = '' } = req.query;
+    const term = q.trim();
+    if (!term) return res.json({ success: true, customers: [], accounts: [] });
+    
+    const s = `%${term}%`;
+    
+    // 1. Search customers (Members)
+    const customers = db.prepare(`
+      SELECT c.id, c.customer_code, c.full_name, c.phone, c.pan_card, c.status,
+        (SELECT COUNT(*) FROM fixed_deposits WHERE customer_id = c.id) as fds_count,
+        (SELECT COUNT(*) FROM recurring_deposits WHERE customer_id = c.id) as rds_count,
+        (SELECT COUNT(*) FROM mis_accounts WHERE customer_id = c.id) as mis_count,
+        (SELECT COUNT(*) FROM savings_accounts WHERE customer_id = c.id) as savings_count
+      FROM customers c
+      WHERE c.full_name LIKE ? OR c.customer_code LIKE ? OR c.phone LIKE ? OR c.pan_card LIKE ?
+      ORDER BY 
+        CASE WHEN c.full_name LIKE ? THEN 1 WHEN c.customer_code LIKE ? THEN 2 ELSE 3 END,
+        c.id DESC
+      LIMIT 10
+    `).all(s, s, s, s, `${term}%`, `${term}%`);
+
+    // 2. Search Accounts (FD, RD, MIS, Savings)
+    const accounts = [];
+    
+    try {
+      const fds = db.prepare(`
+        SELECT fd.id, fd.fd_number as account_number, 'FD' as product_type, fd.principal_amount as amount, fd.status, c.full_name as customer_name, c.id as customer_id
+        FROM fixed_deposits fd
+        JOIN customers c ON fd.customer_id = c.id
+        WHERE fd.fd_number LIKE ? OR c.full_name LIKE ?
+        LIMIT 5
+      `).all(s, s);
+      accounts.push(...fds);
+    } catch(e) {}
+
+    try {
+      const rds = db.prepare(`
+        SELECT rd.id, rd.rd_number as account_number, 'RD' as product_type, rd.monthly_installment as amount, rd.status, c.full_name as customer_name, c.id as customer_id
+        FROM recurring_deposits rd
+        JOIN customers c ON rd.customer_id = c.id
+        WHERE rd.rd_number LIKE ? OR c.full_name LIKE ?
+        LIMIT 5
+      `).all(s, s);
+      accounts.push(...rds);
+    } catch(e) {}
+
+    try {
+      const mis = db.prepare(`
+        SELECT m.id, m.mis_number as account_number, 'MIS' as product_type, m.deposit_amount as amount, m.status, c.full_name as customer_name, c.id as customer_id
+        FROM mis_accounts m
+        JOIN customers c ON m.customer_id = c.id
+        WHERE m.mis_number LIKE ? OR c.full_name LIKE ?
+        LIMIT 5
+      `).all(s, s);
+      accounts.push(...mis);
+    } catch(e) {}
+
+    try {
+      const sav = db.prepare(`
+        SELECT s.id, s.account_number, 'SAVINGS' as product_type, s.current_balance as amount, s.status, c.full_name as customer_name, c.id as customer_id
+        FROM savings_accounts s
+        JOIN customers c ON s.customer_id = c.id
+        WHERE s.account_number LIKE ? OR c.full_name LIKE ?
+        LIMIT 5
+      `).all(s, s);
+      accounts.push(...sav);
+    } catch(e) {}
+
+    res.json({ success: true, customers, accounts });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Live Branches List endpoint
 app.get('/api/branches', (req, res) => {
   try {
     const db = require('./db');
-    const branches = db.prepare('SELECT id, branch_code, branch_name, city, state, pincode, address, contact_phone, contact_email, is_active FROM branches ORDER BY id ASC').all();
+    const branches = db.prepare('SELECT id, branch_code, branch_name, city, state, pincode, address, contact_phone, contact_email, is_active FROM branches WHERE is_active = 1 ORDER BY id ASC').all();
     res.json({ success: true, branches });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Live Audit Trail endpoint (Anti-Fraud & Staff / Agent Action Tracking)
+app.get('/api/audit-logs', (req, res) => {
+  try {
+    const db = require('./db');
+    const { search, limit = 100 } = req.query;
+    let query = 'SELECT * FROM audit_logs';
+    const params = [];
+    if (search && search.trim()) {
+      query += ' WHERE username LIKE ? OR full_name LIKE ? OR action LIKE ? OR entity_id LIKE ? OR details LIKE ?';
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term, term);
+    }
+    query += ' ORDER BY id DESC LIMIT ?';
+    params.push(parseInt(limit) || 100);
+    const logs = db.prepare(query).all(...params);
+    res.json({ success: true, count: logs.length, logs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

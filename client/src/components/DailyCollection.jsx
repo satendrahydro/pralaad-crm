@@ -331,7 +331,7 @@ export default function DailyCollection() {
 
       {/* Collect Modal */}
       {collectModalOpen && activeItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-16 pb-10 p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <h3 className="text-sm font-black text-slate-900">Record Field Collection</h3>
             <p className="text-xs text-slate-500">

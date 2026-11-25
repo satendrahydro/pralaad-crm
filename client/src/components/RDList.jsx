@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, 
   Search, 
@@ -13,11 +14,16 @@ import {
   ArrowRight,
   Receipt,
   Eye,
-  X
+  X,
+  Check,
+  Download,
+  FileSpreadsheet,
+  Sparkles
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import { exportToExcel } from '../utils/excelExport';
 
-export default function RDList({ onOpenNewRD, isEmployee = false }) {
+export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomerProfile }) {
   const [rds, setRds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -29,6 +35,36 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [collectLateFee, setCollectLateFee] = useState(0);
   const [paymentMode, setPaymentMode] = useState('CASH');
+  const [collectDate, setCollectDate] = useState(new Date().toISOString().split('T')[0]);
+  const [collectRef, setCollectRef] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (collectModalOpen) setCollectModalOpen(false);
+        else if (selectedRD) setSelectedRD(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedRD, collectModalOpen]);
+
+  const handleExportExcel = () => {
+    if (!rds.length) return alert('No RD records to export');
+    const rows = rds.map(r => ({
+      'RD Number': r.rd_number || '',
+      'Customer Name': r.customer_name || '',
+      'Phone': r.customer_phone || '',
+      'Monthly Installment (₹)': r.monthly_installment,
+      'Interest Rate (% p.a.)': r.annual_rate,
+      'Tenure (Months)': r.tenure_months,
+      'Total Principal (₹)': r.total_principal,
+      'Maturity Amount (₹)': r.maturity_amount,
+      'Installments Paid': r.installments_paid,
+      'Status': r.status || ''
+    }));
+    exportToExcel(rows, 'TARPL_RD_Portfolio', 'Recurring Deposits');
+  };
 
   const handleExportCSV = () => {
     if (!rds.length) return alert('No RD records to export');
@@ -94,7 +130,10 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
         method: 'POST',
         body: JSON.stringify({
           payment_mode: paymentMode,
-          late_fee: parseFloat(collectLateFee || 0)
+          late_fee: parseFloat(collectLateFee || 0),
+          paid_date: collectDate,
+          collection_date: collectDate,
+          transaction_ref: collectRef
         })
       });
 
@@ -135,14 +174,27 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
             <RotateCw className="w-4 h-4" />
           </button>
 
-          <button
-            id="rd-export-csv-btn"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
-            title="Export RDs to CSV"
-          >
-            Export CSV
-          </button>
+          {/* Dual Export: Excel (.xlsx) & CSV */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100 p-0.5 shadow-2xs">
+            <button
+              id="rd-export-excel-btn"
+              onClick={handleExportExcel}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+              title="Export to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button
+              id="rd-export-csv-btn"
+              onClick={handleExportCSV}
+              className="px-2.5 py-1.5 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
+              title="Export to CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>CSV</span>
+            </button>
+          </div>
 
           <button
             onClick={onOpenNewRD}
@@ -217,8 +269,26 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
                     <tr key={rd.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 px-4 font-mono font-bold text-slate-900">{rd.rd_number}</td>
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-800">{rd.customer_name}</div>
-                        <div className="text-[11px] text-slate-400">{rd.customer_phone}</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onViewCustomerProfile && onViewCustomerProfile(rd.customer_id)}
+                            className="font-bold text-slate-900 hover:text-teal-700 hover:underline text-left cursor-pointer truncate max-w-[150px]"
+                            title="Click to view Customer 360 Profile"
+                          >
+                            {rd.customer_name}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onViewCustomerProfile && onViewCustomerProfile(rd.customer_id)}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-md transition shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                            title="Customer 360: View all active accounts & services"
+                          >
+                            <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                            <span>360°</span>
+                          </button>
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">{rd.customer_phone}</div>
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-slate-900">{formatINR(rd.monthly_installment)}</td>
                       <td className="py-3 px-4 text-center text-slate-600">{rd.tenure_months} M</td>
@@ -258,35 +328,54 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
       </div>
 
       {/* 4. RD Detailed Installments Passbook Drawer */}
-      {selectedRD && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 relative max-h-[90vh] flex flex-col animate-fadeIn">
+      {selectedRD && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex justify-center items-center p-3 sm:p-6 overflow-hidden"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedRD(null); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-[96vw] xl:max-w-6xl w-full max-h-[88vh] flex flex-col overflow-hidden animate-fadeIn relative">
             
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 font-black">
+            {/* Pinned Top Header */}
+            <div className="shrink-0 px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between gap-3 shadow-xs z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 font-black shrink-0">
                   RD
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    {selectedRD.rd_number} — {selectedRD.customer_name}
-                  </h2>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900 truncate">
+                      {selectedRD.rd_number} — {selectedRD.customer_name}
+                    </h2>
+                    {onViewCustomerProfile && (
+                      <button
+                        type="button"
+                        onClick={() => onViewCustomerProfile(selectedRD.customer_id)}
+                        className="px-2 py-0.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1 shrink-0"
+                        title="View Complete Customer 360° Profile & All Services"
+                      >
+                        👤 360° All Services
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">
                     {formatINR(selectedRD.monthly_installment)}/month • {selectedRD.tenure_months} Months • {selectedRD.annual_rate}% p.a.
                   </p>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedRD(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-300 hover:border-rose-200 rounded-xl font-bold text-xs transition cursor-pointer active:scale-95 shrink-0"
+                title="Close Passbook"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 stroke-[2.5]" />
+                <span>Close</span>
               </button>
             </div>
 
             {/* Content & Installment Table */}
-            <div className="py-4 overflow-y-auto flex-1 space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 min-h-0">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-slate-400 block text-[11px]">Total Principal</span>
@@ -313,112 +402,218 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
                 </div>
 
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/50 border-b border-slate-200 text-slate-500 font-semibold">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[10px] tracking-wider">
                     <tr>
                       <th className="py-2.5 px-3">#</th>
-                      <th className="py-2.5 px-3">Due Date</th>
+                      <th className="py-2.5 px-3 text-slate-800 bg-slate-100">Schedule / Due Date (देय तिथि)</th>
+                      <th className="py-2.5 px-3 text-slate-800 bg-slate-100">Collected Date (जमा करने की तारीख)</th>
                       <th className="py-2.5 px-3 text-right">Installment</th>
                       <th className="py-2.5 px-3 text-right">Late Fee</th>
+                      <th className="py-2.5 px-3">Payment Mode & Ref</th>
                       <th className="py-2.5 px-3 text-center">Status</th>
-                      <th className="py-2.5 px-3 text-center">Paid Date</th>
                       <th className="py-2.5 px-3 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {rdDetails?.installments?.map(inst => (
-                      <tr key={inst.id} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 font-mono text-slate-400">{inst.installment_no}</td>
-                        <td className="py-2.5 px-3 font-medium text-slate-800">{formatDate(inst.due_date)}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-900">{formatINR(inst.installment_amount)}</td>
-                        <td className="py-2.5 px-3 text-right text-rose-600">{inst.late_fee > 0 ? formatINR(inst.late_fee) : '-'}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            inst.status === 'COLLECTED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {inst.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-center text-slate-500">
-                          {inst.paid_date ? formatDate(inst.paid_date) : '-'}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          {inst.status === 'PENDING' ? (
-                            <button
-                              onClick={() => {
-                                setSelectedInstallment(inst);
-                                setCollectLateFee(0);
-                                setCollectModalOpen(true);
-                              }}
-                              className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[11px] shadow-xs cursor-pointer"
-                            >
-                              Collect
-                            </button>
-                          ) : (
-                            <span className="text-[10px] font-mono text-slate-400">{inst.payment_mode || 'PAID'}</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {rdDetails?.installments?.map(inst => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      const isCollected = inst.status === 'COLLECTED';
+                      const isOverdue = !isCollected && inst.due_date && inst.due_date < todayStr;
+                      const isFuture = !isCollected && inst.due_date && inst.due_date > todayStr;
+                      const isDueToday = !isCollected && inst.due_date && inst.due_date === todayStr;
+
+                      return (
+                        <tr key={inst.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 font-mono text-slate-400">{inst.installment_no}</td>
+                          <td className="py-2.5 px-3 bg-amber-50/20">
+                            <span className="font-mono font-bold text-slate-800">{formatDate(inst.due_date)}</span>
+                            {isOverdue && (
+                              <span className="ml-1.5 inline-block text-[9px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                                ⚠️ Overdue
+                              </span>
+                            )}
+                            {isFuture && (
+                              <span className="ml-1.5 inline-block text-[9px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200">
+                                🗓️ Scheduled
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 bg-emerald-50/20">
+                            {inst.paid_date ? (
+                              <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-300">
+                                <Check className="w-2.5 h-2.5 text-emerald-600" />
+                                {formatDate(inst.paid_date)}
+                              </span>
+                            ) : isFuture ? (
+                              <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                                Upcoming Due
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-amber-700 font-bold bg-amber-100/60 px-1.5 py-0.5 rounded">
+                                Awaiting Deposit
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">{formatINR(inst.installment_amount)}</td>
+                          <td className="py-2.5 px-3 text-right text-rose-600 font-mono">{inst.late_fee > 0 ? formatINR(inst.late_fee) : '-'}</td>
+                          <td className="py-2.5 px-3">
+                            {isCollected ? (
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                  {inst.payment_mode || 'CASH'}
+                                </span>
+                                {inst.transaction_ref && (
+                                  <div className="text-[9px] font-mono text-slate-500 mt-0.5">{inst.transaction_ref}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic">-</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              isCollected 
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                : isFuture 
+                                ? 'bg-sky-50 text-sky-800 border border-sky-200'
+                                : isDueToday
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-rose-100 text-rose-800 border border-rose-200'
+                            }`}>
+                              {isCollected ? 'COLLECTED' : isFuture ? 'SCHEDULED' : isDueToday ? 'DUE TODAY' : 'OVERDUE'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {!isCollected ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedInstallment(inst);
+                                  setCollectLateFee(0);
+                                  setCollectDate(new Date().toISOString().split('T')[0]);
+                                  setCollectRef(`COLL-RD-${Date.now().toString().slice(-6)}`);
+                                  setCollectModalOpen(true);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] shadow-xs cursor-pointer ${
+                                  isFuture ? 'bg-slate-200 hover:bg-slate-300 text-slate-700' : 'bg-teal-600 hover:bg-teal-700 text-white'
+                                }`}
+                              >
+                                {isFuture ? 'Advance Collect' : 'Collect'}
+                              </button>
+                            ) : (
+                              <span className="text-[10px] font-bold text-emerald-700">✓ Received</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
 
+            {/* Pinned Bottom Footer */}
+            <div className="shrink-0 px-6 py-2.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-xs text-slate-500 z-10">
+              <span>Press <kbd className="px-1.5 py-0.5 bg-slate-200 rounded text-[11px] font-mono text-slate-700">Esc</kbd> or click outside to close</span>
+            </div>
+
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 5. Collect Installment Modal */}
-      {collectModalOpen && selectedInstallment && (
-        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {collectModalOpen && selectedInstallment && createPortal(
+        <div className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-fadeIn">
-            <h3 className="text-base font-bold text-slate-900">
-              Collect RD Installment #{selectedInstallment.installment_no}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {selectedRD.customer_name} • Due Date: {formatDate(selectedInstallment.due_date)}
-            </p>
-
-            <form onSubmit={handleCollectSubmit} className="mt-4 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">Installment Amount</label>
+                <h3 className="text-base font-bold text-slate-900">
+                  Collect RD Installment #{selectedInstallment.installment_no}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedRD.customer_name} • Scheduled Due Date: {formatDate(selectedInstallment.due_date)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCollectModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCollectSubmit} className="mt-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Installment Amount</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={formatINR(selectedInstallment.installment_amount)}
+                    className="w-full text-xs p-2 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-800 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Late Fine / Penalty</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={collectLateFee}
+                    onChange={(e) => setCollectLateFee(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Deposit / Collection Date */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
+                  Collection Date (जमा करने की तारीख) *
+                </label>
                 <input
-                  type="text"
-                  readOnly
-                  value={formatINR(selectedInstallment.installment_amount)}
-                  className="w-full text-xs p-2.5 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-800"
+                  type="date"
+                  required
+                  max={new Date().toISOString().split('T')[0]}
+                  value={collectDate}
+                  onChange={(e) => setCollectDate(e.target.value)}
+                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold focus:outline-none focus:border-teal-600"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">Late Fine / Penalty (if overdue)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={collectLateFee}
-                  onChange={(e) => setCollectLateFee(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">Collection Mode</label>
+                <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Collection Mode</label>
                 <select
                   value={paymentMode}
                   onChange={(e) => setPaymentMode(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
+                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-bold focus:outline-none focus:border-slate-800"
                 >
-                  <option value="CASH">Cash in Vault</option>
+                  <option value="CASH">Cash in Vault (गल्ले में जमा)</option>
                   <option value="BANK_NEFT">Bank NEFT / Direct Transfer</option>
                   <option value="SAVINGS_TRANSFER">Transfer from Customer Savings A/c</option>
+                  <option value="CHEQUE">Cheque / Demand Draft</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
+                  Receipt / Transaction Reference No
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. COLL-RD-91823"
+                  value={collectRef}
+                  onChange={(e) => setCollectRef(e.target.value)}
+                  className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold"
+                />
               </div>
 
               <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex justify-between items-center">
                 <span className="text-xs font-semibold text-teal-900">Total Collection Amount:</span>
-                <span className="text-sm font-black text-teal-800">
+                <span className="text-sm font-black text-teal-800 font-mono">
                   {formatINR(selectedInstallment.installment_amount + parseFloat(collectLateFee || 0))}
                 </span>
               </div>
@@ -433,20 +628,21 @@ export default function RDList({ onOpenNewRD, isEmployee = false }) {
                 <button
                   type="button"
                   onClick={() => setCollectModalOpen(false)}
-                  className="flex-1 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs"
+                  className="flex-1 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs"
+                  className="flex-1 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-xs cursor-pointer"
                 >
                   Confirm Collection
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

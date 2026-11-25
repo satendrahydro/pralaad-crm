@@ -402,20 +402,81 @@ router.post('/invest', authenticateCustomer, (req, res) => {
   });
 });
 
-// PUT /api/customer-portal/profile - Update phone/email/nominee
+// POST /api/customer-portal/update-profile - Update profile details (requires Super Admin Maker-Checker Approval)
 router.post('/update-profile', authenticateCustomer, (req, res) => {
-  const { email, address, nominee_name, nominee_relation } = req.body;
-  
-  db.prepare(`
-    UPDATE customers SET
-      email = COALESCE(?, email),
-      address = COALESCE(?, address),
-      nominee_name = COALESCE(?, nominee_name),
-      nominee_relation = COALESCE(?, nominee_relation)
-    WHERE id = ?
-  `).run(email, address, nominee_name, nominee_relation, req.customer.id);
+  try {
+    const customerId = req.customer.id;
+    const currentCust = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+    if (!currentCust) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
 
-  res.json({ success: true, message: 'Profile details updated successfully' });
+    const { email, address, nominee_name, nominee_relation, phone } = req.body;
+    const candidates = { email, address, nominee_name, nominee_relation, phone };
+    const changes = {};
+
+    Object.keys(candidates).forEach(field => {
+      if (candidates[field] !== undefined && candidates[field] !== null) {
+        let newVal = candidates[field];
+        if (typeof newVal === 'string') newVal = newVal.trim();
+        let oldVal = currentCust[field];
+        if (typeof oldVal === 'string') oldVal = oldVal.trim();
+
+        if (newVal && String(newVal) !== String(oldVal || '')) {
+          changes[field] = { old: oldVal, new: newVal };
+        }
+      }
+    });
+
+    if (Object.keys(changes).length === 0) {
+      return res.json({ success: true, message: 'कोई नया बदलाव नहीं पाया गया।' });
+    }
+
+    const reqNumber = `REQ-APPCUST-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const requestData = JSON.stringify({
+      customerId: currentCust.id,
+      customerName: currentCust.full_name,
+      customerCode: currentCust.customer_code,
+      changes,
+      proposedValues: candidates,
+      makerName: `Client Mobile App (${currentCust.full_name})`,
+      source: 'MOBILE_APP',
+      submitted_at: new Date().toISOString()
+    });
+
+    db.prepare(`
+      INSERT INTO approval_requests (
+        request_number, request_type, maker_id, customer_id, proposed_amount, request_data, status, decision_remarks
+      ) VALUES (?, 'CUSTOMER_EDIT', 1, ?, 0, ?, 'PENDING_APPROVAL', ?)
+    `).run(
+      reqNumber,
+      currentCust.id,
+      requestData,
+      `Client Mobile App update requested by ${currentCust.full_name} (${currentCust.customer_code})`
+    );
+
+    // Audit log
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (1, 'SUBMIT_APP_CUSTOMER_EDIT_REQUEST', 'APPROVAL_REQUEST', ?, ?)
+      `).run(
+        reqNumber,
+        `Mobile App client (${currentCust.full_name}) submitted profile update request. Modified fields: ${Object.keys(changes).join(', ')}`
+      );
+    } catch (e) {}
+
+    return res.json({ 
+      success: true, 
+      pendingApproval: true,
+      makerApprovalRequired: true,
+      requestNumber: reqNumber,
+      message: 'प्रोफाइल में बदलाव Super Admin अप्रूवल के लिए भेज दिया गया है। Super Admin द्वारा अप्रूव होने के बाद ही यह लागू होगा।' 
+    });
+  } catch (err) {
+    console.error('Error submitting mobile profile update:', err);
+    return res.status(500).json({ success: false, message: 'प्रोफाइल अपडेट सबमिट करने में समस्या आई।' });
+  }
 });
 
 // POST /api/customer-portal/change-password - Authenticated customer changes password

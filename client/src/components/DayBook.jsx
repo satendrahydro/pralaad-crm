@@ -272,11 +272,9 @@ export default function DayBook({ onOpenJournalEntry }) {
             onChange={(e) => setSelectedBranch(e.target.value)}
             className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500"
           >
-            <option value="ALL">ALL (All Branches)</option>
+            <option value="ALL">ALL (All Branches - 2)</option>
             <option value="BHR001">BHR001 - MAIN BRANCH</option>
-            <option value="BHR002">BHR002 - TARPL0002</option>
             <option value="BRH003">BRH003 - TARPL SAVING</option>
-            <option value="SHEKHUPURA">TARPL0002 - SHEKHUPURA BRANCH</option>
           </select>
 
           {/* Date Picker */}
@@ -587,7 +585,7 @@ export default function DayBook({ onOpenJournalEntry }) {
 
           </div>
 
-          {/* Blue PRINT Button Matching live Hubco Day Book bottom */}
+          {/* Blue PRINT Button */}
           <div className="flex items-center justify-center pt-3 pb-2">
             <button
               onClick={() => window.print()}
@@ -845,8 +843,8 @@ export default function DayBook({ onOpenJournalEntry }) {
       {/* 6. DUAL-PURPOSE MODAL: RECORD INPUT (आवक) & OUTPUT (जावक)  */}
       {/* ======================================================== */}
       {showEntryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header with Dynamic Theme */}
             <div className={`px-6 py-4 flex items-center justify-between text-white ${
               modalMode === 'INFLOW' 
@@ -870,9 +868,11 @@ export default function DayBook({ onOpenJournalEntry }) {
               </div>
               <button 
                 onClick={() => setShowEntryModal(false)}
-                className="w-8 h-8 rounded-lg bg-black/10 hover:bg-black/20 flex items-center justify-center transition cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-black/20 hover:bg-black/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                title="Close"
               >
                 <X className="w-4 h-4 text-white" />
+                <span>✕ Close</span>
               </button>
             </div>
 
@@ -1121,9 +1121,9 @@ export default function DayBook({ onOpenJournalEntry }) {
       {/* 7. ACCOUNT LEDGER STATEMENT DRILLDOWN MODAL (ON CLICK)    */}
       {/* ======================================================== */}
       {showStatementModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header matching live Hubco account ledger */}
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header for account ledger */}
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-bold">
@@ -1154,9 +1154,11 @@ export default function DayBook({ onOpenJournalEntry }) {
                 </button>
                 <button
                   onClick={() => setShowStatementModal(false)}
-                  className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm"
+                  title="Close"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 stroke-[2.5]" />
+                  <span>✕ Close</span>
                 </button>
               </div>
             </div>

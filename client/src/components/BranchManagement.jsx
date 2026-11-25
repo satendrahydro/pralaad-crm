@@ -27,7 +27,7 @@ export default function BranchManagement() {
       contact_phone: '+91 98375 54433',
       contact_email: 'prahlad121980@gmail.com',
       is_active: 1,
-      customer_count: 670,
+      customer_count: 9,
       opening_date: '12 June 2019'
     },
     {
@@ -41,36 +41,8 @@ export default function BranchManagement() {
       contact_phone: '+91 92191 25557',
       contact_email: 'pradeepnp1981@gmail.com',
       is_active: 1,
-      customer_count: 811,
+      customer_count: 1,
       opening_date: '28 January 2020'
-    },
-    {
-      id: 3,
-      branch_code: 'TARPL0002',
-      branch_name: 'SHEKHUPURA BRANCH',
-      city: 'BIJNOR',
-      state: 'Uttar Pradesh',
-      pin: '246721',
-      address: 'TARPL Building, Village Shekhupura Mandawar, Bijnor',
-      contact_phone: '+91 79068 75952',
-      contact_email: 'geetanjalihir@gmail.com',
-      is_active: 1,
-      customer_count: 210,
-      opening_date: '1 March 2022'
-    },
-    {
-      id: 4,
-      branch_code: 'BHR002',
-      branch_name: 'TARPL0002',
-      city: 'BIJNOR',
-      state: 'Uttar Pradesh',
-      pin: '247601',
-      address: 'Shanti Vihar, V K Garden Road, Bijnor',
-      contact_phone: '+91 92191 25557',
-      contact_email: 'geetanjalihir@gmail.com',
-      is_active: 1,
-      customer_count: 6,
-      opening_date: '25 November 2019'
     }
   ]);
 
@@ -91,7 +63,7 @@ export default function BranchManagement() {
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
-            Tarang Anjali Real Tech Pvt. Ltd. (TARPL) अधिकृत शाखाएं व नोडल संपर्क विवरण
+            Taranganjali Private Limited अधिकृत शाखाएं व नोडल संपर्क विवरण
           </p>
         </div>
       </div>

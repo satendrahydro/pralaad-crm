@@ -174,7 +174,8 @@ export default function PaymentsToRelease() {
                 <th className="py-3 px-4">Beneficiary Member</th>
                 <th className="py-3 px-4">Bank & IFSC</th>
                 <th className="py-3 px-4 text-right">Payable Amount</th>
-                <th className="py-3 px-4">Due Date</th>
+                <th className="py-3 px-4 text-amber-950 bg-amber-50">Due Date (पेंडिंग कब से था)</th>
+                <th className="py-3 px-4 text-emerald-950 bg-emerald-50">Disbursed Date (डिसबर्स तारीख)</th>
                 <th className="py-3 px-4 text-center">Checker Approval</th>
                 <th className="py-3 px-4 text-center">Action</th>
               </tr>
@@ -204,8 +205,24 @@ export default function PaymentsToRelease() {
                   <td className="py-3 px-4 text-right font-mono font-black text-rose-700 text-sm">
                     ₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-semibold">
+                  <td className="py-3 px-4 whitespace-nowrap text-slate-800 font-bold font-mono bg-amber-50/20">
                     {item.due_date}
+                  </td>
+                  <td className="py-3 px-4 whitespace-nowrap bg-emerald-50/20">
+                    {item.status === 'RELEASED' ? (
+                      <div>
+                        <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-[10px]">
+                          ✓ {item.released_date || new Date().toISOString().split('T')[0]}
+                        </span>
+                        {item.utr_no && (
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">{item.utr_no}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        Pending Release
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -243,14 +260,21 @@ export default function PaymentsToRelease() {
 
       {/* Release Confirmation Modal */}
       {activeRelease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-16 pb-10 p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900">Authorize Bank Payout / Release</h3>
                 <p className="text-xs text-slate-500">{activeRelease.payment_type} • {activeRelease.account_no}</p>
               </div>
-              <button onClick={() => setActiveRelease(null)} className="text-slate-400 hover:text-slate-700">✕</button>
+              <button 
+                type="button"
+                onClick={() => setActiveRelease(null)} 
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                title="Close"
+              >
+                ✕ Close
+              </button>
             </div>
 
             {releaseSuccess && (

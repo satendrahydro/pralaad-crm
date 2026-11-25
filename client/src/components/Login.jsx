@@ -27,7 +27,6 @@ import {
 import { apiRequest } from '../utils';
 import TarplLogo from './TarplLogo';
 import tarplLogoJpg from '../assets/LOGO_OF_TARPL.jpg';
-import securityImg from '../assets/security-img.jpeg';
 import bgAdminJpg from '../assets/bg-admin.jpg';
 
 export default function Login({ onLoginSuccess }) {
@@ -283,7 +282,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="mb-2">
           <img 
             src={tarplLogoJpg} 
-            alt="Tarang Anjali Real Tech Pvt. Ltd. - जीत आपके विश्वास की" 
+            alt="Taranganjali Private Limited - जीत आपके विश्वास की" 
             className="mx-auto max-w-[240px] h-auto object-contain mb-1" 
           />
           <div className="text-[11px] font-black text-[#062319] tracking-wider uppercase">
@@ -291,7 +290,7 @@ export default function Login({ onLoginSuccess }) {
           </div>
         </div>
 
-        {/* Warning notification matching Hubco Admin exactly */}
+        {/* Warning notification */}
         <p className="text-xs text-[#a94442] font-semibold mb-3.5">
           You need to sign in or sign up before continuing.
         </p>
@@ -390,19 +389,18 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Footer: Powered by Hubco.in & Security Badges */}
+        {/* Footer: Powered by Crafted Reach & Security Badges */}
         <div className="mt-5 pt-3.5 border-t border-slate-100 text-center">
           <div className="text-xs text-slate-600">
-            <strong>Powered by <b className="text-blue-600 font-bold">Hubco.in ®</b></strong>. All rights reserved.
+            <strong>Powered by <b className="text-[#062319] font-extrabold tracking-wide">Crafted Reach ®</b></strong>. All rights reserved.
           </div>
 
-          {/* Security Badge - Sectigo Image + 6-Layer Banking Encryption pill */}
+          {/* Security Badges: 256-Bit SSL + 6-Layer Banking Encryption */}
           <div className="mt-3 flex flex-col items-center gap-2">
-            <img 
-              src={securityImg} 
-              alt="Secured by Sectigo" 
-              className="w-32 h-auto object-contain" 
-            />
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
+              <Lock className="w-3.5 h-3.5 text-emerald-600" />
+              <span>256-Bit SSL Bank-Grade Encryption</span>
+            </div>
 
             <button
               type="button"

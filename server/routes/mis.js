@@ -201,7 +201,7 @@ router.post('/', authenticateToken, requirePermission('mis_creation'), (req, res
 router.post('/:id/payouts/:schedId/pay', authenticateToken, (req, res) => {
   try {
     const { id, schedId } = req.params;
-    const { payment_reference = 'NEFT-' + Date.now() } = req.body;
+    const { payment_reference = 'NEFT-' + Date.now(), paid_date } = req.body;
 
     const mis = db.prepare('SELECT * FROM mis_accounts WHERE id = ?').get(id);
     if (!mis) return res.status(404).json({ success: false, message: 'MIS account not found' });
@@ -231,7 +231,8 @@ router.post('/:id/payouts/:schedId/pay', authenticateToken, (req, res) => {
           monthNo: sched.month_no,
           payoutAmount: sched.payout_amount,
           netPayable: sched.net_payable,
-          paymentReference: payment_reference
+          paymentReference: payment_reference,
+          paidDate: paid_date || new Date().toISOString().split('T')[0]
         }),
         `MIS Month #${sched.month_no} payout proposed`
       );
@@ -246,13 +247,53 @@ router.post('/:id/payouts/:schedId/pay', authenticateToken, (req, res) => {
 
     // Direct Admin Execution
     const today = new Date().toISOString().split('T')[0];
+    const effectivePaidDate = paid_date || today;
+    if (effectivePaidDate > today) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Disbursal date cannot be in the future. Payment must be recorded on or before today.' 
+      });
+    }
     db.prepare(`
       UPDATE mis_payout_schedules
       SET status = 'PAID', paid_date = ?, payment_reference = ?
       WHERE id = ?
-    `).run(today, payment_reference, schedId);
+    `).run(effectivePaidDate, payment_reference, schedId);
 
-    res.json({ success: true, message: 'MIS payout marked as paid successfully' });
+    res.json({ success: true, message: `MIS payout marked as paid on ${effectivePaidDate}` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/mis/:id/close - Premature / Normal Close MIS
+router.post('/:id/close', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body;
+    const mis = db.prepare('SELECT * FROM mis_accounts WHERE id = ?').get(id);
+    if (!mis) return res.status(404).json({ success: false, message: 'MIS account not found' });
+    if (mis.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Only active MIS accounts can be closed' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    db.prepare(`
+      UPDATE mis_accounts
+      SET status = 'CLOSED_PREMATURE',
+          closed_date = ?,
+          remarks = ?
+      WHERE id = ?
+    `).run(today, remarks || `Closed prematurely on ${today}`, id);
+
+    // Cancel remaining pending schedules
+    db.prepare(`
+      UPDATE mis_payout_schedules
+      SET status = 'CANCELLED'
+      WHERE mis_id = ? AND status = 'PENDING'
+    `).run(id);
+
+    res.json({ success: true, message: 'Monthly Income Scheme closed successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

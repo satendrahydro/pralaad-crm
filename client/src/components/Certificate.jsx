@@ -41,10 +41,10 @@ export default function Certificate({ fdId, isOpen, onClose }) {
   const schemeObj = COMPOUNDING_OPTIONS.find(o => o.value === fd?.compounding_frequency);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
+    <div className="fixed inset-0 z-[10001] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto print:p-0 print:bg-white">
       
       {/* Outer Modal Container */}
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 sm:p-10 relative my-8 print:border-none print:shadow-none print:m-0 print:p-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 sm:p-10 relative print:border-none print:shadow-none print:m-0 print:p-4">
         
         {/* Floating Action Buttons (Hidden on Print) */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 print:hidden">
@@ -63,9 +63,11 @@ export default function Certificate({ fdId, isOpen, onClose }) {
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 stroke-[2.5]" />
+              <span>✕ Close (बंद करें)</span>
             </button>
           </div>
         </div>
@@ -92,7 +94,7 @@ export default function Certificate({ fdId, isOpen, onClose }) {
                 <TarplLogo variant="badge" size={60} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-wide text-[#062319] uppercase mt-2">
-                TARANG ANJALI REAL TECH PVT. LTD.
+                TARANGANJALI PRIVATE LIMITED
               </h1>
               <p className="text-xs font-semibold text-[#0A5C36] tracking-wider uppercase mt-1">
                 जीत आपके विश्वास की • Fixed Deposit & Wealth Management Division

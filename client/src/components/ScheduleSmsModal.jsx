@@ -15,7 +15,7 @@ export default function ScheduleSmsModal({ isOpen, onClose }) {
   const handleTemplateChange = (t) => {
     setTemplate(t);
     if (t === 'PAYMENT_REMINDER') {
-      setCustomText('Dear Member, your monthly installment of ₹[AMOUNT] for account [ACC_NO] is due on [DUE_DATE]. - TARANG ANJALI REAL TECH');
+      setCustomText('Dear Member, your monthly installment of ₹[AMOUNT] for account [ACC_NO] is due on [DUE_DATE]. - TARANGANJALI PRIVATE LIMITED');
     } else if (t === 'MATURITY_ALERT') {
       setCustomText('Dear Customer, your Fixed Deposit [FD_NO] will mature on [DATE]. Maturity payout of ₹[AMOUNT] is ready. - TARPL');
     } else if (t === 'CENTER_MEETING') {
@@ -54,7 +54,7 @@ export default function ScheduleSmsModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-[200] flex justify-center items-start pt-16 pb-10 p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto animate-fadeIn">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 bg-emerald-700 text-white flex items-center justify-between">

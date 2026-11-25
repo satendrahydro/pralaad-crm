@@ -100,7 +100,7 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10001] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-fadeIn">
         
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -108,8 +108,13 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
             <h2 className="text-base font-bold text-slate-900">Open Savings Account</h2>
             <p className="text-xs text-slate-500">Liquid customer deposit account with passbook statement</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
+          <button 
+            onClick={onClose} 
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
 
@@ -288,7 +293,7 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
 
         {/* Quick Add Customer Modal */}
         {quickAddOpen && (
-          <div className="fixed inset-0 z-60 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[10020] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
               <button
                 type="button"

@@ -111,7 +111,7 @@ export default function Settings() {
       setStaffError('');
       const res = await apiRequest('/users');
       if (res.success) {
-        setStaffUsers(res.users || []);
+        setStaffUsers(res.staff || res.users || []);
       }
     } catch (err) {
       setStaffError(err.message || 'Failed to fetch staff members.');
@@ -224,7 +224,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">System & Staff Settings</h1>
@@ -659,7 +659,7 @@ export default function Settings() {
       {/* MODAL: ADD NEW STAFF MEMBER                              */}
       {/* ======================================================== */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -774,7 +774,7 @@ export default function Settings() {
       {/* MODAL: RESET STAFF PASSWORD                              */}
       {/* ======================================================== */}
       {showResetModal && selectedStaff && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">

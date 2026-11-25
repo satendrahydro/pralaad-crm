@@ -52,31 +52,29 @@ export default function TarplLogo({
 
   // Full brand header in Sidebar & Navigation
   return (
-    <div className={`flex items-center gap-2.5 ${className}`}>
-      <div className="bg-white rounded-lg p-1 shadow-sm border border-amber-300/60 shrink-0 flex items-center justify-center">
+    <div className={`flex items-center gap-3 min-w-0 ${className}`}>
+      <div className="bg-white rounded-xl p-1.5 shadow-md border border-amber-300/80 shrink-0 flex items-center justify-center">
         <img 
           src={tarplLogoImg} 
           alt="Taranganjali Private Limited" 
           className="object-contain"
-          style={{ height: 32, width: 44 }}
+          style={{ height: 36, width: 48 }}
         />
       </div>
       <div className="min-w-0 leading-tight">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex flex-col">
-            <span className="font-black text-xs sm:text-sm tracking-wider text-[#FBBF24] font-sans uppercase">
-              TARANGANJALI
-            </span>
-            <span className="font-bold text-[9px] sm:text-[10px] tracking-wider text-amber-200 font-sans uppercase">
-              PRIVATE LIMITED
-            </span>
-          </div>
-          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 border border-amber-400/40">
+        <div className="flex items-center gap-1.5">
+          <span className="font-black text-sm tracking-wide text-[#FBBF24] font-sans uppercase whitespace-nowrap shrink-0">
+            TARANGANJALI
+          </span>
+          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-amber-400/25 text-amber-200 border border-amber-400/50 shrink-0">
             CRM
           </span>
         </div>
+        <div className="text-[11px] font-bold text-amber-100 tracking-wider uppercase whitespace-nowrap mt-0.5">
+          PRIVATE LIMITED
+        </div>
         {showSubtitle && (
-          <div className="text-[10px] font-medium text-emerald-200/90 truncate tracking-wide mt-0.5">
+          <div className="text-[10px] font-medium text-emerald-300/90 whitespace-nowrap tracking-wide mt-0.5">
             जीत आपके विश्वास की
           </div>
         )}

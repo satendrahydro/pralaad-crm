@@ -160,9 +160,8 @@ export default function PaymentsToCollect() {
             onChange={(e) => setBranchFilter(e.target.value)}
             className="text-xs py-2 px-3 rounded-lg border border-slate-200 font-medium"
           >
-            <option value="ALL">All Branches</option>
+            <option value="ALL">All Branches (2)</option>
             <option value="MAIN BRANCH">Main Branch</option>
-            <option value="SHEKHUPURA">Shekhupura Branch</option>
             <option value="TARPL SAVING">Tarpl Saving</option>
           </select>
 
@@ -279,7 +278,7 @@ export default function PaymentsToCollect() {
 
       {/* Collect Action Drawer Modal */}
       {activeItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-16 pb-10 p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto animate-fadeIn">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>

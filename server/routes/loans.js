@@ -6,7 +6,7 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 // GET /api/loans/against-deposit - List LAD loans
 router.get('/against-deposit', authenticateToken, (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, collateral_type } = req.query;
     let query = `
       SELECT 
         l.*,
@@ -18,6 +18,17 @@ router.get('/against-deposit', authenticateToken, (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    if (collateral_type && collateral_type !== 'ALL') {
+      if (collateral_type === 'MORTGAGE' || collateral_type === 'PROPERTY') {
+        query += ` AND l.collateral_type IN ('MORTGAGE', 'PROPERTY')`;
+      } else if (collateral_type === 'DEPOSIT' || collateral_type === 'FD') {
+        query += ` AND (l.collateral_type = 'FD' OR l.collateral_type = 'DEPOSIT' OR l.collateral_type IS NULL)`;
+      } else {
+        query += ` AND l.collateral_type = ?`;
+        params.push(collateral_type);
+      }
+    }
 
     if (status && status !== 'ALL') {
       query += ` AND l.status = ?`;
@@ -58,11 +69,12 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
       fd_deposit_amount,
       sanctioned_amount,
       interest_rate = 14.0,
-      tenure_months = 36
+      tenure_months = 36,
+      collateral_type = 'FD'
     } = req.body;
 
     if (!customer_id || !collateral_fd_number || !sanctioned_amount) {
-      return res.status(400).json({ success: false, message: 'Customer, Collateral FD, and Loan Amount are required' });
+      return res.status(400).json({ success: false, message: 'Customer, Collateral details, and Loan Amount are required' });
     }
 
     const customer = db.prepare('SELECT full_name, phone FROM customers WHERE id = ?').get(customer_id);
@@ -70,26 +82,33 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, message: 'Customer not found' });
     }
 
-    // Loan-to-Value (LTV) max 85% validation
-    const maxAllowed = fd_deposit_amount * 0.85;
+    // Loan-to-Value (LTV) validation based on collateral type
+    const ltvRatio = (collateral_type === 'MORTGAGE' || collateral_type === 'PROPERTY') ? 0.70 
+      : collateral_type === 'BUSINESS' ? 0.60 
+      : 0.85;
+    const maxAllowed = Math.round(fd_deposit_amount * ltvRatio);
     if (sanctioned_amount > maxAllowed) {
       return res.status(400).json({ 
         success: false, 
-        message: `Sanction amount exceeds maximum allowable 85% LTV limit (Max: ₹${maxAllowed.toLocaleString('en-IN')})` 
+        message: `Sanction amount exceeds maximum allowable ${(ltvRatio * 100).toFixed(0)}% LTV limit (Max: ₹${maxAllowed.toLocaleString('en-IN')})` 
       });
     }
 
     const count = db.prepare('SELECT count(*) as count FROM loans_against_deposit').get().count;
-    const loan_number = `LAD-2026-${String(count + 1).padStart(3, '0')}`;
+    const prefix = (collateral_type === 'MORTGAGE' || collateral_type === 'PROPERTY') ? 'LAP'
+      : collateral_type === 'BUSINESS' ? 'BL'
+      : 'LAD';
+    const loan_number = `${prefix}-2026-${String(count + 1).padStart(3, '0')}`;
 
     // Standard reducing balance monthly EMI calculation
     const monthlyRate = (interest_rate / 12) / 100;
     const emi = (sanctioned_amount * monthlyRate * Math.pow(1 + monthlyRate, tenure_months)) / (Math.pow(1 + monthlyRate, tenure_months) - 1);
 
     const today = new Date().toISOString().split('T')[0];
-    const matDate = new Date();
+    const effectiveDisbursalDate = req.body.disbursal_date || today;
+    const matDate = new Date(effectiveDisbursalDate);
     matDate.setMonth(matDate.getMonth() + parseInt(tenure_months));
-    const maturity_date = matDate.toISOString().split('T')[0];
+    const maturity_date = req.body.maturity_date || matDate.toISOString().split('T')[0];
 
     const info = db.prepare(`
       INSERT INTO loans_against_deposit (
@@ -97,12 +116,13 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
         collateral_fd_number, fd_deposit_amount, sanctioned_amount, disbursed_amount,
         interest_rate, tenure_months, emi_amount, disbursal_date, maturity_date,
         outstanding_principal, total_recovered, status
-      ) VALUES (?, ?, ?, ?, 'FD', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'ACTIVE')
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'ACTIVE')
     `).run(
       loan_number,
       customer_id,
       customer.full_name,
       customer.phone,
+      collateral_type,
       collateral_fd_number,
       parseFloat(fd_deposit_amount),
       parseFloat(sanctioned_amount),
@@ -110,10 +130,33 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
       parseFloat(interest_rate),
       parseInt(tenure_months),
       Math.round(emi),
-      today,
+      effectiveDisbursalDate,
       maturity_date,
       parseFloat(sanctioned_amount)
     );
+
+    // Auto-record OUTFLOW (जावक) in Day Book for loan disbursement
+    try {
+      const dateCompact = effectiveDisbursalDate.replace(/-/g, '');
+      const countOut = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'OUTFLOW'").get(effectiveDisbursalDate)?.count || 0;
+      const voucher_no = `OUT-${dateCompact}-${String(countOut + 1).padStart(3, '0')}`;
+      db.prepare(`
+        INSERT INTO day_book_cash_entries (
+          voucher_no, entry_type, entry_date, category, category_name,
+          amount, payment_mode, party_name, reference_no, narration, created_by_user_id
+        ) VALUES (?, 'OUTFLOW', ?, 'LOAN_DISBURSEMENT', 'Loan Disbursed', ?, ?, ?, ?, ?, 1)
+      `).run(
+        voucher_no,
+        effectiveDisbursalDate,
+        parseFloat(sanctioned_amount),
+        req.body.payment_mode || 'CASH',
+        `${customer.full_name} (${loan_number})`,
+        loan_number,
+        `${collateral_type || 'LAD'} loan disbursed against ${collateral_fd_number}`
+      );
+    } catch (e) {
+      console.error('Day Book sync error on LAD loan disbursement:', e.message);
+    }
 
     res.json({
       success: true,
@@ -125,6 +168,68 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
   } catch (err) {
     console.error('Error sanctioning LAD loan:', err);
     res.status(500).json({ success: false, message: 'Failed to sanction loan', error: err.message });
+  }
+});
+
+// POST /api/loans/against-deposit/repay - Record Repayment for LAD / Property / Business Loan
+router.post('/against-deposit/repay', authenticateToken, (req, res) => {
+  try {
+    const { loan_id, amount, payment_mode = 'CASH', payment_date, reference_no, narration } = req.body;
+    if (!loan_id || !amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid loan ID and repayment amount are required.' });
+    }
+
+    const loan = db.prepare('SELECT * FROM loans_against_deposit WHERE id = ?').get(loan_id);
+    if (!loan) {
+      return res.status(404).json({ success: false, message: 'Loan not found.' });
+    }
+
+    const numAmount = parseFloat(amount);
+    const newRecovered = (loan.total_recovered || 0) + numAmount;
+    const newOutstanding = Math.max(0, (loan.outstanding_principal || 0) - numAmount);
+    const newStatus = newOutstanding <= 0 ? 'REPAID_CLOSED' : 'ACTIVE';
+
+    db.prepare(`
+      UPDATE loans_against_deposit
+      SET total_recovered = ?, outstanding_principal = ?, status = ?
+      WHERE id = ?
+    `).run(newRecovered, newOutstanding, newStatus, loan_id);
+
+    // Auto-record INFLOW (आवक) in Day Book
+    const today = new Date().toISOString().split('T')[0];
+    const effectiveDate = payment_date || today;
+    const dateCompact = effectiveDate.replace(/-/g, '');
+    try {
+      const countIn = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'INFLOW'").get(effectiveDate)?.count || 0;
+      const voucher_no = `IN-${dateCompact}-${String(countIn + 1).padStart(3, '0')}`;
+      db.prepare(`
+        INSERT INTO day_book_cash_entries (
+          voucher_no, entry_type, entry_date, category, category_name,
+          amount, payment_mode, party_name, reference_no, narration, created_by_user_id
+        ) VALUES (?, 'INFLOW', ?, 'LOAN_RECOVERY', 'Loan EMI / Principal Recovery', ?, ?, ?, ?, ?, 1)
+      `).run(
+        voucher_no,
+        effectiveDate,
+        numAmount,
+        payment_mode,
+        `${loan.customer_name} (${loan.loan_number})`,
+        reference_no || loan.loan_number,
+        narration || `Loan repayment received for ${loan.loan_number}`
+      );
+    } catch(e) {
+      console.error('Day Book sync error on loan recovery:', e.message);
+    }
+
+    res.json({
+      success: true,
+      message: `₹${numAmount.toLocaleString('en-IN')} recovered successfully against Loan ${loan.loan_number}. Outstanding: ₹${newOutstanding.toLocaleString('en-IN')}`,
+      loan_number: loan.loan_number,
+      outstanding_principal: newOutstanding,
+      status: newStatus
+    });
+  } catch (err) {
+    console.error('Error processing loan repayment:', err);
+    res.status(500).json({ success: false, message: 'Failed to process repayment', error: err.message });
   }
 });
 
@@ -223,9 +328,10 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
     const monthlyInterest = (numSanction * (parseFloat(interest_rate) / 100)) / 12;
 
     const today = new Date().toISOString().split('T')[0];
-    const matDate = new Date();
+    const effectiveDisbursalDate = req.body.disbursal_date || today;
+    const matDate = new Date(effectiveDisbursalDate);
     matDate.setMonth(matDate.getMonth() + parseInt(tenure_months));
-    const maturity_date = matDate.toISOString().split('T')[0];
+    const maturity_date = req.body.maturity_date || matDate.toISOString().split('T')[0];
 
     const stmt = db.prepare(`
       INSERT INTO gold_loans (
@@ -257,14 +363,14 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
       parseInt(tenure_months),
       monthlyInterest,
       numSanction,
-      today,
+      effectiveDisbursalDate,
       maturity_date
     );
 
     // Auto-record OUTFLOW (जावक) in Day Book for loan cash disbursement
     try {
-      const dateCompact = today.replace(/-/g, '');
-      const countOut = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'OUTFLOW'").get(today)?.count || 0;
+      const dateCompact = effectiveDisbursalDate.replace(/-/g, '');
+      const countOut = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'OUTFLOW'").get(effectiveDisbursalDate)?.count || 0;
       const voucher_no = `OUT-${dateCompact}-${String(countOut + 1).padStart(3, '0')}`;
       db.prepare(`
         INSERT INTO day_book_cash_entries (
@@ -273,7 +379,7 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
         ) VALUES (?, 'OUTFLOW', ?, 'GOLD_LOAN_DISBURSEMENT', 'Gold Loan Cash Disbursement', ?, ?, ?, ?, ?, 1)
       `).run(
         voucher_no,
-        today,
+        effectiveDisbursalDate,
         numSanction,
         disbursement_mode,
         `${customer.full_name} (${loan_number})`,
@@ -301,7 +407,7 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
 // POST /api/loans/gold-loans/repay - Record Gold Loan Repayment / Recovery
 router.post('/gold-loans/repay', authenticateToken, (req, res) => {
   try {
-    const { loan_id, amount, payment_mode = 'CASH', narration } = req.body;
+    const { loan_id, amount, payment_mode = 'CASH', payment_date, reference_no, narration } = req.body;
     if (!loan_id || !amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ success: false, message: 'Valid loan ID and repayment amount are required.' });
     }
@@ -324,9 +430,10 @@ router.post('/gold-loans/repay', authenticateToken, (req, res) => {
 
     // Auto-record INFLOW (आवक) in Day Book for loan recovery
     const today = new Date().toISOString().split('T')[0];
-    const dateCompact = today.replace(/-/g, '');
+    const effectiveDate = payment_date || today;
+    const dateCompact = effectiveDate.replace(/-/g, '');
     try {
-      const countIn = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'INFLOW'").get(today)?.count || 0;
+      const countIn = db.prepare("SELECT count(*) as count FROM day_book_cash_entries WHERE entry_date = ? AND entry_type = 'INFLOW'").get(effectiveDate)?.count || 0;
       const voucher_no = `IN-${dateCompact}-${String(countIn + 1).padStart(3, '0')}`;
       db.prepare(`
         INSERT INTO day_book_cash_entries (
@@ -335,11 +442,11 @@ router.post('/gold-loans/repay', authenticateToken, (req, res) => {
         ) VALUES (?, 'INFLOW', ?, 'GOLD_LOAN_RECOVERY', 'Gold Loan EMI / Principal Recovery', ?, ?, ?, ?, ?, 1)
       `).run(
         voucher_no,
-        today,
+        effectiveDate,
         numAmount,
         payment_mode,
         `${loan.customer_name} (${loan.loan_number})`,
-        loan.loan_number,
+        reference_no || loan.loan_number,
         narration || `Gold loan recovery received from borrower ${loan.customer_name}`
       );
     } catch(e) {

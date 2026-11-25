@@ -9,6 +9,9 @@ function getDatabaseConnection() {
   try {
     const d = new Database(dbPath);
     d.pragma('journal_mode = WAL');
+    d.pragma('synchronous = NORMAL');
+    d.pragma('temp_store = MEMORY');
+    d.pragma('cache_size = -64000');
     d.pragma('foreign_keys = ON');
     return d;
   } catch (err) {
@@ -22,6 +25,9 @@ function getDatabaseConnection() {
     }
     const d = new Database(dbPath);
     d.pragma('journal_mode = WAL');
+    d.pragma('synchronous = NORMAL');
+    d.pragma('temp_store = MEMORY');
+    d.pragma('cache_size = -64000');
     d.pragma('foreign_keys = ON');
     return d;
   }
@@ -541,6 +547,22 @@ function initDB() {
       narration TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- 19. Tamper-Proof Audit Trail (कर्मचारी एवं एजेंट कार्य लॉग्स - एंटी-फ्रॉड)
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      username TEXT,
+      full_name TEXT,
+      role TEXT,
+      agent_code TEXT,
+      action TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id TEXT,
+      details TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Seed default admin user if not exists
@@ -740,6 +762,29 @@ function initDB() {
       }
     } catch(e) {
       console.error('Error seeding day book cash entries:', e.message);
+    }
+
+    // Performance Indexes for Zero-Latency Lookups
+    try {
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_fds_customer_id ON fixed_deposits(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_rds_customer_id ON recurring_deposits(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_mis_customer_id ON mis_accounts(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_savings_customer_id ON savings_accounts(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_lad_customer_id ON loans_against_deposit(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_gold_loans_customer_id ON gold_loans(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_customers_code ON customers(customer_code);
+        CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+        CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(full_name);
+        CREATE INDEX IF NOT EXISTS idx_rd_installments_rd_id ON rd_installments(rd_id, status);
+        CREATE INDEX IF NOT EXISTS idx_mis_schedules_mis_id ON mis_payout_schedules(mis_id, status);
+        CREATE INDEX IF NOT EXISTS idx_savings_txns_acc_id ON savings_transactions(account_id);
+        CREATE INDEX IF NOT EXISTS idx_fds_status ON fixed_deposits(status);
+        CREATE INDEX IF NOT EXISTS idx_rds_status ON recurring_deposits(status);
+        CREATE INDEX IF NOT EXISTS idx_mis_status ON mis_accounts(status);
+      `);
+    } catch(e) {
+      console.error('Error creating indexes:', e.message);
     }
   } catch (e) {
     console.error('Auto-seed check error:', e.message);

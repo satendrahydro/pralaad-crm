@@ -389,7 +389,7 @@ export default function FDSchemes({ onOpenNewFD }) {
   const [schemes] = useState(OFFICIAL_TARPL_SCHEMES);
   const [filterCategory, setFilterCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' (Hubco style) or 'grid'
+  const [viewMode, setViewMode] = useState('table'); // 'table' (enterprise list) or 'grid'
 
   const filteredSchemes = schemes.filter(s => {
     const matchesCat = filterCategory === 'all' || s.category === filterCategory;
@@ -411,7 +411,7 @@ export default function FDSchemes({ onOpenNewFD }) {
               {schemes.length} Live Schemes
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Taranganjali Realtech Official
+              Taranganjali Official
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
@@ -513,7 +513,7 @@ export default function FDSchemes({ onOpenNewFD }) {
         </div>
       </div>
 
-      {/* View Switcher: Table View (Exact Hubco Structure) vs Grid */}
+      {/* View Switcher: Table View vs Grid */}
       {viewMode === 'table' ? (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">

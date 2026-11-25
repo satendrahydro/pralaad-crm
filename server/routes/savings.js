@@ -326,4 +326,42 @@ router.post('/:id/withdraw', authenticateToken, requirePermission('savings_withd
   }
 });
 
+// POST /api/savings/:id/close - Close Savings Account
+router.post('/:id/close', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body;
+    const account = db.prepare('SELECT * FROM savings_accounts WHERE id = ?').get(id);
+    if (!account) return res.status(404).json({ success: false, message: 'Account not found' });
+    if (account.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, message: 'Only active accounts can be closed' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // If balance remains, record a closing withdrawal transaction
+    if (account.current_balance > 0) {
+      const txnNumber = `TXN-CLS-${Date.now()}`;
+      db.prepare(`
+        INSERT INTO savings_transactions (
+          account_id, transaction_number, transaction_type, amount,
+          balance_after, payment_mode, reference_number, narration, performed_by_user_id
+        ) VALUES (?, ?, 'WITHDRAWAL', ?, 0, 'CASH', 'ACCOUNT-CLOSURE', 'Final closure settlement', ?)
+      `).run(id, txnNumber, account.current_balance, req.user.id);
+    }
+
+    db.prepare(`
+      UPDATE savings_accounts
+      SET status = 'CLOSED',
+          current_balance = 0,
+          closed_date = ?
+      WHERE id = ?
+    `).run(today, id);
+
+    res.json({ success: true, message: 'Savings account closed and settled successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

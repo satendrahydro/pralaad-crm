@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, UserPlus } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
 
-export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = false }) {
+export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
   const [customers, setCustomers] = useState([]);
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -25,7 +25,17 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
   const loadCustomers = async () => {
     try {
       const res = await apiRequest('/customers');
-      if (res.success) setCustomers(res.customers || []);
+      if (res.success && res.customers) {
+        setCustomers(res.customers);
+        const targetId = initialCustomerId || customerId;
+        if (targetId) {
+          const match = res.customers.find(c => String(c.id) === String(targetId));
+          if (match) {
+            setPayoutAccountNo(match.account_no || '');
+            setPayoutBankIfsc(match.ifsc_code || '');
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
     }
@@ -34,8 +44,15 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
   useEffect(() => {
     if (isOpen) {
       loadCustomers();
+      if (initialCustomerId) {
+        setCustomerId(String(initialCustomerId));
+        setCustomerSearch('');
+      }
+    } else {
+      setCustomerSearch('');
+      setQuickError('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialCustomerId]);
 
   const handleQuickAddSubmit = async (e) => {
     e.preventDefault();
@@ -51,8 +68,12 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
         body: JSON.stringify(quickCust)
       });
       if (res.success && res.customer) {
-        await loadCustomers();
-        setCustomerId(String(res.customer.id));
+        const newC = res.customer;
+        setCustomers(prev => [newC, ...prev.filter(c => c.id !== newC.id)]);
+        setCustomerId(String(newC.id));
+        setCustomerSearch('');
+        setPayoutAccountNo(newC.account_no || '');
+        setPayoutBankIfsc(newC.ifsc_code || '');
         setQuickAddOpen(false);
         setQuickCust({ full_name: '', phone: '', email: '', pan_card: '' });
       }
@@ -107,7 +128,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10001] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-fadeIn">
         
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -115,8 +136,13 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
             <h2 className="text-base font-bold text-slate-900">Start Monthly Income Scheme (MIS)</h2>
             <p className="text-xs text-slate-500">Fixed regular monthly pension yield with capital preservation</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
+          <button 
+            onClick={onClose} 
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
 
@@ -139,28 +165,39 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
             </div>
             
             <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Search name/phone/code..."
-                value={customerSearch}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCustomerSearch(val);
-                  const matches = customers.filter(c => 
-                    (c.full_name && c.full_name.toLowerCase().includes(val.toLowerCase())) ||
-                    (c.phone && c.phone.includes(val)) ||
-                    (c.customer_code && c.customer_code.toLowerCase().includes(val.toLowerCase())) ||
-                    String(c.id) === val.trim()
-                  );
-                  if (matches.length === 1 && val.trim().length >= 3) {
-                    const id = String(matches[0].id);
-                    setCustomerId(id);
-                    setPayoutAccountNo(matches[0].account_no || '');
-                    setPayoutBankIfsc(matches[0].ifsc_code || '');
-                  }
-                }}
-                className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search name/phone/code..."
+                  value={customerSearch}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomerSearch(val);
+                    const matches = customers.filter(c => 
+                      (c.full_name && c.full_name.toLowerCase().includes(val.toLowerCase())) ||
+                      (c.phone && c.phone.includes(val)) ||
+                      (c.customer_code && c.customer_code.toLowerCase().includes(val.toLowerCase())) ||
+                      String(c.id) === val.trim()
+                    );
+                    if (matches.length === 1 && val.trim().length >= 3) {
+                      const id = String(matches[0].id);
+                      setCustomerId(id);
+                      setPayoutAccountNo(matches[0].account_no || '');
+                      setPayoutBankIfsc(matches[0].ifsc_code || '');
+                    }
+                  }}
+                  className="w-full text-xs p-2 pr-6 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                />
+                {customerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomerSearch('')}
+                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <select
                 required
                 value={customerId}
@@ -173,19 +210,19 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
                     setPayoutBankIfsc(found.ifsc_code || '');
                   }
                 }}
-                className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg font-semibold"
+                className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg font-semibold focus:outline-none focus:border-indigo-500"
               >
-                <option value="">-- Choose Depositor --</option>
+                <option value="">-- Choose Depositor ({customers.length}) --</option>
                 {customers
                   .filter(c => {
+                    if (String(c.id) === String(customerId)) return true;
                     const q = customerSearch.trim().toLowerCase();
                     if (!q) return true;
                     return (
                       (c.full_name && c.full_name.toLowerCase().includes(q)) ||
                       (c.phone && c.phone.includes(q)) ||
                       (c.customer_code && c.customer_code.toLowerCase().includes(q)) ||
-                      String(c.id) === q ||
-                      String(c.id) === String(customerId)
+                      String(c.id) === q
                     );
                   })
                   .map(c => (
@@ -197,11 +234,16 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
             </div>
 
             {customers.find(c => String(c.id) === String(customerId)) && (
-              <div className="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 flex justify-between items-center">
-                <span>
-                  Selected: <strong>{customers.find(c => String(c.id) === String(customerId)).full_name}</strong> ({customers.find(c => String(c.id) === String(customerId)).customer_code})
-                </span>
-                <button type="button" onClick={() => setCustomerId('')} className="text-rose-600 font-semibold hover:underline">Change</button>
+              <div className="text-xs text-emerald-900 bg-emerald-50 p-2.5 rounded-lg border border-emerald-300 flex justify-between items-center animate-fadeIn shadow-xs">
+                <div>
+                  <span className="font-bold text-emerald-950">
+                    ✓ {customers.find(c => String(c.id) === String(customerId)).full_name}
+                  </span>
+                  <span className="text-[11px] text-emerald-700 ml-1.5">
+                    ({customers.find(c => String(c.id) === String(customerId)).customer_code} • 📞 {customers.find(c => String(c.id) === String(customerId)).phone})
+                  </span>
+                </div>
+                <button type="button" onClick={() => { setCustomerId(''); setCustomerSearch(''); }} className="text-xs text-rose-600 font-bold hover:underline cursor-pointer">✕ Remove</button>
               </div>
             )}
           </div>
@@ -357,7 +399,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, isEmployee = f
 
         {/* Quick Add Customer Modal */}
         {quickAddOpen && (
-          <div className="fixed inset-0 z-60 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[10020] bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
               <button
                 type="button"

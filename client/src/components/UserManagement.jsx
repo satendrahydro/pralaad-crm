@@ -767,7 +767,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 3: PERMISSIONS / ROLES (HUBCO MATRIX)                */}
+        {/* TAB 3: PERMISSIONS / ROLES MATRIX                       */}
         {/* ======================================================== */}
         {activeTab === 'roles' && (
           <div className="p-4 sm:p-6">
@@ -781,7 +781,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
       {/* MODAL 1: ADD STAFF MEMBER (SUPER ADMIN)                  */}
       {/* ======================================================== */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -893,7 +893,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
       {/* MODAL 2: CREATE CUSTOMER APP LOGIN (SUPER ADMIN)         */}
       {/* ======================================================== */}
       {showCreateCustAppModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1032,7 +1032,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
       {/* MODAL 3: CREDENTIALS GENERATED CARD                      */}
       {/* ======================================================== */}
       {showCredentialsCard && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
@@ -1102,7 +1102,7 @@ export default function UserManagement({ onOpenCustomerPortfolio }) {
       {/* MODAL 4: RESET PASSWORD                                  */}
       {/* ======================================================== */}
       {showResetPassModal && resetTarget && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex justify-center items-start pt-16 pb-10 p-4 z-[200] overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
             <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">

@@ -29,7 +29,11 @@ import {
   Filter,
   DollarSign,
   Wallet,
-  Coins
+  Coins,
+  Megaphone,
+  Send,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 
@@ -45,9 +49,9 @@ export default function Customers({
   const [search, setSearch] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [selectedKYC, setSelectedKYC] = useState('ALL');
-  const [viewMode, setViewMode] = useState('table'); // 'table' (Hubco 15-col default) or 'cards'
+  const [viewMode, setViewMode] = useState('table'); // 'table' (Enterprise 15-col default) or 'cards'
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 30; // Matches Hubco 30 rows/page
+  const pageSize = 30; // 30 rows/page
   
   // Add Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -93,6 +97,37 @@ export default function Customers({
   // Delete State
   const [actionLoading, setActionLoading] = useState(null);
 
+  // Bulk WhatsApp Offer Broadcast State
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [offerTitle, setOfferTitle] = useState('विशेष सावधि जमा योजना (Special High-Return FD)');
+  const [offerRate, setOfferRate] = useState('11.00%');
+  const [offerTenure, setOfferTenure] = useState('36 माह (3 Years)');
+  const [minDeposit, setMinDeposit] = useState('₹50,000');
+  const [targetAudience, setTargetAudience] = useState('ALL'); // 'ALL' | 'SENIOR'
+  const [broadcastSentMap, setBroadcastSentMap] = useState({});
+  const [copiedBroadcast, setCopiedBroadcast] = useState(false);
+
+  const getBroadcastMessage = (custName = '{CUSTOMER_NAME}') => {
+    return `नमस्ते ${custName} जी! 🙏\n\nतरंगांजलि (TARPL) की ओर से आपके लिए विशेष निवेश योजना:\n\n🌟 योजना: ${offerTitle}\n💰 विशेष ब्याज दर: ${offerRate} प्रति वर्ष (बैंक से कहीं अधिक)\n⏳ निवेश अवधि: ${offerTenure}\n💵 न्यूनतम जमा: ${minDeposit}\n🔒 100% सुरक्षित एवं मासिक/वार्षिक रिटर्न विकल्प\n\nयह विशेष दर सीमित समय के लिए उपलब्ध है। अपनी FD बुक कराने या जानकारी के लिए संपर्क करें:\n📞 +91 98974 63367 / +91 94123 45678\n📍 तरंगांजलि प्राइवेट लिमिटेड (TARPL)\nवेदिक विहार, बिजनौर (उ.प्र.)`;
+  };
+
+  const handleSendSingleOfferWhatsApp = (cust) => {
+    const phone = cust.phone ? cust.phone.replace(/[^0-9]/g, '') : '';
+    if (!phone) {
+      alert('ग्राहक का फ़ोन नंबर उपलब्ध नहीं है।');
+      return;
+    }
+    const fullPhone = phone.length === 10 ? `91${phone}` : phone;
+    const msg = getBroadcastMessage(cust.full_name);
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    setBroadcastSentMap(prev => ({ ...prev, [cust.id]: true }));
+  };
+
+  const broadcastRecipients = customers.filter(c => {
+    if (targetAudience === 'SENIOR') return c.is_senior_citizen === 1;
+    return true;
+  });
+
   const fetchCustomers = async () => {
     try {
       setLoading(true);
@@ -134,7 +169,7 @@ export default function Customers({
       ? '⚠️ ध्यान दें: आपका ऐप एक्सेस वर्तमान में अस्थायी रूप से निष्क्रिय है।'
       : '✅ आपका मोबाइल ऐप एक्सेस सक्रिय है।';
 
-    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nTaranganjali Realtech (TARPL) मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Member ID: ${cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FD, RD, MIS और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nTarang Anjali Real Tech Pvt. Ltd.`;
+    const msg = `नमस्ते ${cust.full_name} जी! 🙏\n\nTaranganjali Private Limited मोबाइल ऐप क्रेडेंशियल्स:\n\n👤 Member ID: ${cust.customer_code}\n🔑 Password: ${cust.login_password || 'client123'}\n${accessNote}\n\n📱 ऐप ओपन करें और अपनी सभी FD, RD, MIS और ब्याज पेआउट लाइव देखें।\n\nधन्यवाद,\nTaranganjali Private Limited`;
 
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
@@ -214,10 +249,14 @@ export default function Customers({
       setEditSubmitting(true);
       setEditError('');
 
-      await apiRequest(`/customers/${editingCustomer.id}`, {
+      const res = await apiRequest(`/customers/${editingCustomer.id}`, {
         method: 'PUT',
         body: JSON.stringify(editFormData)
       });
+
+      if (res?.makerApprovalRequired) {
+        alert(res.message || 'कस्टमर प्रोफाइल में बदलाव Super Admin अप्रूवल के लिए सबमिट कर दिया गया है। Super Admin द्वारा अप्रूव होने के बाद ही यह लागू होगा।');
+      }
 
       setEditModalOpen(false);
       fetchCustomers();
@@ -373,6 +412,15 @@ export default function Customers({
           </div>
 
           <button
+            onClick={() => setShowBroadcastModal(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs md:text-sm font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+            title="Send Special Offer / Rate Hike to All Members on WhatsApp"
+          >
+            <Megaphone className="w-4 h-4" />
+            <span>📢 Broadcast Offer</span>
+          </button>
+
+          <button
             onClick={() => setModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition cursor-pointer"
           >
@@ -393,11 +441,9 @@ export default function Customers({
               onChange={(e) => setSelectedBranch(e.target.value)}
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="ALL">All Branches (4)</option>
+              <option value="ALL">All Branches (2)</option>
               <option value="MAIN BRANCH">MAIN BRANCH</option>
               <option value="TARPL SAVING">TARPL SAVING</option>
-              <option value="TARPL0002">TARPL0002</option>
-              <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
             </select>
           </div>
 
@@ -434,7 +480,7 @@ export default function Customers({
         </div>
       </div>
 
-      {/* Main View: Hubco 15-Column Table vs Cards */}
+      {/* Main View: 15-Column Table vs Cards */}
       {loading ? (
         <div className="py-20 text-center">
           <div className="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -447,7 +493,7 @@ export default function Customers({
           <p className="text-xs mt-1">Try adjusting your search criteria or click "Add New Member"</p>
         </div>
       ) : viewMode === 'table' ? (
-        /* Exact Hubco 15-Column Table View */
+        /* 15-Column Table View */
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -863,13 +909,15 @@ export default function Customers({
 
       {/* Edit Customer Modal */}
       {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 sm:p-8 relative my-8">
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 sm:p-8 relative">
             <button
               onClick={() => setEditModalOpen(false)}
-              className="absolute right-5 top-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute right-5 top-5 inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+              <span>Close</span>
             </button>
 
             <div className="flex items-center gap-3 mb-6">
@@ -922,8 +970,6 @@ export default function Customers({
                   >
                     <option value="MAIN BRANCH">MAIN BRANCH</option>
                     <option value="TARPL SAVING">TARPL SAVING</option>
-                    <option value="TARPL0002">TARPL0002</option>
-                    <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
                   </select>
                 </div>
 
@@ -1038,13 +1084,15 @@ export default function Customers({
 
       {/* Add Customer Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 sm:p-8 relative my-8">
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 sm:p-8 relative">
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute right-5 top-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute right-5 top-5 inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+              title="Close"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+              <span>Close</span>
             </button>
 
             <div className="flex items-center gap-3 mb-6">
@@ -1053,7 +1101,7 @@ export default function Customers({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Add New Member (सदस्य जोड़ें)</h2>
-                <p className="text-xs text-slate-500">Taranganjali Realtech Official Customer Onboarding</p>
+                <p className="text-xs text-slate-500">Taranganjali Private Limited Official Customer Onboarding</p>
               </div>
             </div>
 
@@ -1097,8 +1145,6 @@ export default function Customers({
                   >
                     <option value="MAIN BRANCH">MAIN BRANCH</option>
                     <option value="TARPL SAVING">TARPL SAVING</option>
-                    <option value="TARPL0002">TARPL0002</option>
-                    <option value="SHEKHUPURA BRANCH">SHEKHUPURA BRANCH</option>
                   </select>
                 </div>
 
@@ -1431,6 +1477,231 @@ export default function Customers({
         </div>
       )}
 
+
+      {/* MODAL 3: BULK WHATSAPP BROADCAST & SPECIAL OFFERS */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex justify-center items-start pt-6 sm:pt-8 pb-10 p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full p-6 sm:p-8 relative">
+            <button
+              onClick={() => setShowBroadcastModal(false)}
+              className="absolute right-5 top-5 inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs border border-rose-200 transition cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+              <span>Close</span>
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <Megaphone className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-900">WhatsApp Broadcast & Special Offers</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                    Live Broadcast
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  सभी खाताधारकों को एक साथ नई ब्याज दर (FD Rate Hike), त्योहार ऑफर या विशेष स्कीम का संदेश भेजें
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Offer Settings & Live Preview */}
+              <div className="lg:col-span-6 space-y-4">
+                {/* Target Audience Filter */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">1. दर्शक चुनें (Target Audience):</label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setTargetAudience('ALL')}
+                      className={`p-2.5 rounded-xl border font-bold text-left transition cursor-pointer ${
+                        targetAudience === 'ALL'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-xs'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold">👥 सभी ग्राहक (All Members)</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 font-normal">{customers.length} खाताधारक</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetAudience('SENIOR')}
+                      className={`p-2.5 rounded-xl border font-bold text-left transition cursor-pointer ${
+                        targetAudience === 'SENIOR'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-xs'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold">🎖️ वरिष्ठ नागरिक (Senior Only)</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 font-normal">
+                        {customers.filter(c => c.is_senior_citizen === 1).length} खाताधारक
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Offer Parameters */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">2. ऑफर विवरण भरें:</div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">योजना का नाम (Scheme Name):</label>
+                    <input
+                      type="text"
+                      value={offerTitle}
+                      onChange={(e) => setOfferTitle(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1">ब्याज दर (ROI):</label>
+                      <input
+                        type="text"
+                        value={offerRate}
+                        onChange={(e) => setOfferRate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-emerald-700"
+                        placeholder="11.00%"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1">अवधि (Tenure):</label>
+                      <input
+                        type="text"
+                        value={offerTenure}
+                        onChange={(e) => setOfferTenure(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                        placeholder="36 माह"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1">न्यूनतम जमा:</label>
+                      <input
+                        type="text"
+                        value={minDeposit}
+                        onChange={(e) => setMinDeposit(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                        placeholder="₹50,000"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Message Preview */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      लाइव संदेश पूर्वावलोकन (WhatsApp Preview):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(getBroadcastMessage());
+                        setCopiedBroadcast(true);
+                        setTimeout(() => setCopiedBroadcast(false), 2000);
+                      }}
+                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedBroadcast ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      {copiedBroadcast ? 'Copied!' : 'Copy Text'}
+                    </button>
+                  </div>
+                  <div className="p-3 bg-[#e5ddd5] dark:bg-slate-900 rounded-2xl border border-slate-300 text-xs text-slate-800 dark:text-slate-200 font-sans leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-xs">
+                      {getBroadcastMessage(broadcastRecipients[0]?.full_name || 'श्रीमान / श्रीमती')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: 1-Click Send Queue */}
+              <div className="lg:col-span-6 flex flex-col h-full border-t lg:border-t-0 lg:border-l border-slate-200 lg:pl-6 pt-4 lg:pt-0">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-xs">संदेश भेजने की सूची (Broadcast Queue)</h3>
+                    <p className="text-[11px] text-slate-500">
+                      {broadcastRecipients.length} खाताधारक लक्षित ({Object.keys(broadcastSentMap).length} भेजे गए)
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allTexts = broadcastRecipients.map(c => `[${c.full_name} - ${c.phone}]:\n${getBroadcastMessage(c.full_name)}`).join('\n\n---\n\n');
+                      navigator.clipboard.writeText(allTexts);
+                      setCopiedBroadcast(true);
+                      setTimeout(() => setCopiedBroadcast(false), 2000);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copy All
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto max-h-[380px] divide-y divide-slate-100 border border-slate-200 rounded-2xl bg-slate-50/50 p-2 space-y-1.5">
+                  {broadcastRecipients.map((c) => {
+                    const isSent = broadcastSentMap[c.id];
+                    return (
+                      <div key={c.id} className="p-2.5 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between gap-3 hover:bg-slate-50 transition">
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                            <span>{c.full_name}</span>
+                            {c.is_senior_citizen === 1 && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">Sr.</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                            📞 {c.phone || 'No Phone'} • <span className="text-slate-400">{c.customer_code}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendSingleOfferWhatsApp(c)}
+                          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0 ${
+                            isSent
+                              ? 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                          }`}
+                        >
+                          {isSent ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Sent ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Send WhatsApp</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-6">
+              <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 font-medium flex items-center gap-1.5">
+                <span>👉 दाएँ लिस्ट में प्रत्येक सदस्य के आगे हरे <b>"Send WhatsApp"</b> बटन पर क्लिक करें।</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBroadcastModal(false)}
+                className="px-5 py-2 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl text-xs cursor-pointer"
+              >
+                Done / बंद करें
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
