@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calculator, ShieldCheck, UserPlus } from 'lucide-react';
+import { X, Calculator, ShieldCheck, UserPlus, Smartphone, Key } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
 
 export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
@@ -15,6 +15,9 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
   const [payoutBankIfsc, setPayoutBankIfsc] = useState('');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [appAccessEnabled, setAppAccessEnabled] = useState(true);
+  const [appPassword, setAppPassword] = useState('client123');
+  const [sendWhatsAppCreds, setSendWhatsAppCreds] = useState(false);
 
   // Quick Add Customer Inline State
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -87,6 +90,16 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
   if (!isOpen) return null;
 
   // Local calculation: monthly payout = (P * r) / 1200
+  useEffect(() => {
+    if (customerId) {
+      const c = customers.find(x => String(x.id) === String(customerId));
+      if (c) {
+        setAppAccessEnabled(c.app_access_enabled !== 0);
+        setAppPassword(c.login_password || 'client123');
+      }
+    }
+  }, [customerId, customers]);
+
   const P = parseFloat(depositAmount) || 0;
   const n = parseInt(tenureMonths) || 60;
   const r = parseFloat(annualRate) || 0;
@@ -117,6 +130,29 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
       });
 
       if (res.success) {
+        // Sync customer app access & password settings
+        try {
+          await apiRequest(`/customers/${customerId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              app_access_enabled: appAccessEnabled ? 1 : 0,
+              login_password: appPassword || 'client123'
+            })
+          });
+        } catch (e) {
+          console.warn('App access sync notice:', e);
+        }
+
+        if (sendWhatsAppCreds) {
+          const c = customers.find(x => String(x.id) === String(customerId));
+          if (c?.phone) {
+            const cleanPhone = c.phone.replace(/[^0-9]/g, '');
+            const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            const msg = `नमस्ते ${c.full_name} जी! 🙏\n\nTaranganjali Private Limited में आपका मासिक आय योजना खाता (MIS Account) सफलतापूर्वक खुल गया है।\n\n📱 मोबाइल ऐप लॉगिन विवरण:\n👤 User ID: ${c.customer_code}\n🔑 Password: ${appPassword || 'client123'}\n\n📲 ऐप डाउनलोड करें और अपना मासिक ब्याज पेआउट व पासबुक देखें:\n${window.location.origin}\n\nधन्यवाद,\nTaranganjali Private Limited`;
+            window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+          }
+        }
+
         alert(res.message || 'MIS proposal submitted successfully');
         onSuccess && onSuccess();
       }
@@ -298,11 +334,14 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                     max="360"
                     required
                     value={tenureMonths}
-                    onChange={(e) => setTenureMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => setTenureMonths(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                    onBlur={() => {
+                      if (!tenureMonths || Number(tenureMonths) < 1) setTenureMonths(1);
+                    }}
                     placeholder="Enter custom months"
                     className="w-full text-xs p-2.5 bg-amber-50/50 border border-amber-300 rounded-lg font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                   />
-                  <span className="absolute right-3 top-2.5 text-xs font-semibold text-slate-500">
+                  <span className="absolute right-3 top-2.5 text-xs font-semibold text-slate-500 pointer-events-none">
                     Months ({((parseInt(tenureMonths) || 0) / 12).toFixed(1)} Yrs)
                   </span>
                 </div>
@@ -371,6 +410,65 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg font-mono focus:outline-none focus:border-slate-800"
               />
             </div>
+          </div>
+
+          {/* 📱 Mobile App Access Control Card */}
+          <div className="p-3 bg-gradient-to-r from-amber-500/10 to-indigo-500/10 border border-amber-500/30 rounded-xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-amber-500 text-slate-950 rounded-lg font-bold">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">Mobile App Access (मोबाइल ऐप एक्सेस)</h4>
+                  <p className="text-[10px] text-slate-500">इस MIS को ग्राहक के मोबाइल ऐप व डिजिटल पासबुक में तुरंत सक्रिय रखें</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={appAccessEnabled}
+                  onChange={(e) => setAppAccessEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                <span className="ml-2 text-xs font-bold text-slate-700">
+                  {appAccessEnabled ? 'App Active (चालू)' : 'App Blocked (बंद)'}
+                </span>
+              </label>
+            </div>
+
+            {appAccessEnabled && (
+              <div className="pt-2 border-t border-amber-500/20 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">लॉगिन आईडी (Login ID):</span>
+                  <div className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800">
+                    {customers.find(c => String(c.id) === String(customerId))?.customer_code || 'Auto-Assigned'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 font-semibold block mb-0.5">ऐप पासवर्ड (App Password):</span>
+                  <input
+                    type="text"
+                    value={appPassword}
+                    onChange={(e) => setAppPassword(e.target.value)}
+                    placeholder="client123"
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="sm:col-span-2 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={sendWhatsAppCreds}
+                      onChange={(e) => setSendWhatsAppCreds(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>📲 MIS बनने पर ग्राहक को WhatsApp पर लॉगिन आईडी व पासवर्ड भेजें</span>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           {isEmployee && (
