@@ -20,6 +20,7 @@ import {
   Building2
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import PaginationBar from './PaginationBar';
 
 export default function LoansAgainstDeposit({ 
   loanType = 'DEPOSIT', 
@@ -28,6 +29,8 @@ export default function LoansAgainstDeposit({
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
   const [totalSanctioned, setTotalSanctioned] = useState(0);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [totalRecovered, setTotalRecovered] = useState(0);
@@ -427,7 +430,7 @@ export default function LoansAgainstDeposit({
                   </td>
                 </tr>
               ) : (
-                loans.map((l) => (
+                loans.slice((Math.min(currentPage, Math.max(1, Math.ceil(loans.length / pageSize))) - 1) * pageSize, Math.min(currentPage, Math.max(1, Math.ceil(loans.length / pageSize))) * pageSize).map((l) => (
                   <tr key={l.id} className="hover:bg-amber-50/20 transition">
                     <td className="py-3 px-3 font-mono font-bold text-slate-900">{l.loan_number}</td>
                     <td className="py-3 px-3">
@@ -486,6 +489,7 @@ export default function LoansAgainstDeposit({
             </tbody>
           </table>
         </div>
+        <PaginationBar totalItems={loans.length} page={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} label="loans" />
       </div>
 
       {/* 5. Sanction Modal */}

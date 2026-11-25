@@ -39,10 +39,12 @@ import {
   ArrowRight,
   Eye,
   Pencil,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { apiRequest, formatINR, formatDate } from '../utils';
 import TarplLogo from './TarplLogo';
+import TransactionBackgroundModal from './TransactionBackgroundModal';
 
 // Standard INPUT (आवक / Cash In / Receipt) Categories
 const INPUT_CATEGORIES = [
@@ -117,6 +119,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
   const [stmtMaxAmt, setStmtMaxAmt] = useState('');
   const [stmtTxType, setStmtTxType] = useState('ALL');
   const [stmtPage, setStmtPage] = useState(1);
+  const [selectedTxDetail, setSelectedTxDetail] = useState(null);
+  const [loadingTxDetail, setLoadingTxDetail] = useState(false);
 
   // Ledger Accounts Index & Edit Modal State (Matches /accounting/accounts & /edit)
   const [ledgersList, setLedgersList] = useState([]);
@@ -220,6 +224,22 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
     }
   }, [dayBookOption, selectedBranch]);
 
+  const handleDeleteCashEntry = async (voucher) => {
+    if (!voucher || !voucher.id) return;
+    if (!window.confirm(`क्या आप वाउचर "${voucher.voucher_no}" (₹${voucher.amount}) को हटाना चाहते हैं?`)) return;
+    try {
+      const targetId = voucher.id || voucher.voucher_no;
+      const res = await apiRequest(`/accounting/cash-entry/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+      if (res && res.success) {
+        fetchDayBook();
+      } else {
+        alert(res?.message || 'वाउचर हटाने में समस्या आई।');
+      }
+    } catch (err) {
+      alert(err.message || 'वाउचर हटाने में त्रुटि।');
+    }
+  };
+
   // Fetch Statement Drilldown with active Prahlad filters
   const loadLedgerStatement = async (ledger, overrides = {}) => {
     const targetLedger = ledger || stmtLedgerRef;
@@ -296,6 +316,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
     setStmtMaxAmt('');
     setStmtTxType('ALL');
     setStmtPage(1);
+    setSelectedTxDetail(null);
     setShowStatementModal(true);
     loadLedgerStatement(ledger, {
       branch: selectedBranch,
@@ -308,6 +329,27 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
       txType: 'ALL',
       page: 1
     });
+  };
+
+  // Clickable Transaction Description -> Open Full Payment & Scheme Background Detail (1:1 Prahlad Drilldown)
+  const handleOpenTransactionBackground = async (row, ledgerInfo) => {
+    setSelectedTxDetail({ row, ledger: ledgerInfo, background: null });
+    setLoadingTxDetail(true);
+    try {
+      const params = new URLSearchParams({
+        id: row.id || '',
+        voucher_no: row.voucher_no || '',
+        ledger_name: ledgerInfo?.name || 'CASH BOOK'
+      });
+      const res = await apiRequest(`/accounting/transaction-background?${params.toString()}`);
+      if (res && res.success && res.background) {
+        setSelectedTxDetail({ row, ledger: ledgerInfo, background: res.background });
+      }
+    } catch (err) {
+      console.error('Failed to load transaction background:', err);
+    } finally {
+      setLoadingTxDetail(false);
+    }
   };
 
   const handleSaveLedgerEdit = async (e) => {
@@ -1028,7 +1070,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 </div>
                 <button
                   onClick={() => handleOpenModal('INFLOW')}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shrink-0 whitespace-nowrap"
                 >
                   + Add आवक
                 </button>
@@ -1065,7 +1107,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 </div>
                 <button
                   onClick={() => handleOpenModal('OUTFLOW')}
-                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shrink-0 whitespace-nowrap"
                 >
                   - Add खर्च
                 </button>
@@ -1182,12 +1224,13 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     <th className="py-2.5 px-4">Mode / Ledger</th>
                     <th className="py-2.5 px-4">Narration / Bill No</th>
                     <th className="py-2.5 px-4 text-right">Amount (₹)</th>
+                    <th className="py-2.5 px-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredDailyVouchers.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="py-12 text-center text-slate-400">
+                      <td colSpan="9" className="py-12 text-center text-slate-400">
                         <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                         <p className="font-semibold">इस अवधि में कोई वाउचर या एंट्री नहीं मिली।</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">तारीख बदलें या "+ आवक" / "- खर्च" बटन से नई एंट्री दर्ज करें।</p>
@@ -1222,7 +1265,14 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                             )}
                           </td>
                           <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                            {v.category_name || v.category}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenTransactionBackground({ ...v, description: `${v.category_name || v.category} - ${v.party_name || v.account}`, debit: isInflow ? v.amount : 0, credit: !isInflow ? v.amount : 0 }, { name: v.ledger || 'CASH BOOK' })}
+                              className="text-left text-[#2563eb] hover:underline cursor-pointer"
+                              title="Click for Payment & Voucher Background"
+                            >
+                              {v.category_name || v.category}
+                            </button>
                           </td>
                           <td className="py-3 px-4 font-medium text-slate-800">
                             <div>{v.party_name || v.account}</div>
@@ -1244,6 +1294,17 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                             isInflow ? 'text-emerald-700' : 'text-rose-700'
                           }`}>
                             {isInflow ? '+' : '-'}₹{v.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCashEntry(v)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[10px] transition cursor-pointer"
+                              title="Delete Voucher Entry"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1835,8 +1896,15 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900">{t.action_label}</div>
-                            <div className="text-[11px] text-slate-500 truncate max-w-xs">{t.narration}</div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenTransactionBackground({ ...t, description: `${t.action_label} - ${t.customer_name}`, debit: isInflow ? (t.inflow_amount || 0) : 0, credit: !isInflow ? (t.outflow_amount || 0) : 0 }, { name: t.payment_mode?.includes('BANK') ? 'BANK BOOK' : 'CASH BOOK' })}
+                              className="text-left group cursor-pointer"
+                              title="Click for full Payment Mode & Scheme Background"
+                            >
+                              <div className="font-bold text-[#2563eb] group-hover:underline">{t.action_label}</div>
+                              <div className="text-[11px] text-slate-500 truncate max-w-xs">{t.narration} • View Background</div>
+                            </button>
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
@@ -2470,9 +2538,29 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                           <tr key={idx} className="hover:bg-slate-50 transition">
                             <td className="py-2.5 px-3 text-[11px] font-medium text-slate-700 whitespace-nowrap">{s.branch || 'MAIN BRANCH'}</td>
                             <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">{s.date}</td>
-                            <td className="py-2.5 px-3 text-[#3c8dbc] font-medium">
-                              <div>{s.description || s.particulars}</div>
-                              {s.voucher_no && <span className="text-[10px] font-mono text-slate-400">[{s.voucher_no}]</span>}
+                            <td className="py-2.5 px-3 font-medium">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenTransactionBackground(s, selectedLedgerStatement.ledger)}
+                                className="text-left text-[#2563eb] hover:text-[#1d4ed8] hover:underline cursor-pointer group flex flex-col items-start gap-0.5"
+                                title="Click to view full payment mode, voucher & customer background"
+                              >
+                                <span className="inline-flex items-center gap-1">
+                                  <span>{s.description || s.particulars}</span>
+                                  <ChevronRight className="w-3.5 h-3.5 opacity-55 group-hover:opacity-100 group-hover:translate-x-0.5 transition shrink-0" />
+                                </span>
+                                <span className="flex flex-wrap items-center gap-1.5 text-[10px] no-underline">
+                                  {s.voucher_no && <span className="font-mono text-slate-500">[{s.voucher_no}]</span>}
+                                  {s.payment_mode && (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold uppercase">
+                                      {s.payment_mode}
+                                    </span>
+                                  )}
+                                  <span className="text-amber-700 font-semibold opacity-80 group-hover:opacity-100">
+                                    • View Payment & Background
+                                  </span>
+                                </span>
+                              </button>
                             </td>
                             <td className="py-2.5 px-3 text-center">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white ${s.is_system === 'Yes' ? 'bg-[#00a65a]' : 'bg-[#dd4b39]'}`}>
@@ -2541,6 +2629,14 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           </div>
         </div>
       )}
+
+      {/* 5A-2. Clickable Transaction Payment & Background Modal */}
+      <TransactionBackgroundModal
+        detail={selectedTxDetail}
+        loading={loadingTxDetail}
+        onClose={() => setSelectedTxDetail(null)}
+        formatAccountingNum={formatAccountingNum}
+      />
 
       {/* ======================================================== */}
       {/* 5B. EDIT LEDGER MODAL (1:1 /edit SHOW IN DAY BOOK TOGGLE)*/}

@@ -75,8 +75,6 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
     }
   };
 
-  if (!isOpen) return null;
-
   // Local projection
   useEffect(() => {
     if (customerId) {
@@ -87,6 +85,8 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
       }
     }
   }, [customerId, customers]);
+
+  if (!isOpen) return null;
 
   const P = parseFloat(monthlyInstallment) || 0;
   const n = parseInt(tenureMonths) || 12;

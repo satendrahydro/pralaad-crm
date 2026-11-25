@@ -4,9 +4,27 @@ const db = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
 // Shared helper to map branch query parameter to DB branch_id, branch_code, display label & baseline balances
+function isBlankCrmMode() {
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'blank_crm_mode'").get();
+    return row && row.value === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function zeroBaselines() {
+  return {
+    'LED-001': 0.00, 'LED-002': 0.00, '102': 0.00, '103': 0.00,
+    'LED-005': 0.00, 'LED-006': 0.00, 'LED-007': 0.00, 'LED-008': 0.00,
+    'LED-009': 0.00, 'LED-010': 0.00, 'LED-011': 0.00
+  };
+}
+
 function resolveBranchContext(selectedBranch) {
   const raw = (selectedBranch || 'ALL').trim();
   const branchUpper = raw.toUpperCase();
+  const isBlank = isBlankCrmMode();
 
   if (branchUpper === 'SHEKHUPURA' || branchUpper === 'SHEKHUPURA BRANCH' || branchUpper === 'TARPL0002' || branchUpper === '13' || branchUpper === '3') {
     return {
@@ -14,7 +32,7 @@ function resolveBranchContext(selectedBranch) {
       branchId: 3,
       displayName: 'SHEKHUPURA BRANCH (TARPL0002 - शेखुपुरा / सुजालपुर)',
       shortName: 'SHEKHUPURA BRANCH',
-      baselines: {
+      baselines: isBlank ? zeroBaselines() : {
         'LED-001': 0.00,
         'LED-002': 0.00,
         '102': 436529.00,
@@ -36,7 +54,7 @@ function resolveBranchContext(selectedBranch) {
       branchId: 1,
       displayName: 'MAIN BRANCH (BHR001)',
       shortName: 'MAIN BRANCH',
-      baselines: {
+      baselines: isBlank ? zeroBaselines() : {
         'LED-001': 1000000.00,
         'LED-002': 470000.00,
         '102': 1848329.00,
@@ -58,7 +76,7 @@ function resolveBranchContext(selectedBranch) {
       branchId: 4,
       displayName: 'TARPL0002 (BHR002)',
       shortName: 'TARPL0002',
-      baselines: {
+      baselines: isBlank ? zeroBaselines() : {
         'LED-001': 0.00,
         'LED-002': 0.00,
         '102': 286529.00,
@@ -80,7 +98,7 @@ function resolveBranchContext(selectedBranch) {
       branchId: 2,
       displayName: 'TARPL SAVING (BRH003)',
       shortName: 'TARPL SAVING',
-      baselines: {
+      baselines: isBlank ? zeroBaselines() : {
         'LED-001': 0.00,
         'LED-002': 0.00,
         '102': 150000.00,
@@ -101,7 +119,7 @@ function resolveBranchContext(selectedBranch) {
     branchId: null,
     displayName: 'ALL (All Branches - 5)',
     shortName: 'ALL',
-    baselines: {
+    baselines: isBlank ? zeroBaselines() : {
       'LED-001': 1000000.00,
       'LED-002': 470000.00,
       '102': 2721387.00,
@@ -289,10 +307,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
                c.full_name as customer_name, c.customer_code, c.phone as customer_phone
         FROM fixed_deposits fd
         JOIN customers c ON fd.customer_id = c.id
-        WHERE (date(fd.start_date) BETWEEN ? AND ? OR date(fd.created_at) BETWEEN ? AND ?)
+        WHERE date(COALESCE(NULLIF(fd.start_date, ''), date(fd.created_at))) BETWEEN ? AND ?
           ${branchWhereFd}
         ORDER BY fd.created_at DESC
-      `).all(startDate, endDate, startDate, endDate);
+      `).all(startDate, endDate);
     } catch (e) { fds = []; }
 
     // 1b. Premature / Matured FD Closures in Date Range
@@ -319,10 +337,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
                c.full_name as customer_name, c.customer_code, c.phone as customer_phone
         FROM recurring_deposits rd
         JOIN customers c ON rd.customer_id = c.id
-        WHERE (date(rd.start_date) BETWEEN ? AND ? OR date(rd.created_at) BETWEEN ? AND ?)
+        WHERE date(COALESCE(NULLIF(rd.start_date, ''), date(rd.created_at))) BETWEEN ? AND ?
           ${branchWhereRd}
         ORDER BY rd.created_at DESC
-      `).all(startDate, endDate, startDate, endDate);
+      `).all(startDate, endDate);
     } catch (e) { rds = []; }
 
     // 2b. RD Installments collected in Date Range
@@ -335,7 +353,7 @@ router.get('/day-book', authenticateToken, (req, res) => {
         FROM rd_installments rdi
         JOIN recurring_deposits rd ON rdi.rd_id = rd.id
         JOIN customers c ON rd.customer_id = c.id
-        WHERE rdi.status = 'PAID' AND date(rdi.paid_date) BETWEEN ? AND ?
+        WHERE rdi.status IN ('PAID', 'COLLECTED') AND date(rdi.paid_date) BETWEEN ? AND ?
           ${branchWhereRd}
         ORDER BY rdi.paid_date DESC
       `).all(startDate, endDate);
@@ -350,10 +368,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
                c.full_name as customer_name, c.customer_code, c.phone as customer_phone
         FROM mis_accounts m
         JOIN customers c ON m.customer_id = c.id
-        WHERE (date(m.start_date) BETWEEN ? AND ? OR date(m.created_at) BETWEEN ? AND ?)
+        WHERE date(COALESCE(NULLIF(m.start_date, ''), date(m.created_at))) BETWEEN ? AND ?
           ${branchWhereMis}
         ORDER BY m.created_at DESC
-      `).all(startDate, endDate, startDate, endDate);
+      `).all(startDate, endDate);
     } catch (e) { misAccounts = []; }
 
     // 3b. MIS Monthly Payouts in Date Range
@@ -371,7 +389,7 @@ router.get('/day-book', authenticateToken, (req, res) => {
       `).all(startDate, endDate);
     } catch (e) { misPayouts = []; }
 
-    // 4. New Savings Accounts in Date Range
+    // 4. New Savings Accounts in Date Range (only legacy rows without an opening entry in savings_transactions to prevent double-count)
     let savingsAccounts = [];
     try {
       savingsAccounts = db.prepare(`
@@ -379,10 +397,11 @@ router.get('/day-book', authenticateToken, (req, res) => {
                c.full_name as customer_name, c.customer_code, c.phone as customer_phone
         FROM savings_accounts s
         JOIN customers c ON s.customer_id = c.id
-        WHERE (date(s.opened_date) BETWEEN ? AND ? OR date(s.created_at) BETWEEN ? AND ?)
+        WHERE date(COALESCE(NULLIF(s.opened_date, ''), date(s.created_at))) BETWEEN ? AND ?
+          AND NOT EXISTS (SELECT 1 FROM savings_transactions stx WHERE stx.account_id = s.id)
           ${branchWhereSb}
         ORDER BY s.created_at DESC
-      `).all(startDate, endDate, startDate, endDate);
+      `).all(startDate, endDate);
     } catch (e) { savingsAccounts = []; }
 
     // 4b. Savings Passbook Transactions (Deposits vs Withdrawals) in Date Range
@@ -1037,149 +1056,215 @@ router.post('/expenses', authenticateToken, (req, res) => {
   }
 });
 
+// 1c. DELETE /api/accounting/cash-entry/:id - Delete a manual Day Book voucher
+router.delete('/cash-entry/:id', authenticateToken, (req, res) => {
+  try {
+    const rawId = String(req.params.id || '').trim();
+    const numericId = parseInt(rawId.replace(/\D+/g, ''), 10);
+    const existing = numericId
+      ? db.prepare('SELECT * FROM day_book_cash_entries WHERE id = ?').get(numericId)
+      : db.prepare('SELECT * FROM day_book_cash_entries WHERE voucher_no = ?').get(rawId);
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Day Book entry not found.' });
+    }
+
+    db.prepare('DELETE FROM day_book_cash_entries WHERE id = ?').run(existing.id);
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, username, full_name, role, action, entity_type, entity_id, details)
+        VALUES (?, ?, ?, ?, 'DELETE_DAYBOOK_ENTRY', 'DAYBOOK_ENTRY', ?, ?)
+      `).run(
+        req.user?.id || 1,
+        req.user?.username || 'admin',
+        req.user?.full_name || 'Administrator',
+        req.user?.role || 'admin',
+        existing.voucher_no,
+        `Deleted ${existing.entry_type} voucher ${existing.voucher_no} (₹${existing.amount})`
+      );
+    } catch (e) {}
+
+    res.json({ success: true, message: `Voucher ${existing.voucher_no} deleted successfully.`, deletedId: existing.id });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 2. POST /api/accounting/journal-entry
 router.post('/journal-entry', authenticateToken, (req, res) => {
   try {
-    const { voucher_date, debit_ledger, credit_ledger, amount, narration, reference_no } = req.body;
+    const { voucher_date, debit_ledger, credit_ledger, debit_account, credit_account, amount, narration, reference_no } = req.body;
+    const drLedger = (debit_ledger || debit_account || '').trim();
+    const crLedger = (credit_ledger || credit_account || '').trim();
 
-    if (!debit_ledger || !credit_ledger || !amount || parseFloat(amount) <= 0) {
+    if (!drLedger || !crLedger || !amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ success: false, message: 'Invalid journal entry: Debit, Credit and valid Amount are required.' });
     }
 
-    if (debit_ledger === credit_ledger) {
+    if (drLedger.toLowerCase() === crLedger.toLowerCase()) {
       return res.status(400).json({ success: false, message: 'Debit and Credit ledgers cannot be identical.' });
     }
 
     const voucher_number = reference_no || `JV-${Date.now().toString().slice(-6)}`;
     const date = voucher_date || new Date().toISOString().split('T')[0];
     const numAmount = parseFloat(amount);
+    let postedTxId = null;
 
-    const stmt = db.prepare(`
-      INSERT INTO transactions (transaction_number, transaction_type, customer_id, amount, transaction_date, payment_mode, reference_number, remarks, created_by)
-      VALUES (?, 'JOURNAL', 1, ?, ?, 'JOURNAL', ?, ?, ?)
-    `);
-    const info = stmt.run(voucher_number, numAmount, date, voucher_number, narration || 'Manual Journal Voucher', req.user?.id || 1);
+    // Support both legacy (transaction_number / customer_id) and fresh (voucher_number) transactions schemas
+    try {
+      const txCols = db.prepare('PRAGMA table_info(transactions)').all().map(c => c.name);
+      if (txCols.includes('transaction_number')) {
+        const anyCustomerId = db.prepare('SELECT id FROM customers ORDER BY id ASC LIMIT 1').get()?.id;
+        if (anyCustomerId) {
+          const info = db.prepare(`
+            INSERT INTO transactions (transaction_number, transaction_type, customer_id, amount, transaction_date, payment_mode, reference_number, remarks, created_by)
+            VALUES (?, 'JOURNAL', ?, ?, ?, 'JOURNAL', ?, ?, ?)
+          `).run(voucher_number, anyCustomerId, numAmount, date, voucher_number, narration || `${drLedger} Dr. To ${crLedger}`, req.user?.id || 1);
+          postedTxId = info.lastInsertRowid;
 
-    // Insert Dr & Cr entries
-    const entryStmt = db.prepare(`
-      INSERT INTO transaction_entries (transaction_id, account_name, entry_type, amount, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    entryStmt.run(info.lastInsertRowid, debit_ledger, 'DEBIT', numAmount, narration || '');
-    entryStmt.run(info.lastInsertRowid, credit_ledger, 'CREDIT', numAmount, narration || '');
+          const entryCols = db.prepare('PRAGMA table_info(transaction_entries)').all().map(c => c.name);
+          const colName = entryCols.includes('account_name') ? 'account_name' : 'account_type';
+          const noteCol = entryCols.includes('notes') ? 'notes' : 'narration';
+          const entryStmt = db.prepare(`INSERT INTO transaction_entries (transaction_id, ${colName}, entry_type, amount, ${noteCol}) VALUES (?, ?, ?, ?, ?)`);
+          entryStmt.run(postedTxId, drLedger, 'DEBIT', numAmount, narration || '');
+          entryStmt.run(postedTxId, crLedger, 'CREDIT', numAmount, narration || '');
+        }
+      } else {
+        const info = db.prepare(`
+          INSERT INTO transactions (voucher_number, voucher_date, voucher_type, total_amount, narration, created_by)
+          VALUES (?, ?, 'JOURNAL', ?, ?, ?)
+        `).run(voucher_number, date, numAmount, narration || `${drLedger} Dr. To ${crLedger}`, req.user?.id || 1);
+        postedTxId = info.lastInsertRowid;
+        const entryStmt = db.prepare(`INSERT INTO transaction_entries (transaction_id, account_type, entry_type, amount, narration) VALUES (?, ?, ?, ?, ?)`);
+        entryStmt.run(postedTxId, drLedger, 'DEBIT', numAmount, narration || '');
+        entryStmt.run(postedTxId, crLedger, 'CREDIT', numAmount, narration || '');
+      }
+    } catch (e) {
+      console.error('Optional transactions table sync skipped:', e.message);
+    }
+
+    // Sync into Day Book entries if Cash Book or Bank Book is debited or credited (or when no customer exists in blank CRM)
+    const drUp = drLedger.toUpperCase();
+    const crUp = crLedger.toUpperCase();
+    const touchesCashOrBank = drUp.includes('CASH') || drUp.includes('BANK') || crUp.includes('CASH') || crUp.includes('BANK');
+    if (touchesCashOrBank || !postedTxId) {
+      const isInflow = drUp.includes('CASH') || drUp.includes('BANK') || !touchesCashOrBank;
+      const isBank = (isInflow ? drUp : crUp).includes('BANK');
+      const dbRes = db.prepare(`
+        INSERT INTO day_book_cash_entries (
+          voucher_no, entry_type, entry_date, category, category_name,
+          amount, payment_mode, party_name, reference_no, narration, branch_code, created_by_user_id
+        ) VALUES (?, ?, ?, 'JOURNAL_VOUCHER', ?, ?, ?, ?, ?, ?, 'BHR001', ?)
+      `).run(
+        voucher_number,
+        isInflow ? 'INFLOW' : 'OUTFLOW',
+        date,
+        `JV: ${drLedger} -> ${crLedger}`,
+        numAmount,
+        isBank ? 'BANK_ONLINE' : 'CASH',
+        isInflow ? crLedger : drLedger,
+        voucher_number,
+        narration || `Journal Voucher (${drLedger} Dr / ${crLedger} Cr)`,
+        req.user?.id || 1
+      );
+      if (!postedTxId) postedTxId = dbRes.lastInsertRowid;
+    }
 
     res.json({
       success: true,
-      message: `Journal Voucher ${voucher_number} posted successfully (Debited: ${debit_ledger}, Credited: ${credit_ledger}).`,
+      message: `Journal Voucher ${voucher_number} posted successfully (Debited: ${drLedger}, Credited: ${crLedger}).`,
       voucher_number,
-      id: info.lastInsertRowid
+      id: postedTxId
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// 3. GET /api/accounting/payments-to-collect
+// 3. GET /api/accounting/payments-to-collect (Live SQLite Dues: RD Installments, Gold Loans, Deposit Loans)
 router.get('/payments-to-collect', authenticateToken, (req, res) => {
   try {
-    // 15 fields: Branch, Group, Center, Advisor, Customer Name, Member ID, Account No, Product Type, Due Amount, Due Date, Overdue Days, Savings Balance, Mobile, Status
-    const items = [
-      {
-        id: 1,
-        branch: 'MAIN BRANCH (BHR001)',
-        group_name: 'Shanti Vihar Self Help Group',
-        center: 'CEN001 - Vedik Vihar',
-        advisor_code: 'ADV0001',
-        advisor_name: 'Ramesh Chandra Sharma',
-        customer_name: 'Prahlad Singh',
-        member_code: 'M00001',
-        phone: '9876543210',
-        account_type: 'RD (Recurring)',
-        account_no: 'RD-2026-0001',
-        due_amount: 5000.00,
-        due_date: '2026-11-20',
-        overdue_days: 0,
-        savings_balance: 145000.00,
-        status: 'DUE_SOON'
-      },
-      {
-        id: 2,
-        branch: 'MAIN BRANCH (BHR001)',
-        group_name: 'Kiratpur Business Group',
-        center: 'CEN003 - Kiratpur Road',
-        advisor_code: 'ADV0002',
-        advisor_name: 'Suresh Verma',
-        customer_name: 'Narpat Singh',
-        member_code: 'M00002',
-        phone: '9876543211',
-        account_type: 'RD (Recurring)',
-        account_no: 'RD-2026-0002',
-        due_amount: 3000.00,
-        due_date: '2026-11-15',
-        overdue_days: 3,
-        savings_balance: 48000.00,
-        status: 'OVERDUE'
-      },
-      {
-        id: 3,
-        branch: 'SHEKHUPURA BRANCH',
-        group_name: 'Shekhupura Mandi Group',
-        center: 'CEN002 - Shekhupura Mandi',
-        advisor_code: 'ADV0003',
-        advisor_name: 'Dinesh Kumar',
-        customer_name: 'Satendra Kumar',
-        member_code: 'M00003',
-        phone: '9876543212',
-        account_type: 'Loan EMI (LAD)',
-        account_no: 'LAD-2026-001',
-        due_amount: 4500.00,
-        due_date: '2026-11-10',
-        overdue_days: 8,
-        savings_balance: 75000.00,
-        status: 'OVERDUE'
-      },
-      {
-        id: 4,
-        branch: 'MAIN BRANCH (BHR001)',
-        group_name: 'Vedik Vihar Group',
-        center: 'CEN001 - Vedik Vihar',
-        advisor_code: 'ADV0001',
-        advisor_name: 'Ramesh Chandra Sharma',
-        customer_name: 'Rahul Sharma',
-        member_code: 'M00004',
-        phone: '9876543213',
-        account_type: 'RD (Recurring)',
-        account_no: 'RD-2026-0004',
-        due_amount: 2500.00,
-        due_date: '2026-11-22',
-        overdue_days: 0,
-        savings_balance: 28000.00,
-        status: 'DUE_SOON'
-      },
-      {
-        id: 5,
-        branch: 'TARPL SAVING (BRH003)',
-        group_name: 'Civil Lines Farmers Cluster',
-        center: 'CEN004 - Shanti Vihar',
-        advisor_code: 'ADV0004',
-        advisor_name: 'Anil Chauhan',
-        customer_name: 'Amit Patel',
-        member_code: 'M00005',
-        phone: '9876543214',
-        account_type: 'Daily Deposit',
-        account_no: 'DD-2026-0005',
-        due_amount: 1000.00,
-        due_date: '2026-11-18',
-        overdue_days: 0,
-        savings_balance: 19500.00,
-        status: 'DUE_TODAY'
-      }
-    ];
+    const items = [];
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      const rdDues = db.prepare(`
+        SELECT rdi.id, rdi.rd_id, rdi.installment_no, rdi.due_date, rdi.installment_amount,
+               rd.rd_number, c.full_name as customer_name, c.customer_code as member_code,
+               c.phone, COALESCE(c.branch, 'MAIN BRANCH') as branch,
+               COALESCE(c.group_name, 'General RD Pool') as group_name
+        FROM rd_installments rdi
+        JOIN recurring_deposits rd ON rdi.rd_id = rd.id
+        JOIN customers c ON rd.customer_id = c.id
+        WHERE rdi.status = 'PENDING' AND rd.status = 'ACTIVE'
+        ORDER BY rdi.due_date ASC
+        LIMIT 80
+      `).all();
+
+      rdDues.forEach(r => {
+        const diffDays = Math.floor((new Date(today) - new Date(r.due_date)) / 86400000);
+        items.push({
+          id: `rd-${r.id}`,
+          rd_id: r.rd_id,
+          installment_id: r.id,
+          branch: r.branch,
+          group_name: r.group_name,
+          center: r.branch.includes('SHEKHUPURA') ? 'CEN002 - Shekhupura Mandi' : 'CEN001 - Vedik Vihar',
+          advisor_code: 'FIELD',
+          advisor_name: 'Branch Collector',
+          customer_name: r.customer_name,
+          member_code: r.member_code,
+          phone: r.phone,
+          account_type: 'RD (Recurring)',
+          account_no: r.rd_number,
+          due_amount: r.installment_amount,
+          due_date: r.due_date,
+          overdue_days: diffDays > 0 ? diffDays : 0,
+          savings_balance: 0,
+          status: diffDays > 0 ? 'OVERDUE' : (r.due_date === today ? 'DUE_TODAY' : 'DUE_SOON')
+        });
+      });
+    } catch (e) {}
+
+    try {
+      const ladDues = db.prepare(`
+        SELECT l.id, l.loan_number, l.emi_amount, l.outstanding_principal, l.disbursal_date, l.collateral_type,
+               c.full_name as customer_name, c.customer_code as member_code, c.phone,
+               COALESCE(c.branch, 'MAIN BRANCH') as branch
+        FROM loans_against_deposit l
+        JOIN customers c ON l.customer_id = c.id
+        WHERE l.status = 'ACTIVE' AND l.outstanding_principal > 0
+        ORDER BY l.id DESC
+        LIMIT 40
+      `).all();
+
+      ladDues.forEach(l => {
+        items.push({
+          id: `lad-${l.id}`,
+          loan_id: l.id,
+          branch: l.branch,
+          group_name: l.collateral_type || 'Secured Loan',
+          center: l.branch.includes('SHEKHUPURA') ? 'CEN002 - Shekhupura Mandi' : 'CEN001 - Vedik Vihar',
+          advisor_code: 'LOAN',
+          advisor_name: 'Loan Desk',
+          customer_name: l.customer_name,
+          member_code: l.member_code,
+          phone: l.phone,
+          account_type: `Loan EMI (${l.collateral_type || 'LAD'})`,
+          account_no: l.loan_number,
+          due_amount: l.emi_amount || l.outstanding_principal,
+          due_date: today,
+          overdue_days: 0,
+          savings_balance: 0,
+          status: 'DUE_TODAY'
+        });
+      });
+    } catch (e) {}
 
     res.json({
       success: true,
       total_items: items.length,
-      total_due: items.reduce((sum, i) => sum + i.due_amount, 0),
+      total_due: items.reduce((sum, i) => sum + (i.due_amount || 0), 0),
       items
     });
   } catch (err) {
@@ -1187,89 +1272,141 @@ router.get('/payments-to-collect', authenticateToken, (req, res) => {
   }
 });
 
-// 4. POST /api/accounting/collect-payment
+// 4. POST /api/accounting/collect-payment - Persists collection to RD/Loan + Day Book Cash Entry
 router.post('/collect-payment', authenticateToken, (req, res) => {
   try {
-    const { item_id, account_no, amount, payment_mode, customer_name } = req.body;
+    const { item_id, account_no, amount, payment_mode = 'CASH', customer_name } = req.body;
+    const numAmt = parseFloat(amount);
+    if (!numAmt || numAmt <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid collection amount is required.' });
+    }
+    const today = new Date().toISOString().split('T')[0];
     const receipt_no = `REC-${Date.now().toString().slice(-6)}`;
+    const idStr = String(item_id || '');
+
+    if (idStr.startsWith('rd-')) {
+      const instId = parseInt(idStr.replace('rd-', ''), 10);
+      const inst = db.prepare('SELECT * FROM rd_installments WHERE id = ?').get(instId);
+      if (inst && inst.status === 'PENDING') {
+        db.prepare(`
+          UPDATE rd_installments
+          SET status = 'PAID', paid_date = ?, total_collected = ?, payment_mode = ?, transaction_ref = ?, collector_user_id = ?
+          WHERE id = ?
+        `).run(today, numAmt, payment_mode, receipt_no, req.user?.id || 1, instId);
+        db.prepare(`
+          UPDATE recurring_deposits
+          SET installments_paid = installments_paid + 1, amount_deposited = amount_deposited + ?
+          WHERE id = ?
+        `).run(numAmt, inst.rd_id);
+      }
+    } else if (idStr.startsWith('lad-')) {
+      const loanId = parseInt(idStr.replace('lad-', ''), 10);
+      const loan = db.prepare('SELECT * FROM loans_against_deposit WHERE id = ?').get(loanId);
+      if (loan) {
+        const nextOut = Math.max(0, (loan.outstanding_principal || 0) - numAmt);
+        db.prepare(`
+          UPDATE loans_against_deposit
+          SET total_recovered = total_recovered + ?, outstanding_principal = ?, status = ?
+          WHERE id = ?
+        `).run(numAmt, nextOut, nextOut <= 0 ? 'REPAID' : 'ACTIVE', loanId);
+      }
+    }
+
+    // Record cash inflow voucher if not already an RD paid row (RD paid rows already sync via rd_installments)
+    if (!idStr.startsWith('rd-')) {
+      try {
+        db.prepare(`
+          INSERT INTO day_book_cash_entries (
+            voucher_no, entry_type, entry_date, category, category_name,
+            amount, payment_mode, party_name, reference_no, narration, branch_code, created_by_user_id
+          ) VALUES (?, 'INFLOW', ?, 'DAILY_COLLECTION', 'Field Payment Collection', ?, ?, ?, ?, ?, 'BHR001', ?)
+        `).run(receipt_no, today, numAmt, payment_mode, `${customer_name || 'Member'} (${account_no})`, receipt_no, `Payment collected for ${account_no}`, req.user?.id || 1);
+      } catch (e) {}
+    }
 
     res.json({
       success: true,
       receipt_no,
       collected_at: new Date().toISOString(),
-      message: `Payment of ₹${amount} for account ${account_no} (${customer_name}) collected successfully. Receipt #${receipt_no} generated.`
+      message: `Payment of ₹${numAmt} for account ${account_no} (${customer_name}) collected successfully. Receipt #${receipt_no} generated.`
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// 5. GET /api/accounting/payments-to-release
+// 5. GET /api/accounting/payments-to-release (Live SQLite Pending FD/MIS Payouts)
 router.get('/payments-to-release', authenticateToken, (req, res) => {
   try {
-    const releases = [
-      {
-        id: 1,
-        branch: 'MAIN BRANCH (BHR001)',
-        payment_type: 'FD Maturity Claim',
-        account_no: 'TARPL/FD/2026/001',
-        customer_name: 'Prahlad Singh',
-        member_code: 'M00001',
-        amount: 236000.00,
-        bank_name: 'Punjab National Bank',
-        account_number: '0123000100234567',
-        ifsc_code: 'PUNB0012300',
-        due_date: '2026-11-20',
-        status: 'APPROVED_READY'
-      },
-      {
-        id: 2,
-        branch: 'MAIN BRANCH (BHR001)',
-        payment_type: 'Monthly MIS Payout',
-        account_no: 'MIS-2026-0001',
-        customer_name: 'Narpat Singh',
-        member_code: 'M00002',
-        amount: 1500.00,
-        bank_name: 'State Bank of India',
-        account_number: '31234567890',
-        ifsc_code: 'SBIN0001234',
-        due_date: '2026-11-18',
-        status: 'READY_TO_RELEASE'
-      },
-      {
-        id: 3,
-        branch: 'SHEKHUPURA BRANCH',
-        payment_type: 'Monthly MIS Payout',
-        account_no: 'MIS-2026-0002',
-        customer_name: 'Satendra Kumar',
-        member_code: 'M00003',
-        amount: 3000.00,
-        bank_name: 'HDFC Bank',
-        account_number: '50100234567890',
-        ifsc_code: 'HDFC0000456',
-        due_date: '2026-11-18',
-        status: 'READY_TO_RELEASE'
-      },
-      {
-        id: 4,
-        branch: 'MAIN BRANCH (BHR001)',
-        payment_type: 'Loan Disbursal (LAD)',
-        account_no: 'LAD-2026-002',
-        customer_name: 'Rahul Sharma',
-        member_code: 'M00004',
-        amount: 42500.00,
-        bank_name: 'Bank of Baroda',
-        account_number: '12340100012345',
-        ifsc_code: 'BARB0BIJNOR',
-        due_date: '2026-11-19',
-        status: 'PENDING_APPROVAL'
-      }
-    ];
+    const releases = [];
+
+    try {
+      const fdScheds = db.prepare(`
+        SELECT s.id, s.payout_date, s.payout_amount, fd.fd_number,
+               c.full_name as customer_name, c.customer_code as member_code,
+               c.bank_name, c.account_no as bank_account_no, c.ifsc_code,
+               COALESCE(c.branch, 'MAIN BRANCH') as branch
+        FROM fd_schedules s
+        JOIN fixed_deposits fd ON s.fd_id = fd.id
+        JOIN customers c ON fd.customer_id = c.id
+        WHERE s.status = 'PENDING' AND fd.status = 'ACTIVE' AND s.payout_amount > 0
+        ORDER BY s.payout_date ASC
+        LIMIT 60
+      `).all();
+
+      fdScheds.forEach(s => {
+        releases.push({
+          id: `fds-${s.id}`,
+          branch: s.branch,
+          payment_type: 'FD Interest Payout',
+          account_no: s.fd_number,
+          customer_name: s.customer_name,
+          member_code: s.member_code,
+          amount: s.payout_amount,
+          bank_name: s.bank_name || '-',
+          account_number: s.bank_account_no || '-',
+          ifsc_code: s.ifsc_code || '-',
+          due_date: s.payout_date,
+          status: 'READY_TO_RELEASE'
+        });
+      });
+    } catch (e) {}
+
+    try {
+      const misScheds = db.prepare(`
+        SELECT msp.id, msp.payout_date, msp.net_payable, m.mis_number, m.payout_account_no, m.payout_bank_ifsc,
+               c.full_name as customer_name, c.customer_code as member_code, c.bank_name,
+               COALESCE(c.branch, 'MAIN BRANCH') as branch
+        FROM mis_payout_schedules msp
+        JOIN mis_accounts m ON msp.mis_id = m.id
+        JOIN customers c ON m.customer_id = c.id
+        WHERE msp.status = 'PENDING' AND m.status = 'ACTIVE'
+        ORDER BY msp.payout_date ASC
+        LIMIT 60
+      `).all();
+
+      misScheds.forEach(m => {
+        releases.push({
+          id: `misp-${m.id}`,
+          branch: m.branch,
+          payment_type: 'Monthly MIS Payout',
+          account_no: m.mis_number,
+          customer_name: m.customer_name,
+          member_code: m.member_code,
+          amount: m.net_payable,
+          bank_name: m.bank_name || '-',
+          account_number: m.payout_account_no || '-',
+          ifsc_code: m.payout_bank_ifsc || '-',
+          due_date: m.payout_date,
+          status: 'READY_TO_RELEASE'
+        });
+      });
+    } catch (e) {}
 
     res.json({
       success: true,
       total_releases: releases.length,
-      total_amount: releases.reduce((sum, r) => sum + r.amount, 0),
+      total_amount: releases.reduce((sum, r) => sum + (r.amount || 0), 0),
       releases
     });
   } catch (err) {
@@ -1277,11 +1414,21 @@ router.get('/payments-to-release', authenticateToken, (req, res) => {
   }
 });
 
-// 6. POST /api/accounting/release-payment
+// 6. POST /api/accounting/release-payment - Persists FD/MIS payout & Day Book Outflow
 router.post('/release-payment', authenticateToken, (req, res) => {
   try {
-    const { release_id, account_no, amount, payment_mode, utr_no, customer_name } = req.body;
+    const { release_id, account_no, amount, payment_mode = 'NEFT', utr_no, customer_name } = req.body;
+    const today = new Date().toISOString().split('T')[0];
     const ref = utr_no || `UTR-${Date.now().toString().slice(-8)}`;
+    const idStr = String(release_id || '');
+
+    if (idStr.startsWith('fds-')) {
+      const sId = parseInt(idStr.replace('fds-', ''), 10);
+      db.prepare("UPDATE fd_schedules SET status = 'PAID', paid_date = ?, payment_reference = ? WHERE id = ?").run(today, ref, sId);
+    } else if (idStr.startsWith('misp-')) {
+      const mId = parseInt(idStr.replace('misp-', ''), 10);
+      db.prepare("UPDATE mis_payout_schedules SET status = 'PAID', paid_date = ?, payment_reference = ? WHERE id = ?").run(today, ref, mId);
+    }
 
     res.json({
       success: true,
@@ -1405,6 +1552,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
           const isInflow = e.entry_type === 'INFLOW';
           rawItems.push({
             id: `cash-${e.id}`,
+            source_type: 'CASH_ENTRY',
             branch: e.branch_code === 'SHEKHUPURA' ? 'SHEKHUPURA BRANCH' : 'MAIN BRANCH',
             sort_date: e.entry_date || endDate,
             date: e.entry_date ? e.entry_date.split('-').reverse().join('/') : '',
@@ -1413,6 +1561,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
             particulars: `${e.category_name} (${e.party_name})`,
             narration: e.narration,
             reference_no: e.reference_no,
+            payment_mode: e.payment_mode || 'CASH',
             is_system: 'No',
             isInflow,
             amount: e.amount
@@ -1433,13 +1582,14 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
           const fds = db.prepare(`
             SELECT fd.id, fd.fd_number, fd.principal_amount, fd.start_date, fd.closed_date, fd.status, fd.premature_interest_paid, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
             FROM fixed_deposits fd JOIN customers c ON fd.customer_id = c.id
-            WHERE (date(fd.start_date) BETWEEN ? AND ? OR (fd.status IN ('CLOSED_PREMATURE', 'MATURED') AND date(fd.closed_date) BETWEEN ? AND ?)) ${bWhereFd}
+            WHERE (date(COALESCE(NULLIF(fd.start_date, ''), date(fd.created_at))) BETWEEN ? AND ? OR (fd.status IN ('CLOSED_PREMATURE', 'MATURED') AND date(fd.closed_date) BETWEEN ? AND ?)) ${bWhereFd}
           `).all(startDate, endDate, startDate, endDate);
           fds.forEach(f => {
             if (targetLedger.code !== '103') {
               if (f.start_date >= startDate && f.start_date <= endDate) {
                 rawItems.push({
                   id: `sys-fd-${f.id}`,
+                  source_type: 'FD',
                   branch: f.branch_name,
                   sort_date: f.start_date,
                   date: f.start_date.split('-').reverse().join('/'),
@@ -1447,6 +1597,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                   description: `FD a/c ${f.fd_number} ${f.full_name} ${f.customer_code}`,
                   particulars: `${f.full_name} (${f.customer_code})`,
                   narration: `New Fixed Deposit Principal`,
+                  payment_mode: 'BANK / CASH',
                   is_system: 'Yes',
                   isInflow: true,
                   amount: f.principal_amount
@@ -1455,6 +1606,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
               if (['CLOSED_PREMATURE', 'MATURED'].includes(f.status) && f.closed_date >= startDate && f.closed_date <= endDate) {
                 rawItems.push({
                   id: `sys-fd-close-${f.id}`,
+                  source_type: 'FD_CLOSURE',
                   branch: f.branch_name,
                   sort_date: f.closed_date,
                   date: f.closed_date.split('-').reverse().join('/'),
@@ -1462,6 +1614,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                   description: `FD a/c ${f.fd_number} ${f.full_name} ${f.customer_code} debit to cash`,
                   particulars: `${f.full_name} (${f.customer_code})`,
                   narration: `${f.status} Payout Released`,
+                  payment_mode: 'BANK / CASH',
                   is_system: 'Yes',
                   isInflow: false,
                   amount: f.principal_amount + (f.premature_interest_paid || 0)
@@ -1475,12 +1628,13 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
           const mis = db.prepare(`
             SELECT m.id, m.mis_number, m.deposit_amount, m.start_date, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
             FROM mis_accounts m JOIN customers c ON m.customer_id = c.id
-            WHERE date(m.start_date) BETWEEN ? AND ? ${bWhereMis}
+            WHERE date(COALESCE(NULLIF(m.start_date, ''), date(m.created_at))) BETWEEN ? AND ? ${bWhereMis}
           `).all(startDate, endDate);
           mis.forEach(m => {
             if (targetLedger.code !== '103') {
               rawItems.push({
                 id: `sys-mis-${m.id}`,
+                source_type: 'MIS',
                 branch: m.branch_name,
                 sort_date: m.start_date,
                 date: m.start_date.split('-').reverse().join('/'),
@@ -1488,6 +1642,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                 description: `MIS a/c ${m.mis_number} ${m.full_name} ${m.customer_code}`,
                 particulars: `${m.full_name} (${m.customer_code})`,
                 narration: `Monthly Income Scheme Booking`,
+                payment_mode: 'BANK / CASH',
                 is_system: 'Yes',
                 isInflow: true,
                 amount: m.deposit_amount
@@ -1503,14 +1658,17 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                      c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
               FROM savings_accounts s
               JOIN customers c ON s.customer_id = c.id
-              WHERE (date(s.opened_date) BETWEEN ? AND ? OR date(s.created_at) BETWEEN ? AND ?) ${bWhereSb}
-            `).all(startDate, endDate, startDate, endDate);
+              WHERE date(COALESCE(NULLIF(s.opened_date, ''), date(s.created_at))) BETWEEN ? AND ?
+                AND NOT EXISTS (SELECT 1 FROM savings_transactions stx WHERE stx.account_id = s.id)
+                ${bWhereSb}
+            `).all(startDate, endDate);
             newSbs.forEach(s => {
               const initAmt = s.current_balance || 0;
               if (initAmt > 0) {
                 const sbDate = s.opened_date || (s.created_at ? s.created_at.split(' ')[0] : endDate);
                 rawItems.push({
                   id: `sys-sb-open-${s.id}`,
+                  source_type: 'SAVINGS_OPEN',
                   branch: s.branch_name,
                   sort_date: sbDate,
                   date: sbDate.split('-').reverse().join('/'),
@@ -1518,6 +1676,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                   description: `Savings A/C ${s.account_number} Opening Deposit - ${s.full_name} (${s.customer_code})`,
                   particulars: `${s.full_name} (${s.account_number})`,
                   narration: 'New Savings Account Initial Deposit',
+                  payment_mode: 'CASH',
                   is_system: 'Yes',
                   isInflow: true,
                   amount: initAmt
@@ -1527,7 +1686,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
           }
 
           const sbTx = db.prepare(`
-            SELECT st.id, st.transaction_number, st.transaction_type, st.amount, st.payment_mode, st.narration, date(st.created_at) as tx_date,
+            SELECT st.id, st.transaction_number, st.transaction_type, st.amount, st.payment_mode, st.reference_number, st.narration, date(st.created_at) as tx_date,
                    s.account_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
             FROM savings_transactions st
             JOIN savings_accounts s ON st.account_id = s.id
@@ -1540,13 +1699,16 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
               const isCredit = st.transaction_type === 'DEPOSIT' || st.transaction_type === 'CREDIT';
               rawItems.push({
                 id: `sys-sb-${st.id}`,
+                source_type: 'SAVINGS_TXN',
                 branch: st.branch_name,
                 sort_date: st.tx_date,
                 date: st.tx_date.split('-').reverse().join('/'),
                 voucher_no: st.transaction_number || st.account_number,
+                reference_no: st.reference_number || '',
                 description: `Savings ${st.account_number} ${st.full_name} - ${st.narration}`,
                 particulars: `${st.full_name} (${st.account_number})`,
                 narration: st.narration,
+                payment_mode: st.payment_mode || 'CASH',
                 is_system: 'Yes',
                 isInflow: isCredit,
                 amount: st.amount
@@ -1562,14 +1724,15 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                      c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
               FROM recurring_deposits rd
               JOIN customers c ON rd.customer_id = c.id
-              WHERE (date(rd.start_date) BETWEEN ? AND ? OR date(rd.created_at) BETWEEN ? AND ?) ${bWhereRd}
-            `).all(startDate, endDate, startDate, endDate);
+              WHERE date(COALESCE(NULLIF(rd.start_date, ''), date(rd.created_at))) BETWEEN ? AND ? ${bWhereRd}
+            `).all(startDate, endDate);
             newRds.forEach(r => {
               const amt = r.monthly_installment || 0;
               if (amt > 0) {
                 const rdDate = r.start_date || (r.created_at ? r.created_at.split(' ')[0] : endDate);
                 rawItems.push({
                   id: `sys-rd-open-${r.id}`,
+                  source_type: 'RD_OPEN',
                   branch: r.branch_name,
                   sort_date: rdDate,
                   date: rdDate.split('-').reverse().join('/'),
@@ -1577,6 +1740,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
                   description: `RD a/c ${r.rd_number} Opening Installment - ${r.full_name} (${r.customer_code})`,
                   particulars: `${r.full_name} (${r.rd_number})`,
                   narration: 'New RD Opening Deposit',
+                  payment_mode: 'CASH',
                   is_system: 'Yes',
                   isInflow: true,
                   amount: amt
@@ -1591,7 +1755,7 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
             FROM rd_installments rdi
             JOIN recurring_deposits rd ON rdi.rd_id = rd.id
             JOIN customers c ON rd.customer_id = c.id
-            WHERE rdi.status = 'PAID' AND date(rdi.paid_date) BETWEEN ? AND ? ${bWhereRd}
+            WHERE rdi.status IN ('PAID', 'COLLECTED') AND date(rdi.paid_date) BETWEEN ? AND ? ${bWhereRd}
           `).all(startDate, endDate);
           rdInst.forEach(r => {
             const isBank = isBankTransferMode(r.payment_mode);
@@ -1599,13 +1763,16 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
               const amt = r.total_collected || r.installment_amount;
               rawItems.push({
                 id: `sys-rd-${r.id}`,
+                source_type: 'RD_INSTALLMENT',
                 branch: r.branch_name,
                 sort_date: r.paid_date,
                 date: r.paid_date.split('-').reverse().join('/'),
                 voucher_no: r.transaction_ref || r.rd_number,
+                reference_no: r.transaction_ref || '',
                 description: `RD ${r.rd_number} Installment #${r.installment_no} - ${r.full_name}`,
                 particulars: `${r.full_name} (${r.rd_number})`,
                 narration: `RD Installment #${r.installment_no}`,
+                payment_mode: r.payment_mode || 'CASH',
                 is_system: 'Yes',
                 isInflow: true,
                 amount: amt
@@ -1634,8 +1801,8 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
         ? (item.isInflow ? item.amount : 0)
         : (item.isInflow ? 0 : item.amount);
 
-      totalDebit += debit;
-      totalCredit += credit;
+      totalDebit = Number((totalDebit + debit).toFixed(2));
+      totalCredit = Number((totalCredit + credit).toFixed(2));
       running = isLiabilityOrCreditLedger
         ? Number((running + credit - debit).toFixed(2))
         : Number((running + debit - credit).toFixed(2));
@@ -1694,6 +1861,368 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
       },
       statement: pagedStatement
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 10. GET /api/accounting/transaction-background - Deep Payment, Scheme & Audit Drilldown for Statement Rows
+router.get('/transaction-background', authenticateToken, (req, res) => {
+  try {
+    const id = String(req.query.id || '').trim();
+    const ledgerName = req.query.ledger_name || 'CASH BOOK';
+    const numericId = parseInt(id.replace(/\D+/g, ''), 10) || 0;
+
+    let background = null;
+
+    if ((id.startsWith('cash-') || id.startsWith('entry-')) && numericId) {
+      const e = db.prepare(`
+        SELECT e.*, COALESCE(u.full_name, u.username, 'Staff') as recorded_by
+        FROM day_book_cash_entries e
+        LEFT JOIN users u ON e.created_by_user_id = u.id
+        WHERE e.id = ?
+      `).get(numericId);
+
+      if (e) {
+        const isBank = isBankTransferMode(e.payment_mode);
+        const isInflow = e.entry_type === 'INFLOW';
+        const contra = `${e.category_name} (${e.party_name})`;
+        background = {
+          source_type: 'CASH_ENTRY',
+          title: e.category_name,
+          subtitle: e.is_system ? 'System Entry' : 'Manual Daily Use Voucher',
+          voucher_no: e.voucher_no,
+          transaction_date: e.entry_date,
+          created_at: e.created_at,
+          branch: e.branch_code === 'SHEKHUPURA' ? 'SHEKHUPURA BRANCH' : 'MAIN BRANCH',
+          is_system: false,
+          payment: {
+            mode: e.payment_mode || 'CASH',
+            mode_label: isBank ? 'Bank / Digital Transfer (NEFT / UPI / Cheque)' : 'Physical Cash Counter (नकद)',
+            reference_no: e.reference_no || '-',
+            amount: e.amount,
+            cash_component: isBank ? 0 : e.amount,
+            transfer_component: isBank ? e.amount : 0,
+            recorded_by: e.recorded_by
+          },
+          customer: {
+            name: e.party_name,
+            code: '-',
+            phone: '-',
+            address: '-'
+          },
+          scheme: {
+            type: e.entry_type === 'INFLOW' ? 'Receipt / आवक' : 'Payment / जावक',
+            account_no: e.voucher_no,
+            amount_label: e.entry_type === 'INFLOW' ? 'Amount Received' : 'Amount Paid',
+            amount: e.amount,
+            status: 'COMPLETED',
+            narration: e.narration
+          },
+          journal: {
+            debit_account: isInflow ? (isBank ? 'BANK BOOK' : 'CASH BOOK') : contra,
+            credit_account: isInflow ? contra : (isBank ? 'BANK BOOK' : 'CASH BOOK'),
+            amount: e.amount
+          },
+          related_history: []
+        };
+      }
+    } else if ((id.startsWith('sys-fd-close-') || id.startsWith('close-fd-') || id.startsWith('sys-fd-') || id.startsWith('fd-')) && numericId) {
+      const fd = db.prepare(`
+        SELECT fd.*, c.full_name, c.customer_code, c.phone, c.address, c.nominee_name, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+        FROM fixed_deposits fd
+        JOIN customers c ON fd.customer_id = c.id
+        WHERE fd.id = ?
+      `).get(numericId);
+
+      if (fd) {
+        const isClosure = id.startsWith('sys-fd-close-') || id.startsWith('close-fd-');
+        const txAmount = isClosure ? (fd.principal_amount + (fd.premature_interest_paid || 0)) : fd.principal_amount;
+        const schedules = db.prepare(`
+          SELECT period_no, payout_date, payout_amount, interest_accrued, status, paid_date, payment_reference
+          FROM fd_schedules WHERE fd_id = ? ORDER BY period_no ASC LIMIT 8
+        `).all(fd.id);
+        background = {
+          source_type: isClosure ? 'FD_CLOSURE' : 'FD',
+          title: isClosure ? `FD Closure / Payout (${fd.fd_number})` : `Fixed Deposit Booking (${fd.fd_number})`,
+          subtitle: `Compounding: ${fd.compounding_frequency} @ ${fd.annual_rate}% p.a.`,
+          voucher_no: fd.fd_number,
+          transaction_date: isClosure ? fd.closed_date : fd.start_date,
+          created_at: fd.created_at,
+          branch: fd.branch_name,
+          is_system: true,
+          payment: {
+            mode: 'CASH / BANK COUNTER',
+            mode_label: isClosure ? 'Maturity / Premature Payout Released' : 'Initial Fixed Deposit Principal Received',
+            reference_no: fd.fd_number,
+            amount: txAmount,
+            cash_component: txAmount,
+            transfer_component: 0,
+            recorded_by: 'System Desk'
+          },
+          customer: {
+            name: fd.full_name,
+            code: fd.customer_code,
+            phone: fd.phone,
+            address: fd.address || '-',
+            nominee: fd.nominee_name || '-'
+          },
+          scheme: {
+            type: 'Fixed Deposit (FD)',
+            account_no: fd.fd_number,
+            amount_label: isClosure ? 'Total Payout' : 'Principal Amount',
+            amount: txAmount,
+            rate: `${fd.annual_rate}% p.a.`,
+            tenure: `${fd.tenure_months} Months`,
+            start_date: fd.start_date,
+            maturity_date: fd.maturity_date,
+            maturity_amount: fd.maturity_amount,
+            status: fd.status,
+            narration: fd.remarks || `${fd.tenure_months}M @ ${fd.annual_rate}% p.a.`
+          },
+          journal: {
+            debit_account: isClosure ? 'NEW FD RD MIS (Liability)' : ledgerName,
+            credit_account: isClosure ? ledgerName : 'NEW FD RD MIS (Liability)',
+            amount: txAmount
+          },
+          related_history: schedules.map(sc => ({
+            date: sc.paid_date || sc.payout_date,
+            voucher_no: sc.payment_reference || `Period #${sc.period_no}`,
+            description: `Interest / Payout #${sc.period_no} (${sc.status})`,
+            payment_mode: sc.payment_reference ? 'BANK / CASH' : 'SCHEDULED',
+            amount: sc.payout_amount > 0 ? sc.payout_amount : sc.interest_accrued,
+            flow: sc.status
+          }))
+        };
+      }
+    } else if ((id.startsWith('sys-mis-') || id.startsWith('mis-') || id.startsWith('misp-')) && numericId) {
+      const resolvedMisId = id.startsWith('misp-')
+        ? (db.prepare('SELECT mis_id FROM mis_payout_schedules WHERE id = ?').get(numericId)?.mis_id || 0)
+        : numericId;
+      const m = db.prepare(`
+        SELECT m.*, c.full_name, c.customer_code, c.phone, c.address, c.nominee_name, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+        FROM mis_accounts m
+        JOIN customers c ON m.customer_id = c.id
+        WHERE m.id = ?
+      `).get(resolvedMisId);
+      if (m) {
+        background = {
+          source_type: 'MIS',
+          title: `Monthly Income Scheme (${m.mis_number})`,
+          subtitle: `Monthly Payout ₹${Number(m.monthly_payout || 0).toLocaleString('en-IN')}`,
+          voucher_no: m.mis_number,
+          transaction_date: m.start_date,
+          created_at: m.created_at,
+          branch: m.branch_name,
+          is_system: true,
+          payment: {
+            mode: 'CASH / BANK COUNTER',
+            mode_label: 'MIS Scheme Principal Deposit Received',
+            reference_no: m.payout_account_no || m.mis_number,
+            amount: m.deposit_amount,
+            cash_component: m.deposit_amount,
+            transfer_component: 0,
+            recorded_by: 'System Desk'
+          },
+          customer: {
+            name: m.full_name,
+            code: m.customer_code,
+            phone: m.phone,
+            address: m.address || '-',
+            nominee: m.nominee_name || '-'
+          },
+          scheme: {
+            type: 'Monthly Income Scheme (MIS)',
+            account_no: m.mis_number,
+            amount_label: 'Deposit Amount',
+            amount: m.deposit_amount,
+            rate: `${m.annual_rate}% p.a.`,
+            tenure: `${m.tenure_months} Months`,
+            start_date: m.start_date,
+            maturity_date: m.maturity_date,
+            maturity_amount: m.total_payout_amount,
+            status: m.status,
+            narration: m.remarks || `Payout Bank A/C: ${m.payout_account_no || '-'}`
+          },
+          journal: {
+            debit_account: ledgerName,
+            credit_account: 'NEW FD RD MIS (Liability)',
+            amount: m.deposit_amount
+          },
+          related_history: []
+        };
+      }
+    } else if ((id.startsWith('sys-sb-open-') || id.startsWith('sb-') || id.startsWith('sys-sb-') || id.startsWith('st-')) && numericId) {
+      const isOpen = id.startsWith('sys-sb-open-') || id.startsWith('sb-');
+      let sbAcc = null;
+      let sbTxn = null;
+
+      if (isOpen) {
+        sbAcc = db.prepare(`
+          SELECT s.*, c.full_name, c.customer_code, c.phone, c.address, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+          FROM savings_accounts s JOIN customers c ON s.customer_id = c.id
+          WHERE s.id = ?
+        `).get(numericId);
+      } else {
+        sbTxn = db.prepare(`
+          SELECT st.*, COALESCE(u.full_name, u.username, 'Staff') as performed_by,
+                 s.id as acc_id, s.account_number, s.current_balance, s.annual_interest_rate, s.opened_date, s.status, s.nominee_name,
+                 c.full_name, c.customer_code, c.phone, c.address, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+          FROM savings_transactions st
+          JOIN savings_accounts s ON st.account_id = s.id
+          JOIN customers c ON s.customer_id = c.id
+          LEFT JOIN users u ON st.performed_by_user_id = u.id
+          WHERE st.id = ?
+        `).get(numericId);
+        sbAcc = sbTxn ? { id: sbTxn.acc_id, ...sbTxn } : null;
+      }
+
+      if (sbAcc) {
+        const isBank = isBankTransferMode(sbTxn?.payment_mode);
+        const isCredit = sbTxn ? (sbTxn.transaction_type === 'DEPOSIT' || sbTxn.transaction_type === 'CREDIT') : true;
+        const amt = sbTxn ? sbTxn.amount : sbAcc.current_balance;
+        const historyRows = db.prepare(`
+          SELECT created_at, transaction_number, transaction_type, amount, balance_after, payment_mode, reference_number, narration
+          FROM savings_transactions WHERE account_id = ? ORDER BY id DESC LIMIT 12
+        `).all(sbAcc.id);
+
+        background = {
+          source_type: isOpen ? 'SAVINGS_OPEN' : 'SAVINGS_TXN',
+          title: `Savings A/C ${sbAcc.account_number} — ${sbTxn ? (isCredit ? 'Deposit' : 'Withdrawal') : 'Initial Balance'}`,
+          subtitle: sbTxn ? sbTxn.narration : 'Initial Account Opening Deposit',
+          voucher_no: sbTxn ? sbTxn.transaction_number : sbAcc.account_number,
+          transaction_date: sbTxn ? String(sbTxn.created_at).split(' ')[0] : sbAcc.opened_date,
+          created_at: sbTxn ? sbTxn.created_at : sbAcc.created_at,
+          branch: sbAcc.branch_name,
+          is_system: true,
+          payment: {
+            mode: sbTxn?.payment_mode || 'CASH',
+            mode_label: isBank ? 'Bank / UPI / Cheque Transfer' : 'Cash Counter Transaction (नकद)',
+            reference_no: sbTxn?.reference_number || '-',
+            amount: amt,
+            cash_component: isBank ? 0 : amt,
+            transfer_component: isBank ? amt : 0,
+            recorded_by: sbTxn?.performed_by || 'Staff'
+          },
+          customer: {
+            name: sbAcc.full_name,
+            code: sbAcc.customer_code,
+            phone: sbAcc.phone,
+            address: sbAcc.address || '-',
+            nominee: sbAcc.nominee_name || '-'
+          },
+          scheme: {
+            type: 'Savings Account (SB)',
+            account_no: sbAcc.account_number,
+            amount_label: 'Current Balance',
+            amount: sbAcc.current_balance,
+            rate: `${sbAcc.annual_interest_rate}% p.a.`,
+            start_date: sbAcc.opened_date,
+            status: sbAcc.status,
+            narration: sbTxn ? `${sbTxn.narration} (Bal After: ₹${Number(sbTxn.balance_after || 0).toLocaleString('en-IN')})` : 'Account Opening'
+          },
+          journal: {
+            debit_account: isCredit ? (isBank ? 'BANK BOOK' : 'CASH BOOK') : 'SAVING ACCOUNTS (Liability)',
+            credit_account: isCredit ? 'SAVING ACCOUNTS (Liability)' : (isBank ? 'BANK BOOK' : 'CASH BOOK'),
+            amount: amt
+          },
+          related_history: historyRows.map(h => ({
+            date: String(h.created_at).split(' ')[0],
+            voucher_no: h.transaction_number,
+            description: h.narration,
+            payment_mode: `${h.payment_mode}${h.reference_number ? ` (${h.reference_number})` : ''}`,
+            amount: h.amount,
+            flow: h.transaction_type
+          }))
+        };
+      }
+    } else if ((id.startsWith('sys-rd-open-') || id.startsWith('rd-') || id.startsWith('sys-rd-') || id.startsWith('rdi-')) && numericId) {
+      const isOpen = id.startsWith('sys-rd-open-') || id.startsWith('rd-');
+      let rd = null;
+      let inst = null;
+      if (isOpen) {
+        rd = db.prepare(`
+          SELECT r.*, c.full_name, c.customer_code, c.phone, c.address, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+          FROM recurring_deposits r JOIN customers c ON r.customer_id = c.id
+          WHERE r.id = ?
+        `).get(numericId);
+      } else {
+        inst = db.prepare(`
+          SELECT rdi.*, COALESCE(u.full_name, u.username, 'Staff') as recorded_by,
+                 r.id as parent_rd_id, r.rd_number, r.monthly_installment, r.annual_rate, r.tenure_months, r.start_date, r.maturity_date, r.maturity_amount, r.status as rd_status,
+                 c.full_name, c.customer_code, c.phone, c.address, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+          FROM rd_installments rdi
+          JOIN recurring_deposits r ON rdi.rd_id = r.id
+          JOIN customers c ON r.customer_id = c.id
+          LEFT JOIN users u ON rdi.collector_user_id = u.id
+          WHERE rdi.id = ?
+        `).get(numericId);
+        rd = inst ? { id: inst.parent_rd_id, ...inst } : null;
+      }
+
+      if (rd) {
+        const isBank = isBankTransferMode(inst?.payment_mode);
+        const amt = inst ? (inst.total_collected || inst.installment_amount) : rd.monthly_installment;
+        const rdInstList = db.prepare(`
+          SELECT installment_no, due_date, paid_date, total_collected, installment_amount, status, payment_mode, transaction_ref
+          FROM rd_installments WHERE rd_id = ? ORDER BY installment_no ASC LIMIT 12
+        `).all(rd.id);
+
+        background = {
+          source_type: isOpen ? 'RD_OPEN' : 'RD_INSTALLMENT',
+          title: `Recurring Deposit ${rd.rd_number} — ${inst ? `Installment #${inst.installment_no}` : 'Opening Installment'}`,
+          subtitle: `Monthly ₹${Number(rd.monthly_installment || 0).toLocaleString('en-IN')} @ ${rd.annual_rate}% p.a.`,
+          voucher_no: inst?.transaction_ref || rd.rd_number,
+          transaction_date: inst?.paid_date || rd.start_date,
+          created_at: rd.created_at || inst?.paid_date,
+          branch: rd.branch_name,
+          is_system: true,
+          payment: {
+            mode: inst?.payment_mode || 'CASH',
+            mode_label: isBank ? 'Bank / UPI / Online Transfer' : 'Cash Collection / Counter',
+            reference_no: inst?.transaction_ref || rd.rd_number,
+            amount: amt,
+            cash_component: isBank ? 0 : amt,
+            transfer_component: isBank ? amt : 0,
+            recorded_by: inst?.recorded_by || 'System Desk'
+          },
+          customer: {
+            name: rd.full_name,
+            code: rd.customer_code,
+            phone: rd.phone,
+            address: rd.address || '-'
+          },
+          scheme: {
+            type: 'Recurring Deposit (RD)',
+            account_no: rd.rd_number,
+            amount_label: 'Monthly Installment',
+            amount: rd.monthly_installment,
+            rate: `${rd.annual_rate}% p.a.`,
+            tenure: `${rd.tenure_months} Months`,
+            start_date: rd.start_date,
+            maturity_date: rd.maturity_date,
+            maturity_amount: rd.maturity_amount,
+            status: rd.rd_status || rd.status,
+            narration: inst ? `Installment #${inst.installment_no} Paid (Late Fee: ₹${inst.late_fee || 0})` : 'New Recurring Deposit Account'
+          },
+          journal: {
+            debit_account: isBank ? 'BANK BOOK' : 'CASH BOOK',
+            credit_account: 'RD ACCOUNTS (Liability)',
+            amount: amt
+          },
+          related_history: rdInstList.map(ri => ({
+            date: ri.paid_date || ri.due_date,
+            voucher_no: ri.transaction_ref || `#${ri.installment_no}`,
+            description: `Installment #${ri.installment_no} (${ri.status})`,
+            payment_mode: ri.payment_mode || '-',
+            amount: ri.status === 'PAID' ? (ri.total_collected || ri.installment_amount) : ri.installment_amount,
+            flow: ri.status
+          }))
+        };
+      }
+    }
+
+    res.json({ success: true, background });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

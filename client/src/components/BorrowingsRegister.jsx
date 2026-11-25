@@ -16,6 +16,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { apiRequest } from '../utils';
+import PaginationBar from './PaginationBar';
 
 export default function BorrowingsRegister() {
   const [udhars, setUdhars] = useState([]);
@@ -28,6 +29,16 @@ export default function BorrowingsRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Repay Modal State
+  const [repayItem, setRepayItem] = useState(null);
+  const [repayAmount, setRepayAmount] = useState('');
+  const [repayMode, setRepayMode] = useState('CASH');
+  const [repayNarration, setRepayNarration] = useState('');
+  const [repaySubmitting, setRepaySubmitting] = useState(false);
+  const [repayMsg, setRepayMsg] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   const [formData, setFormData] = useState({
     lender_name: '',
@@ -105,12 +116,47 @@ export default function BorrowingsRegister() {
     }
   };
 
+  const handleSubmitRepay = async (e) => {
+    e.preventDefault();
+    if (!repayItem || !repayAmount || parseFloat(repayAmount) <= 0) return;
+    setRepaySubmitting(true);
+    setRepayMsg('');
+    try {
+      const res = await apiRequest('/loans/udhar/repay', {
+        method: 'POST',
+        body: JSON.stringify({
+          udhar_id: repayItem.id,
+          amount: parseFloat(repayAmount),
+          payment_mode: repayMode,
+          narration: repayNarration || `Repayment to ${repayItem.lender_name}`
+        })
+      });
+      if (res && res.success) {
+        setRepayMsg(res.message || 'Repayment recorded!');
+        setTimeout(() => {
+          setRepayItem(null);
+          setRepayMsg('');
+          fetchUdhars();
+        }, 900);
+      } else {
+        alert(res?.message || 'Repayment failed');
+      }
+    } catch (err) {
+      alert(err.message || 'Error processing repayment');
+    } finally {
+      setRepaySubmitting(false);
+    }
+  };
+
   const filteredUdhars = udhars.filter(u => {
-    return !search || 
+    return !search ||
       u.voucher_no.toLowerCase().includes(search.toLowerCase()) ||
       u.lender_name.toLowerCase().includes(search.toLowerCase()) ||
       u.narration.toLowerCase().includes(search.toLowerCase());
   });
+  const totalPages = Math.max(1, Math.ceil(filteredUdhars.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedUdhars = filteredUdhars.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -194,7 +240,7 @@ export default function BorrowingsRegister() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               placeholder="Search voucher, lender..."
               className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:border-purple-500"
             />
@@ -202,56 +248,90 @@ export default function BorrowingsRegister() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="w-full text-[11px] text-left">
             <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
               <tr>
-                <th className="py-2.5 px-4">Voucher No</th>
-                <th className="py-2.5 px-4">Date</th>
-                <th className="py-2.5 px-4">Lender / Creditor Name</th>
-                <th className="py-2.5 px-4">Deposit To</th>
-                <th className="py-2.5 px-4 text-right">Amount Borrowed</th>
-                <th className="py-2.5 px-4 text-right">Repaid</th>
-                <th className="py-2.5 px-4 text-right">Balance Due</th>
-                <th className="py-2.5 px-4">Status</th>
-                <th className="py-2.5 px-4">Narration</th>
+                <th className="py-2.5 px-2.5">Voucher No</th>
+                <th className="py-2.5 px-2.5">Date</th>
+                <th className="py-2.5 px-2.5">Lender / Creditor</th>
+                <th className="py-2.5 px-2.5">Mode</th>
+                <th className="py-2.5 px-2.5 text-right">Borrowed</th>
+                <th className="py-2.5 px-2.5 text-right">Repaid</th>
+                <th className="py-2.5 px-2.5 text-right">Balance Due</th>
+                <th className="py-2.5 px-2.5">Status</th>
+                <th className="py-2.5 px-2.5">Narration</th>
+                <th className="py-2.5 px-2.5 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredUdhars.map((u) => (
+              {paginatedUdhars.length === 0 ? (
+                <tr>
+                  <td colSpan="10" className="py-10 text-center text-slate-400">No borrowing records found.</td>
+                </tr>
+              ) : (
+                paginatedUdhars.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50 transition">
-                  <td className="py-3 px-4 font-mono font-bold text-purple-700">{u.voucher_no}</td>
-                  <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{u.borrowing_date}</td>
-                  <td className="py-3 px-4 font-bold text-slate-900">
-                    <div>{u.lender_name}</div>
+                  <td className="py-2.5 px-2.5 font-mono font-bold text-purple-700 whitespace-nowrap">{u.voucher_no}</td>
+                  <td className="py-2.5 px-2.5 text-slate-500 whitespace-nowrap">{u.borrowing_date}</td>
+                  <td className="py-2.5 px-2.5 font-bold text-slate-900">
+                    <div className="truncate max-w-[145px]">{u.lender_name}</div>
                     {u.phone && <div className="text-[10px] text-slate-400 font-normal">{u.phone}</div>}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-2.5 whitespace-nowrap">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                      {u.payment_mode === 'CASH' ? 'CASH BOOK (गल्ला)' : 'BANK BOOK'}
+                      {u.payment_mode === 'CASH' ? 'CASH' : 'BANK'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-purple-700">
+                  <td className="py-2.5 px-2.5 text-right font-mono font-bold text-purple-700 whitespace-nowrap">
                     ₹{u.amount.toLocaleString('en-IN')}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                  <td className="py-2.5 px-2.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
                     ₹{u.amount_repaid.toLocaleString('en-IN')}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-black text-rose-700">
+                  <td className="py-2.5 px-2.5 text-right font-mono font-black text-rose-700 whitespace-nowrap">
                     ₹{u.outstanding_balance.toLocaleString('en-IN')}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-2.5 whitespace-nowrap">
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                       u.status === 'ACTIVE' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-900'
                     }`}>
                       {u.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-slate-500 max-w-xs truncate">{u.narration}</td>
+                  <td className="py-2.5 px-2.5 text-slate-500 truncate max-w-[130px]" title={u.narration}>{u.narration}</td>
+                  <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                    {u.outstanding_balance > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepayItem(u);
+                          setRepayAmount(String(u.outstanding_balance));
+                          setRepayMode('CASH');
+                          setRepayNarration('');
+                          setRepayMsg('');
+                        }}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[10px] cursor-pointer"
+                      >
+                        Repay (लौटाएं)
+                      </button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-700">✓ Settled</span>
+                    )}
+                  </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
+
+        <PaginationBar
+          totalItems={filteredUdhars.length}
+          page={safePage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          label="lenders"
+        />
       </div>
 
       {/* 4. Add Borrowing Modal */}
@@ -388,6 +468,64 @@ export default function BorrowingsRegister() {
                 >
                   {submitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                   <span>Save Udhar & Credit Day Book</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Repay Borrowing Modal */}
+      {repayItem && (
+        <div className="fixed inset-0 z-[200] flex justify-center items-start pt-16 pb-10 p-4 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Repay Udhar ({repayItem.voucher_no})</h3>
+                <p className="text-[11px] text-slate-500">{repayItem.lender_name} • Due ₹{repayItem.outstanding_balance.toLocaleString('en-IN')}</p>
+              </div>
+              <button onClick={() => setRepayItem(null)} className="cursor-pointer"><X className="w-4 h-4 text-slate-500" /></button>
+            </div>
+            {repayMsg && (
+              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">{repayMsg}</div>
+            )}
+            <form onSubmit={handleSubmitRepay} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Repayment Amount (₹) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={repayAmount}
+                  onChange={(e) => setRepayAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono font-bold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Payment Mode</label>
+                <select
+                  value={repayMode}
+                  onChange={(e) => setRepayMode(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                >
+                  <option value="CASH">Cash Counter (गल्ले से)</option>
+                  <option value="BANK_ONLINE">Bank / UPI Transfer</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Remarks</label>
+                <input
+                  type="text"
+                  value={repayNarration}
+                  onChange={(e) => setRepayNarration(e.target.value)}
+                  placeholder="Repayment note..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setRepayItem(null)} className="px-3 py-1.5 border border-slate-300 rounded-lg font-bold">Cancel</button>
+                <button type="submit" disabled={repaySubmitting} className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold cursor-pointer">
+                  {repaySubmitting ? 'Saving...' : 'Confirm Repayment'}
                 </button>
               </div>
             </form>

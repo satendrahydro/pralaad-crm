@@ -656,8 +656,14 @@ function initDB() {
     db.exec("UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL;");
   } catch(e){}
 
-  // Ensure rich 5-client functional demo data & Agent Network if tables are empty
+  // Ensure rich 5-client functional demo data & Agent Network if tables are empty (unless switched to blank client handover mode)
   try {
+    let isBlankMode = false;
+    try {
+      const bm = db.prepare("SELECT value FROM settings WHERE key = 'blank_crm_mode'").get();
+      isBlankMode = bm && bm.value === '1';
+    } catch (e) {}
+
     const custCount = db.prepare('SELECT count(*) as count FROM customers').get();
     let misCount = { count: 0 };
     try { misCount = db.prepare('SELECT count(*) as count FROM mis_accounts').get(); } catch(e){}
@@ -665,7 +671,7 @@ function initDB() {
     try { rankCount = db.prepare('SELECT count(*) as count FROM agent_ranks').get(); } catch(e){}
     let centerCount = { count: 0 };
     try { centerCount = db.prepare('SELECT count(*) as count FROM collection_centers').get(); } catch(e){}
-    if (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0 || !centerCount || centerCount.count === 0) {
+    if (!isBlankMode && (!custCount || custCount.count === 0 || !misCount || misCount.count === 0 || !rankCount || rankCount.count === 0 || !centerCount || centerCount.count === 0)) {
       const { seedComplete5ClientData } = require('./seedData');
       seedComplete5ClientData(db);
     }
@@ -673,7 +679,7 @@ function initDB() {
     // Seed realistic sample daily expenses & cash in/out entries if empty
     try {
       const expCount = db.prepare('SELECT count(*) as count FROM daily_expenses').get();
-      if (!expCount || expCount.count === 0) {
+      if (!isBlankMode && (!expCount || expCount.count === 0)) {
         const today = new Date().toISOString().split('T')[0];
         const insExp = db.prepare(`
           INSERT INTO daily_expenses (expense_voucher_no, expense_date, category, category_name, amount, payment_mode, paid_to, bill_number, narration, created_by_user_id)
@@ -689,7 +695,7 @@ function initDB() {
       // Seed realistic Gold Loans if empty
       try {
         const glCount = db.prepare('SELECT count(*) as count FROM gold_loans').get();
-        if (!glCount || glCount.count === 0) {
+        if (!isBlankMode && (!glCount || glCount.count === 0)) {
           const today = new Date().toISOString().split('T')[0];
           const insGL = db.prepare(`
             INSERT INTO gold_loans (
@@ -724,7 +730,7 @@ function initDB() {
       // Seed realistic Udhar & Borrowings if empty
       try {
         const udharCount = db.prepare('SELECT count(*) as count FROM borrowings_udhar').get();
-        if (!udharCount || udharCount.count === 0) {
+        if (!isBlankMode && (!udharCount || udharCount.count === 0)) {
           const today = new Date().toISOString().split('T')[0];
           const insUdhar = db.prepare(`
             INSERT INTO borrowings_udhar (
@@ -751,7 +757,7 @@ function initDB() {
 
       // Seed day_book_cash_entries (Both Input / Inflow and Output / Outflow)
       const cashEntryCount = db.prepare('SELECT count(*) as count FROM day_book_cash_entries').get();
-      if (!cashEntryCount || cashEntryCount.count === 0) {
+      if (!isBlankMode && (!cashEntryCount || cashEntryCount.count === 0)) {
         const today = new Date().toISOString().split('T')[0];
         const insCash = db.prepare(`
           INSERT INTO day_book_cash_entries (

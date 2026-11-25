@@ -393,6 +393,7 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
     res.json({
       success: true,
       message: `Gold Loan '${loan_number}' sanctioned successfully against ${netWeight}g gold ornaments. Disbursed via ${disbursement_mode}.`,
+      loanId: result.lastInsertRowid,
       loan_number,
       sanctioned_amount: numSanction,
       pouch_number: pouch,
@@ -557,6 +558,61 @@ router.post('/udhar', authenticateToken, (req, res) => {
   } catch (err) {
     console.error('Error adding udhar borrowing:', err);
     res.status(500).json({ success: false, message: 'Failed to record borrowing', error: err.message });
+  }
+});
+
+// POST /api/loans/udhar/repay - Record Repayment for Borrowing (उधार लौटाया - Output/Outflow)
+router.post('/udhar/repay', authenticateToken, (req, res) => {
+  try {
+    const { udhar_id, amount, payment_mode = 'CASH', payment_date, reference_no, narration } = req.body;
+    if (!udhar_id || !amount || parseFloat(amount) <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid borrowing ID and repayment amount are required.' });
+    }
+
+    const row = db.prepare('SELECT * FROM borrowings_udhar WHERE id = ?').get(udhar_id);
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Borrowing record not found.' });
+    }
+
+    const numAmt = parseFloat(amount);
+    const newRepaid = (row.amount_repaid || 0) + numAmt;
+    const newOutstanding = Math.max(0, (row.outstanding_balance || 0) - numAmt);
+    const newStatus = newOutstanding <= 0 ? 'FULLY_REPAID' : 'PARTIALLY_REPAID';
+
+    db.prepare(`
+      UPDATE borrowings_udhar
+      SET amount_repaid = ?, outstanding_balance = ?, status = ?
+      WHERE id = ?
+    `).run(newRepaid, newOutstanding, newStatus, udhar_id);
+
+    const today = new Date().toISOString().split('T')[0];
+    const effectiveDate = payment_date || today;
+    try {
+      const voucherNo = `OUT-${effectiveDate.replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+      db.prepare(`
+        INSERT INTO day_book_cash_entries (
+          voucher_no, entry_type, entry_date, category, category_name,
+          amount, payment_mode, party_name, reference_no, narration, branch_code, created_by_user_id
+        ) VALUES (?, 'OUTFLOW', ?, 'BORROWING_REPAYMENT', 'उधार लौटाया (Borrowing Repaid / Outflow)', ?, ?, ?, ?, ?, 'BHR001', 1)
+      `).run(
+        voucherNo,
+        effectiveDate,
+        numAmt,
+        payment_mode,
+        `${row.lender_name} (${row.voucher_no})`,
+        reference_no || row.voucher_no,
+        narration || `Repayment against borrowing ${row.voucher_no}`
+      );
+    } catch (e) {}
+
+    res.json({
+      success: true,
+      message: `₹${numAmt.toLocaleString('en-IN')} उधार वापसी दर्ज की गई (${row.voucher_no})। शेष देय: ₹${newOutstanding.toLocaleString('en-IN')}`,
+      outstanding_balance: newOutstanding,
+      status: newStatus
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

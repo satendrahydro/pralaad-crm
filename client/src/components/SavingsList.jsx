@@ -23,12 +23,15 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
+import PaginationBar from './PaginationBar';
 
 export default function SavingsList({ onOpenNewSavings, isEmployee = false, onViewCustomerProfile }) {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [accountDetails, setAccountDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -275,7 +278,7 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false, onVi
                   <td colSpan="8" className="py-12 text-center text-slate-400">No savings accounts found.</td>
                 </tr>
               ) : (
-                accounts.map(acc => (
+                accounts.slice((Math.min(currentPage, Math.max(1, Math.ceil(accounts.length / pageSize))) - 1) * pageSize, Math.min(currentPage, Math.max(1, Math.ceil(accounts.length / pageSize))) * pageSize).map(acc => (
                   <tr key={acc.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">{acc.account_number}</td>
                     <td className="py-3 px-4">
@@ -353,6 +356,7 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false, onVi
             </tbody>
           </table>
         </div>
+        <PaginationBar totalItems={accounts.length} page={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} label="accounts" />
       </div>
 
       {/* 4. Passbook Statement Drawer */}

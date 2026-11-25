@@ -1388,7 +1388,7 @@ export default function App() {
             </button>
 
             {/* Global Search Bar with Live Multi-Product Dropdown & Ctrl+K */}
-            <div className="hidden lg:flex items-center relative flex-1 min-w-[100px] max-w-[175px] transition-all duration-200" ref={searchContainerRef}>
+            <div className="hidden xl:flex items-center relative flex-1 min-w-[110px] max-w-[175px] transition-all duration-200" ref={searchContainerRef}>
               <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-2.5 top-2.5 pointer-events-none" />
               <input
                 ref={searchInputRef}
@@ -1449,8 +1449,8 @@ export default function App() {
               <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded">NEW</span>
             </button>
 
-            {/* ACCOUNTS Dropdown (Visible on large screens) */}
-            <div className="relative hidden xl:block shrink-0" ref={accountsRef}>
+            {/* ACCOUNTS Dropdown (Visible on extra-wide screens; always in sidebar & Day Book) */}
+            <div className="relative hidden 2xl:block shrink-0" ref={accountsRef}>
               <button
                 onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
                 className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer shrink-0"
@@ -1670,22 +1670,22 @@ export default function App() {
             {/* 5. Switch to Customer View-Only App (Admin & Staff) */}
             <button
               onClick={() => setViewMode('customer')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer shrink-0"
               title="Preview Customer Digital Passbook / Mobile App"
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span>App</span>
+              <span className="hidden 2xl:inline">App</span>
             </button>
 
             {/* 6. Download APK (Admin & Staff) */}
             <a
               href="/Taranganjali_Banking.apk"
               download="Taranganjali_Banking.apk"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition shrink-0"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition shrink-0"
               title="Download Android APK File for Mobile"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>APK</span>
+              <span className="hidden 2xl:inline">APK</span>
             </a>
 
             {/* 7. Direct Logout Button */}

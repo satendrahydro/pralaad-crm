@@ -28,11 +28,14 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
+import PaginationBar from './PaginationBar';
 
 export default function MISList({ onOpenNewMIS, isEmployee = false, onViewCustomerProfile }) {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedMIS, setSelectedMIS] = useState(null);
   const [misDetails, setMisDetails] = useState(null);
@@ -269,7 +272,7 @@ export default function MISList({ onOpenNewMIS, isEmployee = false, onViewCustom
                   <td colSpan="9" className="py-12 text-center text-slate-400">No MIS accounts found.</td>
                 </tr>
               ) : (
-                accounts.map(mis => (
+                accounts.slice((Math.min(currentPage, Math.max(1, Math.ceil(accounts.length / pageSize))) - 1) * pageSize, Math.min(currentPage, Math.max(1, Math.ceil(accounts.length / pageSize))) * pageSize).map(mis => (
                   <tr key={mis.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">{mis.mis_number}</td>
                     <td className="py-3 px-4">
@@ -320,6 +323,7 @@ export default function MISList({ onOpenNewMIS, isEmployee = false, onViewCustom
             </tbody>
           </table>
         </div>
+        <PaginationBar totalItems={accounts.length} page={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} label="MIS accounts" />
       </div>
 
       {/* 4. MIS Detailed Payout Schedule Drawer */}

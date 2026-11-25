@@ -87,8 +87,6 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
     }
   };
 
-  if (!isOpen) return null;
-
   // Local calculation: monthly payout = (P * r) / 1200
   useEffect(() => {
     if (customerId) {
@@ -99,6 +97,8 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
       }
     }
   }, [customerId, customers]);
+
+  if (!isOpen) return null;
 
   const P = parseFloat(depositAmount) || 0;
   const n = parseInt(tenureMonths) || 60;

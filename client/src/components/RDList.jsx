@@ -22,12 +22,15 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
+import PaginationBar from './PaginationBar';
 
 export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomerProfile }) {
   const [rds, setRds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
   const [selectedRD, setSelectedRD] = useState(null);
   const [rdDetails, setRdDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -263,7 +266,7 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
                   <td colSpan="10" className="py-12 text-center text-slate-400">No recurring deposit records found.</td>
                 </tr>
               ) : (
-                rds.map(rd => {
+                rds.slice((Math.min(currentPage, Math.max(1, Math.ceil(rds.length / pageSize))) - 1) * pageSize, Math.min(currentPage, Math.max(1, Math.ceil(rds.length / pageSize))) * pageSize).map(rd => {
                   const progressPct = Math.min(100, Math.round((rd.installments_paid / rd.tenure_months) * 100));
                   return (
                     <tr key={rd.id} className="hover:bg-slate-50/80 transition">
@@ -325,6 +328,7 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
             </tbody>
           </table>
         </div>
+        <PaginationBar totalItems={rds.length} page={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} label="RDs" />
       </div>
 
       {/* 4. RD Detailed Installments Passbook Drawer */}

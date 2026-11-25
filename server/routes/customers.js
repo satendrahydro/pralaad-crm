@@ -481,29 +481,55 @@ router.get('/:id/portfolio', authenticateToken, (req, res) => {
 
 // DELETE /api/customers/:id - Remove Customer from CRM & Instantly Block App Access
 router.delete('/:id', authenticateToken, (req, res) => {
-  const { force } = req.query;
-  const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
-  if (!cust) {
-    return res.status(404).json({ success: false, message: 'Customer not found' });
-  }
+  try {
+    const { force } = req.query;
+    const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.params.id);
+    if (!cust) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
 
-  const activeFds = db.prepare('SELECT count(*) as count FROM fixed_deposits WHERE customer_id = ? AND status = "ACTIVE"').get(req.params.id);
-  if (activeFds.count > 0 && force !== 'true') {
-    return res.status(400).json({ 
-      success: false, 
-      hasActiveFds: true,
-      message: `Customer ${cust.full_name} has ${activeFds.count} active FD(s). Please close active FDs first or block mobile app access.` 
+    const activeFds = db.prepare("SELECT count(*) as count FROM fixed_deposits WHERE customer_id = ? AND status = 'ACTIVE'").get(req.params.id);
+    if (activeFds.count > 0 && force !== 'true') {
+      return res.status(400).json({
+        success: false,
+        hasActiveFds: true,
+        message: `Customer ${cust.full_name} has ${activeFds.count} active FD(s). Please close active FDs first or use force=true.`
+      });
+    }
+
+    const deleteTx = db.transaction((customerId) => {
+      try {
+        db.prepare('DELETE FROM transaction_entries WHERE transaction_id IN (SELECT id FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?))').run(customerId, customerId);
+        db.prepare('DELETE FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
+      } catch (e) {}
+      try {
+        db.prepare('DELETE FROM approval_requests WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
+      } catch (e) {}
+      try { db.prepare('DELETE FROM whatsapp_logs WHERE customer_id = ?').run(customerId); } catch (e) {}
+      db.prepare('DELETE FROM fd_schedules WHERE fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId);
+      db.prepare('DELETE FROM fixed_deposits WHERE customer_id = ?').run(customerId);
+      try {
+        db.prepare('DELETE FROM rd_installments WHERE rd_id IN (SELECT id FROM recurring_deposits WHERE customer_id = ?)').run(customerId);
+        db.prepare('DELETE FROM recurring_deposits WHERE customer_id = ?').run(customerId);
+      } catch (e) {}
+      try {
+        db.prepare('DELETE FROM mis_payout_schedules WHERE mis_id IN (SELECT id FROM mis_accounts WHERE customer_id = ?)').run(customerId);
+        db.prepare('DELETE FROM mis_accounts WHERE customer_id = ?').run(customerId);
+      } catch (e) {}
+      try {
+        db.prepare('DELETE FROM savings_transactions WHERE account_id IN (SELECT id FROM savings_accounts WHERE customer_id = ?)').run(customerId);
+        db.prepare('DELETE FROM savings_accounts WHERE customer_id = ?').run(customerId);
+      } catch (e) {}
+      try { db.prepare('DELETE FROM loans_against_deposit WHERE customer_id = ?').run(customerId); } catch (e) {}
+      try { db.prepare('DELETE FROM gold_loans WHERE customer_id = ?').run(customerId); } catch (e) {}
+      db.prepare('DELETE FROM customers WHERE id = ?').run(customerId);
     });
+
+    deleteTx(req.params.id);
+    res.json({ success: true, message: `Customer ${cust.full_name} permanently deleted from CRM and Mobile App access revoked.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  // Delete all schedules and FDs associated with customer
-  db.prepare(`
-    DELETE FROM fd_schedules WHERE fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)
-  `).run(req.params.id);
-  db.prepare('DELETE FROM fixed_deposits WHERE customer_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
-
-  res.json({ success: true, message: `Customer ${cust.full_name} permanently deleted from CRM and Mobile App access revoked.` });
 });
 
 module.exports = router;

@@ -20,6 +20,7 @@ import {
   Phone
 } from 'lucide-react';
 import { apiRequest, formatDate, formatINR } from '../utils';
+import PaginationBar from './PaginationBar';
 
 export default function GoldLoanList() {
   const [loans, setLoans] = useState([]);
@@ -28,6 +29,8 @@ export default function GoldLoanList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   // Sanction Modal State
   const [showSanctionModal, setShowSanctionModal] = useState(false);
@@ -394,7 +397,7 @@ export default function GoldLoanList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredLoans.map((l) => (
+              {filteredLoans.slice((Math.min(currentPage, Math.max(1, Math.ceil(filteredLoans.length / pageSize))) - 1) * pageSize, Math.min(currentPage, Math.max(1, Math.ceil(filteredLoans.length / pageSize))) * pageSize).map((l) => (
                 <tr key={l.id} className="hover:bg-slate-50 transition">
                   <td className="py-3 px-3 font-mono font-bold text-amber-700 flex items-center gap-1">
                     <Gem className="w-3.5 h-3.5 text-amber-500" />
@@ -464,6 +467,7 @@ export default function GoldLoanList() {
             </tbody>
           </table>
         </div>
+        <PaginationBar totalItems={filteredLoans.length} page={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} label="gold loans" />
       </div>
 
       {/* 4. SANCTION NEW GOLD LOAN MODAL */}
