@@ -107,6 +107,7 @@ function initDB() {
   try { db.exec("ALTER TABLE users ADD COLUMN permissions TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN branch_id INTEGER;"); } catch(e){}
   try { db.exec("ALTER TABLE fixed_deposits ADD COLUMN scheme_id INTEGER;"); } catch(e){}
+  try { db.exec("ALTER TABLE day_book_cash_entries ADD COLUMN branch_code TEXT DEFAULT 'BHR001';"); } catch(e){}
 
   // 3. Fixed Deposits table
   db.exec(`
@@ -421,8 +422,24 @@ function initDB() {
       party_name TEXT NOT NULL, -- Kisko diya / Kisse aaya (Customer, Vendor, Staff, Bank)
       reference_no TEXT, -- Bill no, Receipt no, Slip no, Cheque/UTR
       narration TEXT NOT NULL,
+      branch_code TEXT DEFAULT 'BHR001',
       created_by_user_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 13d. Core Ledger Accounts Master (1:1 with Prahlad Accounting Ledgers & Show In Day Book)
+    CREATE TABLE IF NOT EXISTS ledger_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      system_name TEXT NOT NULL,
+      group_name TEXT NOT NULL,
+      type TEXT NOT NULL, -- 'Asset' | 'Liability' | 'Equity' | 'Expense' | 'Revenue'
+      is_system INTEGER DEFAULT 1,
+      show_in_db INTEGER DEFAULT 1, -- 1 = Yes, 0 = No
+      is_bank_account INTEGER DEFAULT 0,
+      risk_percent REAL DEFAULT 0,
+      sort_order INTEGER DEFAULT 0
     );
 
     -- 14. Associate / Advisor Network & Hierarchy Ranks
@@ -766,6 +783,26 @@ function initDB() {
 
     // Performance Indexes for Zero-Latency Lookups
     try {
+      // Seed Core Ledger Accounts matching admin.taranganjali.com if empty
+      const ledCount = db.prepare('SELECT count(*) as count FROM ledger_accounts').get();
+      if (!ledCount || ledCount.count === 0) {
+        const insLed = db.prepare(`
+          INSERT INTO ledger_accounts (code, name, system_name, group_name, type, is_system, show_in_db, is_bank_account, risk_percent, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        insLed.run('LED-001', 'TARPL MAIN', 'tarpl_main', 'CASH & CASH EQUIVALENT', 'Asset', 1, 1, 0, 0, 1);
+        insLed.run('LED-002', 'WALLET BALANCE', 'wallet_balance_asset', 'CASH & CASH EQUIVALENT', 'Asset', 1, 1, 0, 0, 2);
+        insLed.run('102', 'CASH BOOK', 'cash_book', 'CASH & CASH EQUIVALENT', 'Asset', 1, 1, 0, 0, 3);
+        insLed.run('103', 'BANK BOOK', 'bank_book', 'CASH & CASH EQUIVALENT', 'Asset', 1, 1, 1, 0, 4);
+        insLed.run('LED-005', 'NEW FD RD MIS', 'new_fd_rd_mis', 'FIXED DEPOSITS / TERM LIABILITIES', 'Liability', 1, 1, 0, 0, 5);
+        insLed.run('LED-006', 'WALLET BALANCE', 'wallet_balance_liability', 'ADVISOR WALLET LIABILITY', 'Liability', 1, 1, 0, 0, 6);
+        insLed.run('LED-007', 'SAVING ACCOUNTS', 'saving_accounts', 'DEMAND LIABILITIES', 'Liability', 1, 1, 0, 0, 7);
+        insLed.run('LED-008', 'RD ACCOUNTS', 'rd_accounts', 'RECURRING LIABILITIES', 'Liability', 1, 1, 0, 0, 8);
+        insLed.run('LED-009', 'DD ACCOUNTS', 'dd_accounts', 'DAILY DEPOSIT LIABILITIES', 'Liability', 1, 1, 0, 0, 9);
+        insLed.run('LED-010', 'GOLD LOAN BOOK', 'gold_loan_book', 'SECURED LOANS & ADVANCES', 'Asset', 1, 0, 0, 0, 10);
+        insLed.run('LED-011', 'BORROWINGS & UDHAR', 'borrowings_udhar', 'UNSECURED BORROWINGS', 'Liability', 1, 0, 0, 0, 11);
+      }
+
       db.exec(`
         CREATE INDEX IF NOT EXISTS idx_fds_customer_id ON fixed_deposits(customer_id);
         CREATE INDEX IF NOT EXISTS idx_rds_customer_id ON recurring_deposits(customer_id);

@@ -1420,17 +1420,17 @@ export default function App() {
               )}
             </div>
 
-            {/* Direct DAY BOOK Navigation Button (Visible on wide screens) */}
+            {/* Direct DAY BOOK Navigation Button (1:1 with Prahlad Top Navbar) */}
             <button
-              onClick={() => handleSwitchTab('day_book', 'Day Book (8 Ledgers)', BookOpen, 'bg-amber-600')}
-              className={`hidden 2xl:inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
+              onClick={() => handleSwitchTab('day_book', 'Day Book', BookOpen, 'bg-amber-600')}
+              className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
                 activeTab === 'day_book'
                   ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37] shadow-xs'
                   : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-amber-300'
               }`}
-              title="Open Day Book (Daily Cash & Bank Ledgers)"
+              title="Open Day Book (Prahlad 1:1 Format)"
             >
-              <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <BookOpen className="w-3.5 h-3.5" />
               <span>Day Book</span>
             </button>
 

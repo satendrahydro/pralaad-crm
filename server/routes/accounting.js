@@ -3,6 +3,190 @@ const router = express.Router();
 const db = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
+// Shared helper to map branch query parameter to DB branch_id, branch_code, display label & baseline balances
+function resolveBranchContext(selectedBranch) {
+  const raw = (selectedBranch || 'ALL').trim();
+  const branchUpper = raw.toUpperCase();
+
+  if (branchUpper === 'SHEKHUPURA' || branchUpper === 'SHEKHUPURA BRANCH' || branchUpper === 'TARPL0002' || branchUpper === '13' || branchUpper === '3') {
+    return {
+      code: 'SHEKHUPURA',
+      branchId: 3,
+      displayName: 'SHEKHUPURA BRANCH (TARPL0002 - शेखुपुरा / सुजालपुर)',
+      shortName: 'SHEKHUPURA BRANCH',
+      baselines: {
+        'LED-001': 0.00,
+        'LED-002': 0.00,
+        '102': 436529.00,
+        '103': 65370.00,
+        'LED-005': 0.00,
+        'LED-006': 0.00,
+        'LED-007': 401790.00,
+        'LED-008': 0.00,
+        'LED-009': 0.00,
+        'LED-010': 0.00,
+        'LED-011': 0.00
+      }
+    };
+  }
+
+  if (branchUpper === 'BHR001' || branchUpper === 'MAIN BRANCH' || branchUpper === '1') {
+    return {
+      code: 'BHR001',
+      branchId: 1,
+      displayName: 'MAIN BRANCH (BHR001)',
+      shortName: 'MAIN BRANCH',
+      baselines: {
+        'LED-001': 1000000.00,
+        'LED-002': 470000.00,
+        '102': 1848329.00,
+        '103': 409091.51,
+        'LED-005': 205874675.00,
+        'LED-006': 2137375.00,
+        'LED-007': 2417837.00,
+        'LED-008': 318496.00,
+        'LED-009': 282396.00,
+        'LED-010': 325000.00,
+        'LED-011': 150000.00
+      }
+    };
+  }
+
+  if (branchUpper === 'BHR002' || branchUpper === '4') {
+    return {
+      code: 'BHR002',
+      branchId: 4,
+      displayName: 'TARPL0002 (BHR002)',
+      shortName: 'TARPL0002',
+      baselines: {
+        'LED-001': 0.00,
+        'LED-002': 0.00,
+        '102': 286529.00,
+        '103': 35370.00,
+        'LED-005': 0.00,
+        'LED-006': 0.00,
+        'LED-007': 251790.00,
+        'LED-008': 0.00,
+        'LED-009': 0.00,
+        'LED-010': 0.00,
+        'LED-011': 0.00
+      }
+    };
+  }
+
+  if (branchUpper === 'BRH003' || branchUpper === 'TARPL SAVING' || branchUpper === '2') {
+    return {
+      code: 'BRH003',
+      branchId: 2,
+      displayName: 'TARPL SAVING (BRH003)',
+      shortName: 'TARPL SAVING',
+      baselines: {
+        'LED-001': 0.00,
+        'LED-002': 0.00,
+        '102': 150000.00,
+        '103': 30000.00,
+        'LED-005': 0.00,
+        'LED-006': 0.00,
+        'LED-007': 150000.00,
+        'LED-008': 0.00,
+        'LED-009': 0.00,
+        'LED-010': 0.00,
+        'LED-011': 0.00
+      }
+    };
+  }
+
+  return {
+    code: 'ALL',
+    branchId: null,
+    displayName: 'ALL (All Branches - 5)',
+    shortName: 'ALL',
+    baselines: {
+      'LED-001': 1000000.00,
+      'LED-002': 470000.00,
+      '102': 2721387.00,
+      '103': 539831.51,
+      'LED-005': 205874675.00,
+      'LED-006': 2137375.00,
+      'LED-007': 3221417.00,
+      'LED-008': 318496.00,
+      'LED-009': 282396.00,
+      'LED-010': 325000.00,
+      'LED-011': 150000.00
+    }
+  };
+}
+
+// Helper to normalize legacy ledger codes (LED-003 -> 102 CASH BOOK, LED-004 -> 103 BANK BOOK)
+function normalizeLedgerCode(rawCode) {
+  const c = decodeURIComponent(rawCode || '').trim().toUpperCase();
+  if (c === 'LED-003' || c === 'CASH BOOK') return '102';
+  if (c === 'LED-004' || c === 'BANK BOOK') return '103';
+  if (c === 'TARPL MAIN') return 'LED-001';
+  if (c === 'WALLET BALANCE' || c === 'WALLET_BALANCE_ASSET') return 'LED-002';
+  if (c === 'WALLET BALANCE LIABILITY' || c === 'WALLET BALANCE (COLLECTION)') return 'LED-006';
+  if (c === 'NEW FD RD MIS' || c === 'NEW FD / MIS/ RD') return 'LED-005';
+  if (c === 'SAVING ACCOUNTS') return 'LED-007';
+  if (c === 'RD ACCOUNTS') return 'LED-008';
+  if (c === 'DD ACCOUNTS') return 'LED-009';
+  if (c === 'GOLD LOAN BOOK') return 'LED-010';
+  if (c === 'BORROWINGS & UDHAR') return 'LED-011';
+  return c;
+}
+
+// Load ledger metadata list from ledger_accounts table with fallback
+function loadLedgersFromDb(branchCtx) {
+  let rows = [];
+  try {
+    rows = db.prepare('SELECT * FROM ledger_accounts ORDER BY sort_order ASC, id ASC').all();
+  } catch (e) {
+    rows = [];
+  }
+
+  if (rows.length === 0) {
+    rows = [
+      { id: 1, code: 'LED-001', name: 'TARPL MAIN', system_name: 'tarpl_main', group_name: 'CASH & CASH EQUIVALENT', type: 'Asset', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 2, code: 'LED-002', name: 'WALLET BALANCE', system_name: 'wallet_balance_asset', group_name: 'CASH & CASH EQUIVALENT', type: 'Asset', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 3, code: '102', name: 'CASH BOOK', system_name: 'cash_book', group_name: 'CASH & CASH EQUIVALENT', type: 'Asset', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 4, code: '103', name: 'BANK BOOK', system_name: 'bank_book', group_name: 'CASH & CASH EQUIVALENT', type: 'Asset', is_system: 1, show_in_db: 1, is_bank_account: 1, risk_percent: 0 },
+      { id: 5, code: 'LED-005', name: 'NEW FD RD MIS', system_name: 'new_fd_rd_mis', group_name: 'FIXED DEPOSITS / TERM LIABILITIES', type: 'Liability', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 6, code: 'LED-006', name: 'WALLET BALANCE', system_name: 'wallet_balance_liability', group_name: 'ADVISOR WALLET LIABILITY', type: 'Liability', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 7, code: 'LED-007', name: 'SAVING ACCOUNTS', system_name: 'saving_accounts', group_name: 'DEMAND LIABILITIES', type: 'Liability', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 8, code: 'LED-008', name: 'RD ACCOUNTS', system_name: 'rd_accounts', group_name: 'RECURRING LIABILITIES', type: 'Liability', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 9, code: 'LED-009', name: 'DD ACCOUNTS', system_name: 'dd_accounts', group_name: 'DAILY DEPOSIT LIABILITIES', type: 'Liability', is_system: 1, show_in_db: 1, is_bank_account: 0, risk_percent: 0 },
+      { id: 10, code: 'LED-010', name: 'GOLD LOAN BOOK', system_name: 'gold_loan_book', group_name: 'SECURED LOANS & ADVANCES', type: 'Asset', is_system: 1, show_in_db: 0, is_bank_account: 0, risk_percent: 0 },
+      { id: 11, code: 'LED-011', name: 'BORROWINGS & UDHAR', system_name: 'borrowings_udhar', group_name: 'UNSECURED BORROWINGS', type: 'Liability', is_system: 1, show_in_db: 0, is_bank_account: 0, risk_percent: 0 }
+    ];
+  }
+
+  return rows.map(r => {
+    const base = branchCtx.baselines[r.code] ?? 0.00;
+    return {
+      id: r.id,
+      code: r.code,
+      legacy_code: r.code === '102' ? 'LED-003' : r.code === '103' ? 'LED-004' : r.code,
+      name: r.name,
+      system_name: r.system_name,
+      group_name: r.group_name,
+      type: r.type,
+      is_system: !!r.is_system,
+      show_in_db: r.show_in_db !== 0,
+      is_bank_account: !!r.is_bank_account,
+      risk_percent: r.risk_percent || 0,
+      opening_balance: base,
+      receipts: 0.00,
+      payments: 0.00,
+      closing_balance: base
+    };
+  });
+}
+
+// Helper to classify payment mode into CASH vs BANK/TRANSFER
+function isBankTransferMode(mode) {
+  const m = (mode || 'CASH').toUpperCase();
+  return m.includes('BANK_ONLINE') || m.includes('TRANSFER') || m.includes('NEFT') || m.includes('RTGS') || m.includes('IMPS') || m.includes('UPI') || m.includes('CHEQUE') || m === 'BANK';
+}
+
 // 1. GET /api/accounting/day-book
 router.get('/day-book', authenticateToken, (req, res) => {
   try {
@@ -10,123 +194,35 @@ router.get('/day-book', authenticateToken, (req, res) => {
     const startDate = req.query.startDate || req.query.date || today;
     const endDate = req.query.endDate || req.query.date || startDate;
     const selectedBranch = req.query.branch || 'ALL';
+    const branchCtx = resolveBranchContext(selectedBranch);
 
-    // Compute live total balances from database for ledger references
-    const totalFd = db.prepare("SELECT COALESCE(SUM(principal_amount), 0) AS total FROM fixed_deposits WHERE status = 'ACTIVE'").get()?.total || 0;
-    const totalRd = db.prepare("SELECT COALESCE(SUM(monthly_installment), 0) AS total FROM recurring_deposits WHERE status = 'ACTIVE'").get()?.total || 0;
-    const totalMis = db.prepare("SELECT COALESCE(SUM(deposit_amount), 0) AS total FROM mis_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
-    const totalSavings = db.prepare("SELECT COALESCE(SUM(current_balance), 0) AS total FROM savings_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
-
-    // Branch-wise baseline opening balances matching admin.taranganjali.com
-    const branchUpper = (selectedBranch || 'ALL').toUpperCase();
-    const isShekhupura = branchUpper === 'SHEKHUPURA' || branchUpper === 'TARPL0002' || branchUpper === '13';
-    const isMainBranch = branchUpper === 'BHR001' || branchUpper === '1';
-    const isBhr002 = branchUpper === 'BHR002' || branchUpper === '2';
-    const isBrh003 = branchUpper === 'BRH003' || branchUpper === '3';
-
-    let branchBalances = {
-      tarplMain: 1000000.00,
-      walletAsset: 470000.00,
-      cashBook: 2721387.00,
-      bankBook: 539831.51,
-      newFdRdMis: 205874675.00,
-      walletLiability: 2137375.00,
-      savingAccounts: 3221417.00,
-      rdAccounts: 318496.00,
-      ddAccounts: 282396.00,
-      goldLoan: 325000.00,
-      borrowings: 150000.00
-    };
-
-    if (isShekhupura) {
-      // Shekhupura Branch (TARPL0002 / शेखुपुरा / सुजालपुर डे-बुक 1:1)
-      branchBalances = {
-        tarplMain: 0.00,
-        walletAsset: 0.00,
-        cashBook: 436529.00,
-        bankBook: 65370.00,
-        newFdRdMis: 0.00,
-        walletLiability: 0.00,
-        savingAccounts: 401790.00,
-        rdAccounts: 0.00,
-        ddAccounts: 0.00,
-        goldLoan: 0.00,
-        borrowings: 0.00
-      };
-    } else if (isMainBranch) {
-      branchBalances = {
-        tarplMain: 1000000.00,
-        walletAsset: 470000.00,
-        cashBook: 1848329.00,
-        bankBook: 409091.51,
-        newFdRdMis: 205874675.00,
-        walletLiability: 2137375.00,
-        savingAccounts: 2417837.00,
-        rdAccounts: 318496.00,
-        ddAccounts: 282396.00,
-        goldLoan: 325000.00,
-        borrowings: 150000.00
-      };
-    } else if (isBhr002) {
-      branchBalances = {
-        tarplMain: 0.00,
-        walletAsset: 0.00,
-        cashBook: 286529.00,
-        bankBook: 35370.00,
-        newFdRdMis: 0.00,
-        walletLiability: 0.00,
-        savingAccounts: 251790.00,
-        rdAccounts: 0.00,
-        ddAccounts: 0.00,
-        goldLoan: 0.00,
-        borrowings: 0.00
-      };
-    } else if (isBrh003) {
-      branchBalances = {
-        tarplMain: 0.00,
-        walletAsset: 0.00,
-        cashBook: 150000.00,
-        bankBook: 30000.00,
-        newFdRdMis: 0.00,
-        walletLiability: 0.00,
-        savingAccounts: 150000.00,
-        rdAccounts: 0.00,
-        ddAccounts: 0.00,
-        goldLoan: 0.00,
-        borrowings: 0.00
-      };
-    }
-
-    // 9 Core Banking Ledgers matching admin.taranganjali.com Day Book
-    const ledgers = [
-      { id: 1, code: 'LED-001', name: 'TARPL MAIN', type: 'Capital & Reserves', opening_balance: branchBalances.tarplMain, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.tarplMain },
-      { id: 2, code: 'LED-002', name: 'WALLET BALANCE', type: 'Central Pool', opening_balance: branchBalances.walletAsset, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.walletAsset },
-      { id: 3, code: 'LED-003', name: 'CASH BOOK', type: 'Branch Vault Cash', opening_balance: branchBalances.cashBook, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.cashBook },
-      { id: 4, code: 'LED-004', name: 'BANK BOOK', type: 'Banking Current A/C', opening_balance: branchBalances.bankBook, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.bankBook },
-      { id: 5, code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Liabilities', opening_balance: branchBalances.newFdRdMis, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.newFdRdMis },
-      { id: 6, code: 'LED-006', name: 'WALLET BALANCE', type: 'Advisor Collection Pool', opening_balance: branchBalances.walletLiability, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.walletLiability },
-      { id: 7, code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Demand Liabilities', opening_balance: branchBalances.savingAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.savingAccounts },
-      { id: 8, code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities', opening_balance: branchBalances.rdAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.rdAccounts },
-      { id: 9, code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts', opening_balance: branchBalances.ddAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.ddAccounts },
-      { id: 10, code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (गोल्ड लोन)', opening_balance: branchBalances.goldLoan, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.goldLoan },
-      { id: 11, code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Hand Loan / Udhar (उधार खाता)', opening_balance: branchBalances.borrowings, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.borrowings }
-    ];
+    const allLedgers = loadLedgersFromDb(branchCtx);
+    const ledgers = allLedgers.filter(l => l.show_in_db);
 
     // ==========================================
     // OPTION 1: DAILY USE (दैनिक खर्च व आवक-जावक)
     // ==========================================
     let dayCashEntries = [];
     try {
-      dayCashEntries = db.prepare(`
-        SELECT * FROM day_book_cash_entries 
-        WHERE entry_date BETWEEN ? AND ? 
-        ORDER BY entry_date DESC, id DESC
-      `).all(startDate, endDate);
-    } catch(e) {
+      if (branchCtx.code === 'ALL') {
+        dayCashEntries = db.prepare(`
+          SELECT * FROM day_book_cash_entries 
+          WHERE entry_date BETWEEN ? AND ? 
+          ORDER BY entry_date DESC, id DESC
+        `).all(startDate, endDate);
+      } else {
+        dayCashEntries = db.prepare(`
+          SELECT * FROM day_book_cash_entries 
+          WHERE entry_date BETWEEN ? AND ? 
+            AND (UPPER(COALESCE(branch_code, 'BHR001')) = ? ${branchCtx.code === 'BHR001' ? "OR branch_code IS NULL OR branch_code = 'ALL'" : ''})
+          ORDER BY entry_date DESC, id DESC
+        `).all(startDate, endDate, branchCtx.code);
+      }
+    } catch (e) {
       dayCashEntries = [];
     }
 
-    if (dayCashEntries.length === 0) {
+    if (dayCashEntries.length === 0 && (branchCtx.code === 'ALL' || branchCtx.code === 'BHR001')) {
       try {
         const legacyExpenses = db.prepare(`
           SELECT * FROM daily_expenses WHERE expense_date BETWEEN ? AND ? ORDER BY expense_date DESC, id DESC
@@ -143,36 +239,23 @@ router.get('/day-book', authenticateToken, (req, res) => {
           party_name: e.paid_to,
           reference_no: e.bill_number,
           narration: e.narration,
+          branch_code: 'BHR001',
           created_at: e.created_at
         }));
-      } catch(e) {}
+      } catch (e) {}
     }
 
-    const cashInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && e.payment_mode === 'CASH').reduce((sum, e) => sum + e.amount, 0);
-    const bankInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && e.payment_mode === 'BANK_ONLINE').reduce((sum, e) => sum + e.amount, 0);
-    const cashOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && e.payment_mode === 'CASH').reduce((sum, e) => sum + e.amount, 0);
-    const bankOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && e.payment_mode === 'BANK_ONLINE').reduce((sum, e) => sum + e.amount, 0);
-
-    // Apply adjustments to Ledgers
-    const cashLedger = ledgers.find(l => l.code === 'LED-003');
-    if (cashLedger) {
-      cashLedger.receipts += cashInflows;
-      cashLedger.payments += cashOutflows;
-      cashLedger.closing_balance = cashLedger.opening_balance + cashLedger.receipts - cashLedger.payments;
-    }
-    const bankLedger = ledgers.find(l => l.code === 'LED-004');
-    if (bankLedger) {
-      bankLedger.receipts += bankInflows;
-      bankLedger.payments += bankOutflows;
-      bankLedger.closing_balance = bankLedger.opening_balance + bankLedger.receipts - bankLedger.payments;
-    }
+    const cashInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && !isBankTransferMode(e.payment_mode)).reduce((sum, e) => sum + e.amount, 0);
+    const bankInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && isBankTransferMode(e.payment_mode)).reduce((sum, e) => sum + e.amount, 0);
+    const cashOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && !isBankTransferMode(e.payment_mode)).reduce((sum, e) => sum + e.amount, 0);
+    const bankOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && isBankTransferMode(e.payment_mode)).reduce((sum, e) => sum + e.amount, 0);
 
     const cashVouchers = dayCashEntries.map(e => ({
       id: `entry-${e.id}`,
       voucher_no: e.voucher_no,
       date: e.entry_date,
       time: e.created_at ? e.created_at.split(' ')[1]?.slice(0, 5) || '11:00 AM' : '11:00 AM',
-      ledger: e.payment_mode === 'CASH' ? 'CASH BOOK' : 'BANK BOOK',
+      ledger: isBankTransferMode(e.payment_mode) ? 'BANK BOOK' : 'CASH BOOK',
       account: `${e.category_name} (${e.party_name})`,
       category: e.category,
       category_name: e.category_name,
@@ -181,8 +264,8 @@ router.get('/day-book', authenticateToken, (req, res) => {
       payment_mode: e.payment_mode,
       type: e.entry_type === 'INFLOW' ? 'RECEIPT' : 'EXPENSE',
       dr_cr: e.entry_type === 'INFLOW'
-        ? `DR ${e.payment_mode === 'CASH' ? 'Cash Book' : 'Bank Book'} / CR ${e.category_name}`
-        : `DR ${e.category_name} / CR ${e.payment_mode === 'CASH' ? 'Cash Book' : 'Bank Book'}`,
+        ? `DR ${isBankTransferMode(e.payment_mode) ? 'Bank Book' : 'Cash Book'} / CR ${e.category_name}`
+        : `DR ${e.category_name} / CR ${isBankTransferMode(e.payment_mode) ? 'Bank Book' : 'Cash Book'}`,
       amount: e.amount,
       narration: e.narration,
       bill_number: e.reference_no,
@@ -192,6 +275,11 @@ router.get('/day-book', authenticateToken, (req, res) => {
     // ==========================================
     // OPTION 2: BANKING DAY BOOK (कोर बैंकिंग)
     // ==========================================
+    const branchWhereFd = branchCtx.branchId ? `AND COALESCE(fd.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+    const branchWhereRd = branchCtx.branchId ? `AND COALESCE(rd.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+    const branchWhereMis = branchCtx.branchId ? `AND COALESCE(m.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+    const branchWhereSb = branchCtx.branchId ? `AND COALESCE(s.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+
     // 1. New Fixed Deposits (FD) in Date Range
     let fds = [];
     try {
@@ -202,9 +290,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         FROM fixed_deposits fd
         JOIN customers c ON fd.customer_id = c.id
         WHERE (date(fd.start_date) BETWEEN ? AND ? OR date(fd.created_at) BETWEEN ? AND ?)
+          ${branchWhereFd}
         ORDER BY fd.created_at DESC
       `).all(startDate, endDate, startDate, endDate);
-    } catch(e) { fds = []; }
+    } catch (e) { fds = []; }
 
     // 1b. Premature / Matured FD Closures in Date Range
     let fdClosures = [];
@@ -216,9 +305,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         JOIN customers c ON fd.customer_id = c.id
         WHERE fd.status IN ('CLOSED_PREMATURE', 'MATURED')
           AND date(fd.closed_date) BETWEEN ? AND ?
+          ${branchWhereFd}
         ORDER BY fd.closed_date DESC
       `).all(startDate, endDate);
-    } catch(e) { fdClosures = []; }
+    } catch (e) { fdClosures = []; }
 
     // 2. New Recurring Deposits (RD) in Date Range
     let rds = [];
@@ -230,9 +320,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         FROM recurring_deposits rd
         JOIN customers c ON rd.customer_id = c.id
         WHERE (date(rd.start_date) BETWEEN ? AND ? OR date(rd.created_at) BETWEEN ? AND ?)
+          ${branchWhereRd}
         ORDER BY rd.created_at DESC
       `).all(startDate, endDate, startDate, endDate);
-    } catch(e) { rds = []; }
+    } catch (e) { rds = []; }
 
     // 2b. RD Installments collected in Date Range
     let rdInstallments = [];
@@ -245,9 +336,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         JOIN recurring_deposits rd ON rdi.rd_id = rd.id
         JOIN customers c ON rd.customer_id = c.id
         WHERE rdi.status = 'PAID' AND date(rdi.paid_date) BETWEEN ? AND ?
+          ${branchWhereRd}
         ORDER BY rdi.paid_date DESC
       `).all(startDate, endDate);
-    } catch(e) { rdInstallments = []; }
+    } catch (e) { rdInstallments = []; }
 
     // 3. New Monthly Income Schemes (MIS) in Date Range
     let misAccounts = [];
@@ -259,9 +351,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         FROM mis_accounts m
         JOIN customers c ON m.customer_id = c.id
         WHERE (date(m.start_date) BETWEEN ? AND ? OR date(m.created_at) BETWEEN ? AND ?)
+          ${branchWhereMis}
         ORDER BY m.created_at DESC
       `).all(startDate, endDate, startDate, endDate);
-    } catch(e) { misAccounts = []; }
+    } catch (e) { misAccounts = []; }
 
     // 3b. MIS Monthly Payouts in Date Range
     let misPayouts = [];
@@ -273,9 +366,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         JOIN mis_accounts m ON msp.mis_id = m.id
         JOIN customers c ON m.customer_id = c.id
         WHERE msp.status = 'PAID' AND date(msp.paid_date) BETWEEN ? AND ?
+          ${branchWhereMis}
         ORDER BY msp.paid_date DESC
       `).all(startDate, endDate);
-    } catch(e) { misPayouts = []; }
+    } catch (e) { misPayouts = []; }
 
     // 4. New Savings Accounts in Date Range
     let savingsAccounts = [];
@@ -286,9 +380,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         FROM savings_accounts s
         JOIN customers c ON s.customer_id = c.id
         WHERE (date(s.opened_date) BETWEEN ? AND ? OR date(s.created_at) BETWEEN ? AND ?)
+          ${branchWhereSb}
         ORDER BY s.created_at DESC
       `).all(startDate, endDate, startDate, endDate);
-    } catch(e) { savingsAccounts = []; }
+    } catch (e) { savingsAccounts = []; }
 
     // 4b. Savings Passbook Transactions (Deposits vs Withdrawals) in Date Range
     let savingsTxns = [];
@@ -301,9 +396,10 @@ router.get('/day-book', authenticateToken, (req, res) => {
         JOIN savings_accounts s ON st.account_id = s.id
         JOIN customers c ON s.customer_id = c.id
         WHERE date(st.created_at) BETWEEN ? AND ?
+          ${branchWhereSb}
         ORDER BY st.created_at DESC
       `).all(startDate, endDate);
-    } catch(e) { savingsTxns = []; }
+    } catch (e) { savingsTxns = []; }
 
     // Combine All Banking Activities into Unified Ledger Table
     const bankingTransactions = [];
@@ -504,6 +600,39 @@ router.get('/day-book', authenticateToken, (req, res) => {
     const sbDepositsTotal = savingsTxns.filter(t => t.transaction_type === 'DEPOSIT' || t.transaction_type === 'CREDIT').reduce((sum, t) => sum + t.amount, 0);
     const sbWithdrawalsTotal = savingsTxns.filter(t => t.transaction_type === 'WITHDRAWAL' || t.transaction_type === 'DEBIT').reduce((sum, t) => sum + t.amount, 0);
 
+    // Apply live movements from BOTH Daily Cash Entries AND Banking Transactions to Core Ledgers
+    const bankingCashIn = bankingTransactions.filter(t => t.inflow_amount > 0 && !isBankTransferMode(t.payment_mode)).reduce((s, t) => s + t.inflow_amount, 0);
+    const bankingBankIn = bankingTransactions.filter(t => t.inflow_amount > 0 && isBankTransferMode(t.payment_mode)).reduce((s, t) => s + t.inflow_amount, 0);
+    const bankingCashOut = bankingTransactions.filter(t => t.outflow_amount > 0 && !isBankTransferMode(t.payment_mode)).reduce((s, t) => s + t.outflow_amount, 0);
+    const bankingBankOut = bankingTransactions.filter(t => t.outflow_amount > 0 && isBankTransferMode(t.payment_mode)).reduce((s, t) => s + t.outflow_amount, 0);
+
+    const ledgerMap = {};
+    allLedgers.forEach(l => { ledgerMap[l.code] = l; });
+
+    if (ledgerMap['102']) {
+      ledgerMap['102'].receipts = cashInflows + bankingCashIn;
+      ledgerMap['102'].payments = cashOutflows + bankingCashOut;
+    }
+    if (ledgerMap['103']) {
+      ledgerMap['103'].receipts = bankInflows + bankingBankIn;
+      ledgerMap['103'].payments = bankOutflows + bankingBankOut;
+    }
+    if (ledgerMap['LED-005']) {
+      ledgerMap['LED-005'].receipts = fdPrincipalTotal + misDepositTotal;
+      ledgerMap['LED-005'].payments = fdClosedTotal + misPayoutTotal;
+    }
+    if (ledgerMap['LED-007']) {
+      ledgerMap['LED-007'].receipts = sbInitialTotal + sbDepositsTotal;
+      ledgerMap['LED-007'].payments = sbWithdrawalsTotal;
+    }
+    if (ledgerMap['LED-008']) {
+      ledgerMap['LED-008'].receipts = rdInstallmentCommitTotal + rdCollectedTotal;
+    }
+
+    allLedgers.forEach(l => {
+      l.closing_balance = Number((l.opening_balance + (l.receipts || 0) - (l.payments || 0)).toFixed(2));
+    });
+
     const totalOpening = ledgers.reduce((acc, l) => acc + l.opening_balance, 0);
     const totalReceipts = ledgers.reduce((acc, l) => acc + l.receipts, 0);
     const totalPayments = ledgers.reduce((acc, l) => acc + l.payments, 0);
@@ -523,7 +652,7 @@ router.get('/day-book', authenticateToken, (req, res) => {
           items: []
         };
       }
-      const isCash = (item.mode || 'CASH').toUpperCase().includes('CASH');
+      const isCash = !isBankTransferMode(item.mode);
       const cashAmt = isCash ? item.amount : 0;
       const transferAmt = !isCash ? item.amount : 0;
       targetGroups[categoryName].cashTotal += cashAmt;
@@ -598,15 +727,7 @@ router.get('/day-book', authenticateToken, (req, res) => {
       naveGrandTotal: naveList.reduce((sum, g) => sum + g.total, 0)
     };
 
-    const branchDisplayName = isShekhupura 
-      ? 'SHEKHUPURA BRANCH (TARPL0002 - शेखुपुरा / सुजालपुर)'
-      : isMainBranch 
-        ? 'MAIN BRANCH (BHR001)'
-        : isBhr002 
-          ? 'TARPL0002 (BHR002)'
-          : isBrh003 
-            ? 'TARPL SAVING (BRH003)'
-            : 'ALL (All Branches - 5)';
+    const branchDisplayName = branchCtx.displayName;
 
     res.json({
       success: true,
@@ -614,8 +735,9 @@ router.get('/day-book', authenticateToken, (req, res) => {
       endDate,
       date: startDate,
       isRange: startDate !== endDate,
-      branch: selectedBranch,
+      branch: branchCtx.code,
       branchName: branchDisplayName,
+      allLedgers,
       rozKird: {
         jama: jamaList,
         nave: naveList,
@@ -743,8 +865,11 @@ router.post('/cash-entry', authenticateToken, (req, res) => {
       payment_mode = 'CASH', // 'CASH' or 'BANK_ONLINE'
       party_name, 
       reference_no = '', 
-      narration 
+      narration,
+      branch_code = 'BHR001'
     } = req.body;
+
+    const branchCtx = resolveBranchContext(branch_code === 'ALL' ? 'BHR001' : branch_code);
 
     if (!amount || parseFloat(amount) <= 0) {
       return res.status(400).json({ success: false, message: 'Valid amount is required.' });
@@ -774,8 +899,8 @@ router.post('/cash-entry', authenticateToken, (req, res) => {
     const stmt = db.prepare(`
       INSERT INTO day_book_cash_entries (
         voucher_no, entry_type, entry_date, category, category_name, 
-        amount, payment_mode, party_name, reference_no, narration, created_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        amount, payment_mode, party_name, reference_no, narration, branch_code, created_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -789,6 +914,7 @@ router.post('/cash-entry', authenticateToken, (req, res) => {
       party_name.trim(),
       reference_no.trim(),
       narration.trim(),
+      branchCtx.code,
       req.user?.id || 1
     );
 
@@ -1182,137 +1308,320 @@ router.post('/schedule-sms', authenticateToken, (req, res) => {
   }
 });
 
-// 8. GET /api/accounting/ledger-statement/:code - Detailed Ledger Statement Drilldown
+// 8. GET /api/accounting/ledgers - List All Ledger Accounts (Matches Prahlad /accounting/accounts)
+router.get('/ledgers', authenticateToken, (req, res) => {
+  try {
+    const branchCtx = resolveBranchContext(req.query.branch || 'ALL');
+    const ledgers = loadLedgersFromDb(branchCtx);
+    res.json({ success: true, branch: branchCtx.code, branchName: branchCtx.displayName, ledgers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 8b. PUT /api/accounting/ledgers/:code - Edit Ledger & "Show In Day Book" Flag
+router.put('/ledgers/:code', authenticateToken, (req, res) => {
+  try {
+    const normalized = normalizeLedgerCode(req.params.code);
+    const { name, show_in_db, is_bank_account, risk_percent } = req.body;
+    const existing = db.prepare('SELECT * FROM ledger_accounts WHERE UPPER(code) = ?').get(normalized);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Ledger account not found.' });
+    }
+    db.prepare(`
+      UPDATE ledger_accounts
+      SET name = COALESCE(?, name),
+          show_in_db = COALESCE(?, show_in_db),
+          is_bank_account = COALESCE(?, is_bank_account),
+          risk_percent = COALESCE(?, risk_percent)
+      WHERE id = ?
+    `).run(
+      name ? name.trim().toUpperCase() : null,
+      typeof show_in_db === 'boolean' ? (show_in_db ? 1 : 0) : null,
+      typeof is_bank_account === 'boolean' ? (is_bank_account ? 1 : 0) : null,
+      risk_percent !== undefined ? Number(risk_percent) || 0 : null,
+      existing.id
+    );
+    const updated = db.prepare('SELECT * FROM ledger_accounts WHERE id = ?').get(existing.id);
+    res.json({ success: true, ledger: updated, message: 'Ledger account updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 9. GET /api/accounting/ledger-statement/:code - Detailed 1:1 Ledger Statement Drilldown
 router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
   try {
-    const { code } = req.params;
-    const { date } = req.query;
-    const selectedDate = date || new Date().toISOString().split('T')[0];
+    const normalizedCode = normalizeLedgerCode(req.params.code);
+    const branchCtx = resolveBranchContext(req.query.branch || 'ALL');
+    const today = new Date().toISOString().split('T')[0];
+    const startDate = req.query.startDate || '2026-01-01';
+    const endDate = req.query.endDate || req.query.date || today;
+    const manualOnly = req.query.manualOnly === 'true' || req.query.manualOnly === '1';
+    const search = (req.query.search || '').trim().toLowerCase();
+    const minAmount = parseFloat(req.query.minAmount || '0') || 0;
+    const maxAmount = parseFloat(req.query.maxAmount || '0') || 0;
+    const txType = (req.query.txType || 'ALL').toUpperCase();
 
-    // Determine target ledger
-    const targetCode = decodeURIComponent(code).trim().toUpperCase();
-
-    // Map known ledger baselines matching admin.taranganjali.com
-    const ledgerMetadata = {
-      'LED-001': { code: 'LED-001', name: 'TARPL MAIN', type: 'Asset Ledger (कंपनी मुख्य पूंजी)', opening: 1000000.00, branch: 'MAIN BRANCH (BHR001)' },
-      'TARPL MAIN': { code: 'LED-001', name: 'TARPL MAIN', type: 'Asset Ledger (कंपनी मुख्य पूंजी)', opening: 1000000.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-002': { code: 'LED-002', name: 'WALLET BALANCE', type: 'Asset Ledger (कलेक्शन फ्लोट वॉलेट)', opening: 470000.00, branch: 'MAIN BRANCH (BHR001)' },
-      'WALLET BALANCE': { code: 'LED-002', name: 'WALLET BALANCE', type: 'Asset Ledger (कलेक्शन फ्लोट वॉलेट)', opening: 470000.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-003': { code: 'LED-003', name: 'CASH BOOK', type: 'Asset Ledger (कार्यालय तिजोरी व नकद गल्ला)', opening: 2736651.00, branch: 'MAIN BRANCH (BHR001)' },
-      'CASH BOOK': { code: 'LED-003', name: 'CASH BOOK', type: 'Asset Ledger (कार्यालय तिजोरी व नकद गल्ला)', opening: 2736651.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-004': { code: 'LED-004', name: 'BANK BOOK', type: 'Asset Ledger (PNB बैंक चालू खाता व UPI)', opening: 528431.51, branch: 'MAIN BRANCH (BHR001)' },
-      'BANK BOOK': { code: 'LED-004', name: 'BANK BOOK', type: 'Asset Ledger (PNB बैंक चालू खाता व UPI)', opening: 528431.51, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-005': { code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Reserves (एफडी/आरडी देयताएं)', opening: 202112275.00, branch: 'MAIN BRANCH (BHR001)' },
-      'NEW FD RD MIS': { code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Reserves (एफडी/आरडी देयताएं)', opening: 202112275.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-006': { code: 'LED-006', name: 'WALLET BALANCE', type: 'Agent Float Wallet (फील्ड एजेंट वॉलेट)', opening: 2137375.00, branch: 'MAIN BRANCH (BHR001)' },
-      'WALLET BALANCE (COLLECTION)': { code: 'LED-006', name: 'WALLET BALANCE', type: 'Agent Float Wallet (फील्ड एजेंट वॉलेट)', opening: 2137375.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-007': { code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Savings Liabilities (बचत खाता जमा)', opening: 3221417.00, branch: 'MAIN BRANCH (BHR001)' },
-      'SAVING ACCOUNTS': { code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Savings Liabilities (बचत खाता जमा)', opening: 3221417.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-008': { code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities (आवर्ती जमा)', opening: 318496.00, branch: 'MAIN BRANCH (BHR001)' },
-      'RD ACCOUNTS': { code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities (आवर्ती जमा)', opening: 318496.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-009': { code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts (दैनिक जमा)', opening: 282396.00, branch: 'MAIN BRANCH (BHR001)' },
-      'DD ACCOUNTS': { code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts (दैनिक जमा)', opening: 282396.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-010': { code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (स्वर्ण आभूषण सुरक्षित ऋण)', opening: 325000.00, branch: 'MAIN BRANCH (BHR001)' },
-      'GOLD LOAN BOOK': { code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (स्वर्ण आभूषण सुरक्षित ऋण)', opening: 325000.00, branch: 'MAIN BRANCH (BHR001)' },
-
-      'LED-011': { code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Borrowing Liabilities (हाथ उधारी व देयताएं)', opening: 150000.00, branch: 'MAIN BRANCH (BHR001)' },
-      'BORROWINGS & UDHAR': { code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Borrowing Liabilities (हाथ उधारी व देयताएं)', opening: 150000.00, branch: 'MAIN BRANCH (BHR001)' }
+    const allLedgers = loadLedgersFromDb(branchCtx);
+    const targetLedger = allLedgers.find(l => l.code === normalizedCode || l.legacy_code === normalizedCode) || {
+      code: normalizedCode,
+      name: decodeURIComponent(req.params.code || normalizedCode).toUpperCase(),
+      system_name: normalizedCode.toLowerCase(),
+      group_name: 'GENERAL LEDGER',
+      type: 'Asset',
+      is_system: true,
+      show_in_db: true,
+      risk_percent: 0,
+      opening_balance: branchCtx.baselines[normalizedCode] ?? 0.00
     };
 
-    const meta = ledgerMetadata[targetCode] || {
-      code: targetCode,
-      name: targetCode,
-      type: 'General Ledger',
-      opening: 500000.00,
-      branch: 'MAIN BRANCH (BHR001)'
-    };
+    const openingBal = targetLedger.opening_balance || 0;
+    const isLiabilityOrCreditLedger = ['Liability', 'Equity', 'Revenue'].includes(targetLedger.type);
+    const rawItems = [];
 
-    // Query real day_book_cash_entries
-    let cashEntries = [];
+    // 1. Collect Manual Day Book Cash/Bank Entries (IS SYSTEM = No)
     try {
-      cashEntries = db.prepare(`
-        SELECT * FROM day_book_cash_entries 
-        ORDER BY id ASC
-      `).all();
-    } catch(e) {}
+      const cashRows = db.prepare(`
+        SELECT * FROM day_book_cash_entries
+        WHERE entry_date BETWEEN ? AND ?
+          ${branchCtx.code !== 'ALL' ? `AND (UPPER(COALESCE(branch_code, 'BHR001')) = '${branchCtx.code}' ${branchCtx.code === 'BHR001' ? "OR branch_code IS NULL OR branch_code = 'ALL'" : ''})` : ''}
+        ORDER BY entry_date ASC, id ASC
+      `).all(startDate, endDate);
 
-    // Filter relevant transactions for this ledger
-    let filtered = [];
-    if (meta.code === 'LED-003') { // CASH BOOK
-      filtered = cashEntries.filter(e => e.payment_mode === 'CASH');
-    } else if (meta.code === 'LED-004') { // BANK BOOK
-      filtered = cashEntries.filter(e => e.payment_mode === 'BANK_ONLINE');
-    } else if (meta.code === 'LED-010') { // GOLD LOAN
-      filtered = cashEntries.filter(e => e.category.includes('GOLD_LOAN'));
-    } else if (meta.code === 'LED-011') { // UDHAR
-      filtered = cashEntries.filter(e => e.category.includes('BORROWING'));
-    } else if (meta.code === 'LED-007') { // SAVINGS
-      filtered = cashEntries.filter(e => e.category.includes('SAVINGS'));
-    } else if (meta.code === 'LED-008') { // RD
-      filtered = cashEntries.filter(e => e.category.includes('RD') || e.category.includes('COLLECTION'));
-    } else {
-      filtered = cashEntries.slice(0, 5);
+      cashRows.forEach(e => {
+        const isBank = isBankTransferMode(e.payment_mode);
+        let match = false;
+        if (targetLedger.code === '102' && !isBank) match = true;
+        else if (targetLedger.code === '103' && isBank) match = true;
+        else if (targetLedger.code === 'LED-007' && e.category?.includes('SAVINGS')) match = true;
+        else if (targetLedger.code === 'LED-008' && (e.category?.includes('RD') || e.category?.includes('COLLECTION'))) match = true;
+        else if (targetLedger.code === 'LED-010' && e.category?.includes('GOLD_LOAN')) match = true;
+        else if (targetLedger.code === 'LED-011' && e.category?.includes('BORROWING')) match = true;
+
+        if (match) {
+          const isInflow = e.entry_type === 'INFLOW';
+          rawItems.push({
+            id: `cash-${e.id}`,
+            branch: e.branch_code === 'SHEKHUPURA' ? 'SHEKHUPURA BRANCH' : 'MAIN BRANCH',
+            sort_date: e.entry_date || endDate,
+            date: e.entry_date ? e.entry_date.split('-').reverse().join('/') : '',
+            voucher_no: e.voucher_no,
+            description: `${e.category_name} - ${e.party_name}${e.narration ? ' (' + e.narration + ')' : ''}`,
+            particulars: `${e.category_name} (${e.party_name})`,
+            narration: e.narration,
+            reference_no: e.reference_no,
+            is_system: 'No',
+            isInflow,
+            amount: e.amount
+          });
+        }
+      });
+    } catch (e) {}
+
+    // 2. Collect System Banking Transactions (IS SYSTEM = Yes) unless manualOnly
+    if (!manualOnly) {
+      const bWhereFd = branchCtx.branchId ? `AND COALESCE(fd.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+      const bWhereRd = branchCtx.branchId ? `AND COALESCE(rd.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+      const bWhereMis = branchCtx.branchId ? `AND COALESCE(m.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+      const bWhereSb = branchCtx.branchId ? `AND COALESCE(s.branch_id, c.branch_id, 1) = ${branchCtx.branchId}` : '';
+
+      try {
+        if (['102', '103', 'LED-005'].includes(targetLedger.code)) {
+          const fds = db.prepare(`
+            SELECT fd.id, fd.fd_number, fd.principal_amount, fd.start_date, fd.closed_date, fd.status, fd.premature_interest_paid, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+            FROM fixed_deposits fd JOIN customers c ON fd.customer_id = c.id
+            WHERE (date(fd.start_date) BETWEEN ? AND ? OR (fd.status IN ('CLOSED_PREMATURE', 'MATURED') AND date(fd.closed_date) BETWEEN ? AND ?)) ${bWhereFd}
+          `).all(startDate, endDate, startDate, endDate);
+          fds.forEach(f => {
+            if (targetLedger.code !== '103') {
+              if (f.start_date >= startDate && f.start_date <= endDate) {
+                rawItems.push({
+                  id: `sys-fd-${f.id}`,
+                  branch: f.branch_name,
+                  sort_date: f.start_date,
+                  date: f.start_date.split('-').reverse().join('/'),
+                  voucher_no: f.fd_number,
+                  description: `FD a/c ${f.fd_number} ${f.full_name} ${f.customer_code}`,
+                  particulars: `${f.full_name} (${f.customer_code})`,
+                  narration: `New Fixed Deposit Principal`,
+                  is_system: 'Yes',
+                  isInflow: true,
+                  amount: f.principal_amount
+                });
+              }
+              if (['CLOSED_PREMATURE', 'MATURED'].includes(f.status) && f.closed_date >= startDate && f.closed_date <= endDate) {
+                rawItems.push({
+                  id: `sys-fd-close-${f.id}`,
+                  branch: f.branch_name,
+                  sort_date: f.closed_date,
+                  date: f.closed_date.split('-').reverse().join('/'),
+                  voucher_no: f.fd_number,
+                  description: `FD a/c ${f.fd_number} ${f.full_name} ${f.customer_code} debit to cash`,
+                  particulars: `${f.full_name} (${f.customer_code})`,
+                  narration: `${f.status} Payout Released`,
+                  is_system: 'Yes',
+                  isInflow: false,
+                  amount: f.principal_amount + (f.premature_interest_paid || 0)
+                });
+              }
+            }
+          });
+        }
+
+        if (['102', '103', 'LED-005'].includes(targetLedger.code)) {
+          const mis = db.prepare(`
+            SELECT m.id, m.mis_number, m.deposit_amount, m.start_date, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+            FROM mis_accounts m JOIN customers c ON m.customer_id = c.id
+            WHERE date(m.start_date) BETWEEN ? AND ? ${bWhereMis}
+          `).all(startDate, endDate);
+          mis.forEach(m => {
+            if (targetLedger.code !== '103') {
+              rawItems.push({
+                id: `sys-mis-${m.id}`,
+                branch: m.branch_name,
+                sort_date: m.start_date,
+                date: m.start_date.split('-').reverse().join('/'),
+                voucher_no: m.mis_number,
+                description: `MIS a/c ${m.mis_number} ${m.full_name} ${m.customer_code}`,
+                particulars: `${m.full_name} (${m.customer_code})`,
+                narration: `Monthly Income Scheme Booking`,
+                is_system: 'Yes',
+                isInflow: true,
+                amount: m.deposit_amount
+              });
+            }
+          });
+        }
+
+        if (['102', '103', 'LED-007'].includes(targetLedger.code)) {
+          const sbTx = db.prepare(`
+            SELECT st.id, st.transaction_number, st.transaction_type, st.amount, st.payment_mode, st.narration, date(st.created_at) as tx_date,
+                   s.account_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+            FROM savings_transactions st
+            JOIN savings_accounts s ON st.account_id = s.id
+            JOIN customers c ON s.customer_id = c.id
+            WHERE date(st.created_at) BETWEEN ? AND ? ${bWhereSb}
+          `).all(startDate, endDate);
+          sbTx.forEach(st => {
+            const isBank = isBankTransferMode(st.payment_mode);
+            if (targetLedger.code === 'LED-007' || (targetLedger.code === '102' && !isBank) || (targetLedger.code === '103' && isBank)) {
+              const isCredit = st.transaction_type === 'DEPOSIT' || st.transaction_type === 'CREDIT';
+              rawItems.push({
+                id: `sys-sb-${st.id}`,
+                branch: st.branch_name,
+                sort_date: st.tx_date,
+                date: st.tx_date.split('-').reverse().join('/'),
+                voucher_no: st.transaction_number || st.account_number,
+                description: `Savings ${st.account_number} ${st.full_name} - ${st.narration}`,
+                particulars: `${st.full_name} (${st.account_number})`,
+                narration: st.narration,
+                is_system: 'Yes',
+                isInflow: isCredit,
+                amount: st.amount
+              });
+            }
+          });
+        }
+
+        if (['102', '103', 'LED-008'].includes(targetLedger.code)) {
+          const rdInst = db.prepare(`
+            SELECT rdi.id, rdi.installment_no, rdi.total_collected, rdi.installment_amount, rdi.paid_date, rdi.payment_mode, rdi.transaction_ref,
+                   rd.rd_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+            FROM rd_installments rdi
+            JOIN recurring_deposits rd ON rdi.rd_id = rd.id
+            JOIN customers c ON rd.customer_id = c.id
+            WHERE rdi.status = 'PAID' AND date(rdi.paid_date) BETWEEN ? AND ? ${bWhereRd}
+          `).all(startDate, endDate);
+          rdInst.forEach(r => {
+            const isBank = isBankTransferMode(r.payment_mode);
+            if (targetLedger.code === 'LED-008' || (targetLedger.code === '102' && !isBank) || (targetLedger.code === '103' && isBank)) {
+              const amt = r.total_collected || r.installment_amount;
+              rawItems.push({
+                id: `sys-rd-${r.id}`,
+                branch: r.branch_name,
+                sort_date: r.paid_date,
+                date: r.paid_date.split('-').reverse().join('/'),
+                voucher_no: r.transaction_ref || r.rd_number,
+                description: `RD ${r.rd_number} Installment #${r.installment_no} - ${r.full_name}`,
+                particulars: `${r.full_name} (${r.rd_number})`,
+                narration: `RD Installment #${r.installment_no}`,
+                is_system: 'Yes',
+                isInflow: true,
+                amount: amt
+              });
+            }
+          });
+        }
+      } catch (e) {}
     }
 
-    // Build Chronological Running Balance Statement
-    let running = meta.opening;
+    // Sort chronologically for accurate running balance using double-entry debit/credit rules
+    rawItems.sort((a, b) => (a.sort_date || '').localeCompare(b.sort_date || ''));
+
+    let running = openingBal;
     let totalDebit = 0;
     let totalCredit = 0;
 
-    const statement = filtered.map((e, index) => {
-      const isCredit = e.entry_type === 'INFLOW';
-      const debitAmt = isCredit ? 0 : e.amount;
-      const creditAmt = isCredit ? e.amount : 0;
+    const fullStatement = rawItems.map(item => {
+      const oBal = running;
+      // Asset ledgers: receipt/inflow = Debit (+), payment/outflow = Credit (-)
+      // Liability/Equity/Revenue ledgers: deposit/inflow = Credit (+), withdrawal/outflow = Debit (-)
+      const debit = isLiabilityOrCreditLedger
+        ? (item.isInflow ? 0 : item.amount)
+        : (item.isInflow ? item.amount : 0);
+      const credit = isLiabilityOrCreditLedger
+        ? (item.isInflow ? item.amount : 0)
+        : (item.isInflow ? 0 : item.amount);
 
-      totalDebit += debitAmt;
-      totalCredit += creditAmt;
-
-      if (meta.code === 'LED-010') { // Loan Asset: Disbursement increases, Recovery decreases
-        running = isCredit ? running - e.amount : running + e.amount;
-      } else if (meta.code === 'LED-011') { // Liability: Borrowing increases, Repayment decreases
-        running = isCredit ? running + e.amount : running - e.amount;
-      } else { // Asset (Cash/Bank): Inflow increases, Outflow decreases
-        running = isCredit ? running + e.amount : running - e.amount;
-      }
+      totalDebit += debit;
+      totalCredit += credit;
+      running = isLiabilityOrCreditLedger
+        ? Number((running + credit - debit).toFixed(2))
+        : Number((running + debit - credit).toFixed(2));
 
       return {
-        id: e.id,
-        date: e.entry_date ? e.entry_date.split('-').reverse().join('/') : selectedDate.split('-').reverse().join('/'),
-        voucher_no: e.voucher_no,
-        description: `${e.category_name} - ${e.party_name}`,
-        narration: e.narration,
-        reference_no: e.reference_no,
-        type: isCredit ? 'RECEIPT' : 'PAYMENT',
-        is_system: 'YES',
-        debit: debitAmt,
-        credit: creditAmt,
-        running_balance: running
+        ...item,
+        debit,
+        credit,
+        opening_balance: oBal,
+        running_balance: running,
+        balance: running
       };
     });
+
+    const filteredStatement = fullStatement.filter(item => {
+      const amt = Math.max(item.debit || 0, item.credit || 0);
+      if (search && !item.description.toLowerCase().includes(search) && !(item.voucher_no || '').toLowerCase().includes(search)) return false;
+      if (minAmount > 0 && amt < minAmount) return false;
+      if (maxAmount > 0 && amt > maxAmount) return false;
+      if (txType === 'DEBIT' && !(item.debit > 0)) return false;
+      if (txType === 'CREDIT' && !(item.credit > 0)) return false;
+      return true;
+    }).reverse(); // Most recent first matching Prahlad's CASH BOOK ledger
 
     res.json({
       success: true,
       ledger: {
-        code: meta.code,
-        name: meta.name,
-        type: meta.type,
-        branch: meta.branch,
-        opening_balance: meta.opening,
+        code: targetLedger.code,
+        group: targetLedger.group_name || 'CASH & CASH EQUIVALENT',
+        name: targetLedger.name,
+        system_name: targetLedger.system_name || targetLedger.name.toLowerCase().replace(/\s+/g, '_'),
+        is_system: targetLedger.is_system ? 'Yes' : 'No',
+        show_in_db: targetLedger.show_in_db ? 'Yes' : 'No',
+        risk_percent: targetLedger.risk_percent || 0,
+        type: targetLedger.type,
+        branch: branchCtx.displayName,
+        total_t: fullStatement.length,
+        last_t: fullStatement.length > 0 ? fullStatement[fullStatement.length - 1].date : '-',
+        opening_balance: openingBal,
         total_debit: totalDebit,
         total_credit: totalCredit,
+        net_diff: totalDebit - totalCredit,
         closing_balance: running,
-        statement_count: statement.length
+        statement_count: filteredStatement.length
       },
-      statement
+      statement: filteredStatement
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
