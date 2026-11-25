@@ -36,7 +36,8 @@ import {
   ChevronRight,
   Filter,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Eye
 } from 'lucide-react';
 import { apiRequest, formatINR, formatDate } from '../utils';
 
@@ -635,15 +636,30 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
               </button>
             </div>
 
+            {/* Format Selector Dropdown (Prahlad 1:1) */}
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
+              <span className="text-slate-400 font-bold text-[10px]">FORMAT:</span>
+              <select
+                value={viewFormat}
+                onChange={(e) => setViewFormat(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value="format1">Format 1 (3-Column View)</option>
+                <option value="format2">Format 2 (रोज किर्द & Table View)</option>
+              </select>
+            </div>
+
             {/* Branch Selector */}
             <select 
               value={selectedBranch} 
               onChange={(e) => setSelectedBranch(e.target.value)}
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none"
             >
-              <option value="ALL">All Branches (2)</option>
-              <option value="BHR001">MAIN BRANCH</option>
-              <option value="BRH003">TARPL SAVING</option>
+              <option value="ALL">ALL (All Branches - 5)</option>
+              <option value="BHR001">BHR001 - MAIN BRANCH</option>
+              <option value="BHR002">BHR002 - TARPL0002</option>
+              <option value="BRH003">BRH003 - TARPL SAVING</option>
+              <option value="SHEKHUPURA">SHEKHUPURA BRANCH (TARPL0002 - शेखुपुरा / सुजालपुर)</option>
             </select>
           </div>
         </div>
@@ -933,6 +949,460 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
       {/* ======================================================== */}
       {dayBookOption === 'BANKING' && (
         <div className="space-y-6 animate-fadeIn">
+
+          {/* ======================================================== */}
+          {/* 3-COLUMN BANKING CARD LAYOUT (1:1 WITH PRAHLAD LIVE CRM) */}
+          {/* ======================================================== */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                  <Landmark className="w-5 h-5 text-indigo-600" />
+                  <span>3-Column Banking Ledger Cards (Day Book)</span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {data?.branchName || selectedBranch} • {dateRangeLabel} • प्रहलाद CRM 1:1 फॉर्मेट (Click any ledger or 👁️ to open Passbook Statement)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-500">Active Format:</span>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                  {viewFormat === 'format1' ? 'Format 1 (Summary)' : 'Format 2 (रोज किर्द तपशील)'}
+                </span>
+              </div>
+            </div>
+
+            {/* 3 Equal Columns Grid: OPENING | CURRENT/CLOSING | DAY TRANSACTIONS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* COLUMN 1: OPENING (<DATE>) (box-warning amber) */}
+              <div className="bg-white rounded-2xl shadow-sm border-t-4 border-amber-500 border-x border-b border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-4 bg-amber-50/50 border-b border-amber-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-amber-950 uppercase tracking-wide">
+                      OPENING ({startDate.split('-').reverse().join('/')})
+                    </h3>
+                    <span className="text-[10px] font-bold text-amber-700">आरंभिक शेष (Opening Balances)</span>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                </div>
+
+                <div className="p-4 space-y-4 divide-y divide-slate-100 flex-1">
+                  {(data?.ledgers || []).slice(0, 9).map((ledger) => (
+                    <div key={ledger.id} className="pt-3 first:pt-0 text-center">
+                      <div className="text-xl font-black font-mono text-slate-900 tracking-tight">
+                        {ledger.opening_balance < 0 
+                          ? `(${Math.abs(ledger.opening_balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                          : ledger.opening_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenLedgerStatement(ledger)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-tight mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                        title="Click to view Passbook Statement"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>{ledger.name}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* COLUMN 2: CURRENT/ CLOSING (<DATE>) (box-danger red) */}
+              <div className="bg-white rounded-2xl shadow-sm border-t-4 border-rose-500 border-x border-b border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-rose-950 uppercase tracking-wide">
+                      CURRENT/ CLOSING ({endDate.split('-').reverse().join('/')})
+                    </h3>
+                    <span className="text-[10px] font-bold text-rose-700">अंतिम चालू शेष (Closing Balances)</span>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                </div>
+
+                <div className="p-4 space-y-4 divide-y divide-slate-100 flex-1">
+                  {(data?.ledgers || []).slice(0, 9).map((ledger) => (
+                    <div key={ledger.id} className="pt-3 first:pt-0 text-center">
+                      <div className="text-xl font-black font-mono text-slate-900 tracking-tight">
+                        {ledger.closing_balance < 0 
+                          ? `(${Math.abs(ledger.closing_balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                          : ledger.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenLedgerStatement(ledger)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-tight mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                        title="Click to view Passbook Statement"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>{ledger.name}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* COLUMN 3: DAY TRANSACTIONS (box-success green) */}
+              <div className="bg-white rounded-2xl shadow-sm border-t-4 border-emerald-500 border-x border-b border-slate-200 overflow-hidden flex flex-col">
+                <div className="p-4 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-emerald-950 uppercase tracking-wide">
+                      DAY TRANSACTIONS
+                    </h3>
+                    <span className="text-[10px] font-bold text-emerald-700">दैनिक आवागमन (Receipts - Payments)</span>
+                  </div>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+
+                <div className="p-4 space-y-4 divide-y divide-slate-100 flex-1">
+                  {(data?.ledgers || []).slice(0, 9).map((ledger) => {
+                    const netMovement = (ledger.receipts || 0) - (ledger.payments || 0);
+                    return (
+                      <div key={ledger.id} className="pt-3 first:pt-0 text-center">
+                        <div className={`text-xl font-black font-mono tracking-tight ${
+                          netMovement > 0 ? 'text-emerald-700' : netMovement < 0 ? 'text-rose-700' : 'text-slate-800'
+                        }`}>
+                          {netMovement === 0 
+                            ? '0.00' 
+                            : netMovement < 0 
+                              ? `(${Math.abs(netMovement).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                              : `+${netMovement.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          }
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenLedgerStatement(ledger)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-tight mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                          title="Click to view Passbook Statement"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-indigo-500" />
+                          <span>{ledger.name}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* ======================================================== */}
+          {/* FORMAT 2: TWO-SIDED रोज किर्द तपशील (जमा vs नावे)         */}
+          {/* ======================================================== */}
+          {viewFormat === 'format2' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-0">
+              <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-400" />
+                  <div>
+                    <h3 className="text-sm font-black tracking-wide flex items-center gap-2">
+                      <span>रोज किर्द तपशील (Daily Cash & Transfer Day Book)</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-normal">
+                        Format 2
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-300">
+                      दिनांक: {dateRangeLabel} • शाखा: {data?.branchName || selectedBranch}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-emerald-400 font-bold">🟢 जमा: ₹{(data?.rozKird?.totals?.jamaGrandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-rose-400 font-bold">🔴 नावे: ₹{(data?.rozKird?.totals?.naveGrandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              {/* Two-Sided Container: Left = जमा (Receipts), Right = नावे (Payments) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+                
+                {/* LEFT SIDE: जमा (Credits / Receipts / आवक) */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-emerald-500">
+                    <span className="text-sm font-black text-emerald-800 uppercase tracking-wide flex items-center gap-1.5">
+                      <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                      <span>जमा (CREDITS / INFLOW)</span>
+                    </span>
+                    <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      ₹{(data?.rozKird?.totals?.jamaGrandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-emerald-50/60 text-emerald-950 font-bold text-[10px] uppercase border-b border-emerald-100">
+                        <tr>
+                          <th className="py-2 px-2 text-left">खाते नं.</th>
+                          <th className="py-2 px-2 text-left">नाव / नॅरेशन</th>
+                          <th className="py-2 px-2 text-right">कॅश (₹)</th>
+                          <th className="py-2 px-2 text-right">ट्रान्सफर (₹)</th>
+                          <th className="py-2 px-2 text-right">एकूण (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {(!data?.rozKird?.jama || data.rozKird.jama.length === 0) ? (
+                          <tr>
+                            <td colSpan="5" className="py-8 text-center text-slate-400 italic">
+                              इस अवधि में कोई जमा (Receipt) प्रविष्टि नहीं है।
+                            </td>
+                          </tr>
+                        ) : (
+                          data.rozKird.jama.map((group, gIdx) => (
+                            <React.Fragment key={gIdx}>
+                              {/* Group Category Header Row */}
+                              <tr className="bg-emerald-100/50 font-bold text-emerald-900">
+                                <td colSpan="2" className="py-2 px-2 uppercase text-[11px]">
+                                  {group.categoryName}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-[11px]">
+                                  {group.cashTotal > 0 ? `₹${group.cashTotal.toLocaleString('en-IN')}` : '-'}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-[11px]">
+                                  {group.transferTotal > 0 ? `₹${group.transferTotal.toLocaleString('en-IN')}` : '-'}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-emerald-800 text-[11px] font-black">
+                                  ₹{group.total.toLocaleString('en-IN')}
+                                </td>
+                              </tr>
+                              {/* Group Item Rows */}
+                              {group.items.map((item, iIdx) => (
+                                <tr key={iIdx} className="hover:bg-slate-50 transition">
+                                  <td className="py-1.5 px-2 font-mono text-[10px] text-slate-500 whitespace-nowrap pl-4">
+                                    {item.account_no}
+                                  </td>
+                                  <td className="py-1.5 px-2 font-medium text-slate-800 truncate max-w-[180px]">
+                                    {item.name_narration}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-600">
+                                    {item.cash > 0 ? `₹${item.cash.toLocaleString('en-IN')}` : '-'}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-600">
+                                    {item.transfer > 0 ? `₹${item.transfer.toLocaleString('en-IN')}` : '-'}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono font-bold text-emerald-700">
+                                    ₹{item.total.toLocaleString('en-IN')}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot className="border-t-2 border-emerald-400 bg-emerald-50/80 font-black text-emerald-950">
+                        <tr>
+                          <td colSpan="2" className="py-2.5 px-2 uppercase text-xs">एकूण जमा (Total Receipts)</td>
+                          <td className="py-2.5 px-2 text-right font-mono">₹{(data?.rozKird?.totals?.jamaCashTotal || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-2.5 px-2 text-right font-mono">₹{(data?.rozKird?.totals?.jamaTransferTotal || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-emerald-800 text-sm">₹{(data?.rozKird?.totals?.jamaGrandTotal || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                {/* RIGHT SIDE: नावे (Debits / Payments / जावक) */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-rose-500">
+                    <span className="text-sm font-black text-rose-800 uppercase tracking-wide flex items-center gap-1.5">
+                      <ArrowUpRight className="w-4 h-4 text-rose-600" />
+                      <span>नावे (DEBITS / OUTFLOW)</span>
+                    </span>
+                    <span className="text-xs font-mono font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                      ₹{(data?.rozKird?.totals?.naveGrandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-rose-50/60 text-rose-950 font-bold text-[10px] uppercase border-b border-rose-100">
+                        <tr>
+                          <th className="py-2 px-2 text-left">खाते नं.</th>
+                          <th className="py-2 px-2 text-left">नाव / नॅरेशन</th>
+                          <th className="py-2 px-2 text-right">कॅश (₹)</th>
+                          <th className="py-2 px-2 text-right">ट्रान्सफर (₹)</th>
+                          <th className="py-2 px-2 text-right">एकूण (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {(!data?.rozKird?.nave || data.rozKird.nave.length === 0) ? (
+                          <tr>
+                            <td colSpan="5" className="py-8 text-center text-slate-400 italic">
+                              इस अवधि में कोई नावे (Payment) प्रविष्टि नहीं है।
+                            </td>
+                          </tr>
+                        ) : (
+                          data.rozKird.nave.map((group, gIdx) => (
+                            <React.Fragment key={gIdx}>
+                              {/* Group Category Header Row */}
+                              <tr className="bg-rose-100/50 font-bold text-rose-900">
+                                <td colSpan="2" className="py-2 px-2 uppercase text-[11px]">
+                                  {group.categoryName}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-[11px]">
+                                  {group.cashTotal > 0 ? `₹${group.cashTotal.toLocaleString('en-IN')}` : '-'}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-[11px]">
+                                  {group.transferTotal > 0 ? `₹${group.transferTotal.toLocaleString('en-IN')}` : '-'}
+                                </td>
+                                <td className="py-2 px-2 text-right font-mono text-rose-800 text-[11px] font-black">
+                                  ₹{group.total.toLocaleString('en-IN')}
+                                </td>
+                              </tr>
+                              {/* Group Item Rows */}
+                              {group.items.map((item, iIdx) => (
+                                <tr key={iIdx} className="hover:bg-slate-50 transition">
+                                  <td className="py-1.5 px-2 font-mono text-[10px] text-slate-500 whitespace-nowrap pl-4">
+                                    {item.account_no}
+                                  </td>
+                                  <td className="py-1.5 px-2 font-medium text-slate-800 truncate max-w-[180px]">
+                                    {item.name_narration}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-600">
+                                    {item.cash > 0 ? `₹${item.cash.toLocaleString('en-IN')}` : '-'}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-600">
+                                    {item.transfer > 0 ? `₹${item.transfer.toLocaleString('en-IN')}` : '-'}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono font-bold text-rose-700">
+                                    ₹{item.total.toLocaleString('en-IN')}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))
+                        )}
+                      </tbody>
+                      <tfoot className="border-t-2 border-rose-400 bg-rose-50/80 font-black text-rose-950">
+                        <tr>
+                          <td colSpan="2" className="py-2.5 px-2 uppercase text-xs">एकूण नावे (Total Payments)</td>
+                          <td className="py-2.5 px-2 text-right font-mono">₹{(data?.rozKird?.totals?.naveCashTotal || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-2.5 px-2 text-right font-mono">₹{(data?.rozKird?.totals?.naveTransferTotal || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-2.5 px-2 text-right font-mono text-rose-800 text-sm">₹{(data?.rozKird?.totals?.naveGrandTotal || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* FORMAT 1: ENGLISH SUMMARY STATEMENT TABLE                */}
+          {/* ======================================================== */}
+          {viewFormat === 'format1' && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h3 className="text-sm font-black tracking-wide flex items-center gap-2">
+                      <span>Day Book Ledger Statement Summary (Format 1)</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-normal">
+                        Format 1
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-300">
+                      Summary statement for the 9 Core Ledgers • {dateRangeLabel} • {data?.branchName || selectedBranch}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Format 1</span>
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-600 tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">NAME</th>
+                      <th className="py-3 px-4">TYPE</th>
+                      <th className="py-3 px-4 text-right">OPENING BAL. ({startDate.split('-').reverse().join('/')})</th>
+                      <th className="py-3 px-4 text-right">DEBIT (RECEIPTS)</th>
+                      <th className="py-3 px-4 text-right">CREDIT (PAYMENTS)</th>
+                      <th className="py-3 px-4 text-right">CLOSING BAL. ({endDate.split('-').reverse().join('/')})</th>
+                      <th className="py-3 px-4 text-center">ACTION</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {(data?.ledgers || []).slice(0, 9).map((ledger) => (
+                      <tr key={ledger.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLedgerStatement(ledger)}
+                            className="hover:text-indigo-600 hover:underline flex items-center gap-1.5 cursor-pointer text-left"
+                          >
+                            <span>{ledger.name}</span>
+                          </button>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            ledger.type.includes('Asset') || ledger.type.includes('Capital') || ledger.type.includes('Cash') || ledger.type.includes('Bank')
+                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            {ledger.type.includes('Asset') || ledger.type.includes('Capital') || ledger.type.includes('Cash') || ledger.type.includes('Bank') ? 'Asset' : 'Liability'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
+                          ₹{ledger.opening_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                          {ledger.receipts > 0 ? `₹${ledger.receipts.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-rose-700">
+                          {ledger.payments > 0 ? `₹${ledger.payments.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-indigo-700 text-sm">
+                          ₹{ledger.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLedgerStatement(ledger)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition cursor-pointer"
+                            title="View Statement"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Statement</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-black text-slate-900">
+                    <tr>
+                      <td colSpan="2" className="py-3 px-4 uppercase text-xs">GRAND TOTAL</td>
+                      <td className="py-3 px-4 text-right font-mono text-sm">
+                        ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + l.opening_balance, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-emerald-700 text-sm">
+                        ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + (l.receipts || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-rose-700 text-sm">
+                        ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + (l.payments || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-indigo-900 text-sm">
+                        ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + l.closing_balance, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
           
           {/* Top 4 Banking KPI Cards (कितना आया, कितना गया, तरलता, नए खाते) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1599,6 +2069,183 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* 6. CLEAN PRINTABLE DAY BOOK COMPONENT (FOR WINDOW.PRINT) */}
+      {/* ======================================================== */}
+      <div id="printable-daybook" className="hidden print:block font-sans text-black p-4">
+        {/* Letterhead */}
+        <div className="text-center pb-4 border-b-2 border-slate-900 mb-4">
+          <h1 className="text-2xl font-black tracking-tight text-slate-950 uppercase">
+            TARANGANJALI REALTECH PVT LTD
+          </h1>
+          <p className="text-xs text-slate-600 font-semibold">
+            Core Banking & Wealth Management System • CIN: U70109UP2019PTC118942
+          </p>
+          <p className="text-xs text-slate-500">
+            Head Office: Mandawar Road, Bijnor, Uttar Pradesh - 246701 • Phone: +91 98765 43210
+          </p>
+          <div className="mt-2 inline-block px-4 py-1 bg-slate-100 rounded border border-slate-300 font-bold text-xs uppercase tracking-wider">
+            Day Book for the period: {dateRangeLabel} ({data?.branchName || selectedBranch})
+          </div>
+        </div>
+
+        {viewFormat === 'format1' ? (
+          /* FORMAT 1 PRINT TABLE */
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 uppercase mb-2">Ledger Statement Summary (Format 1)</h2>
+            <table className="w-full text-xs border border-slate-400 border-collapse">
+              <thead>
+                <tr className="bg-slate-200 border-b border-slate-400">
+                  <th className="p-2 text-left border-r border-slate-400">NAME</th>
+                  <th className="p-2 text-left border-r border-slate-400">TYPE</th>
+                  <th className="p-2 text-right border-r border-slate-400">OPENING BAL.</th>
+                  <th className="p-2 text-right border-r border-slate-400">DEBIT</th>
+                  <th className="p-2 text-right border-r border-slate-400">CREDIT</th>
+                  <th className="p-2 text-right">CLOSING BAL.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.ledgers || []).slice(0, 9).map((l, idx) => (
+                  <tr key={idx} className="border-b border-slate-300">
+                    <td className="p-2 font-bold border-r border-slate-300">{l.name}</td>
+                    <td className="p-2 border-r border-slate-300">{l.type.includes('Asset') || l.type.includes('Capital') || l.type.includes('Cash') || l.type.includes('Bank') ? 'Asset' : 'Liability'}</td>
+                    <td className="p-2 text-right font-mono border-r border-slate-300">₹{l.opening_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-2 text-right font-mono border-r border-slate-300">{l.receipts > 0 ? `₹${l.receipts.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}</td>
+                    <td className="p-2 text-right font-mono border-r border-slate-300">{l.payments > 0 ? `₹${l.payments.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}</td>
+                    <td className="p-2 text-right font-mono font-bold">₹{l.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-200 font-black border-t-2 border-slate-500">
+                  <td colSpan="2" className="p-2 uppercase border-r border-slate-400">GRAND TOTAL</td>
+                  <td className="p-2 text-right font-mono border-r border-slate-400">
+                    ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + l.opening_balance, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2 text-right font-mono border-r border-slate-400">
+                    ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + (l.receipts || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2 text-right font-mono border-r border-slate-400">
+                    ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + (l.payments || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="p-2 text-right font-mono">
+                    ₹{(data?.ledgers || []).slice(0, 9).reduce((s, l) => s + l.closing_balance, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          /* FORMAT 2 PRINT TABLE (रोज किर्द तपशील) */
+          <div>
+            <div className="text-center font-bold text-base mb-3 border-b pb-1">
+              रोज किर्द तपशील (Transaction Date: {dateRangeLabel})
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Side: जमा */}
+              <div>
+                <div className="font-bold text-xs bg-slate-200 p-1.5 border border-slate-400 text-center uppercase">
+                  जमा (CREDITS / INFLOW)
+                </div>
+                <table className="w-full text-[11px] border border-slate-400 border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-400">
+                      <th className="p-1 text-left border-r border-slate-400">खाते नं.</th>
+                      <th className="p-1 text-left border-r border-slate-400">नाव / नॅरेशन</th>
+                      <th className="p-1 text-right border-r border-slate-400">कॅश</th>
+                      <th className="p-1 text-right border-r border-slate-400">ट्रान्सफर</th>
+                      <th className="p-1 text-right">एकूण</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data?.rozKird?.jama || []).map((g, gIdx) => (
+                      <React.Fragment key={gIdx}>
+                        <tr className="bg-slate-100 font-bold border-b border-slate-300">
+                          <td colSpan="2" className="p-1 uppercase border-r border-slate-300">{g.categoryName}</td>
+                          <td className="p-1 text-right border-r border-slate-300">{g.cashTotal > 0 ? `₹${g.cashTotal.toLocaleString('en-IN')}` : '-'}</td>
+                          <td className="p-1 text-right border-r border-slate-300">{g.transferTotal > 0 ? `₹${g.transferTotal.toLocaleString('en-IN')}` : '-'}</td>
+                          <td className="p-1 text-right">₹{g.total.toLocaleString('en-IN')}</td>
+                        </tr>
+                        {g.items.map((it, iIdx) => (
+                          <tr key={iIdx} className="border-b border-slate-200">
+                            <td className="p-1 font-mono text-[10px] border-r border-slate-200">{it.account_no}</td>
+                            <td className="p-1 border-r border-slate-200 truncate max-w-[140px]">{it.name_narration}</td>
+                            <td className="p-1 text-right border-r border-slate-200">{it.cash > 0 ? `₹${it.cash.toLocaleString('en-IN')}` : '-'}</td>
+                            <td className="p-1 text-right border-r border-slate-200">{it.transfer > 0 ? `₹${it.transfer.toLocaleString('en-IN')}` : '-'}</td>
+                            <td className="p-1 text-right font-bold">₹{it.total.toLocaleString('en-IN')}</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-200 font-bold border-t border-slate-400">
+                      <td colSpan="2" className="p-1 uppercase border-r border-slate-400">एकूण जमा</td>
+                      <td className="p-1 text-right border-r border-slate-400">₹{(data?.rozKird?.totals?.jamaCashTotal || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-1 text-right border-r border-slate-400">₹{(data?.rozKird?.totals?.jamaTransferTotal || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-1 text-right">₹{(data?.rozKird?.totals?.jamaGrandTotal || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Right Side: नावे */}
+              <div>
+                <div className="font-bold text-xs bg-slate-200 p-1.5 border border-slate-400 text-center uppercase">
+                  नावे (DEBITS / OUTFLOW)
+                </div>
+                <table className="w-full text-[11px] border border-slate-400 border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-400">
+                      <th className="p-1 text-left border-r border-slate-400">खाते नं.</th>
+                      <th className="p-1 text-left border-r border-slate-400">नाव / नॅरेशन</th>
+                      <th className="p-1 text-right border-r border-slate-400">कॅश</th>
+                      <th className="p-1 text-right border-r border-slate-400">ट्रान्सफर</th>
+                      <th className="p-1 text-right">एकूण</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data?.rozKird?.nave || []).map((g, gIdx) => (
+                      <React.Fragment key={gIdx}>
+                        <tr className="bg-slate-100 font-bold border-b border-slate-300">
+                          <td colSpan="2" className="p-1 uppercase border-r border-slate-300">{g.categoryName}</td>
+                          <td className="p-1 text-right border-r border-slate-300">{g.cashTotal > 0 ? `₹${g.cashTotal.toLocaleString('en-IN')}` : '-'}</td>
+                          <td className="p-1 text-right border-r border-slate-300">{g.transferTotal > 0 ? `₹${g.transferTotal.toLocaleString('en-IN')}` : '-'}</td>
+                          <td className="p-1 text-right">₹{g.total.toLocaleString('en-IN')}</td>
+                        </tr>
+                        {g.items.map((it, iIdx) => (
+                          <tr key={iIdx} className="border-b border-slate-200">
+                            <td className="p-1 font-mono text-[10px] border-r border-slate-200">{it.account_no}</td>
+                            <td className="p-1 border-r border-slate-200 truncate max-w-[140px]">{it.name_narration}</td>
+                            <td className="p-1 text-right border-r border-slate-200">{it.cash > 0 ? `₹${it.cash.toLocaleString('en-IN')}` : '-'}</td>
+                            <td className="p-1 text-right border-r border-slate-200">{it.transfer > 0 ? `₹${it.transfer.toLocaleString('en-IN')}` : '-'}</td>
+                            <td className="p-1 text-right font-bold">₹{it.total.toLocaleString('en-IN')}</td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-200 font-bold border-t border-slate-400">
+                      <td colSpan="2" className="p-1 uppercase border-r border-slate-400">एकूण नावे</td>
+                      <td className="p-1 text-right border-r border-slate-400">₹{(data?.rozKird?.totals?.naveCashTotal || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-1 text-right border-r border-slate-400">₹{(data?.rozKird?.totals?.naveTransferTotal || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-1 text-right">₹{(data?.rozKird?.totals?.naveGrandTotal || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 pt-4 border-t border-slate-300 flex justify-between text-xs text-slate-500">
+          <span>Prepared by: Accountant / Cashier</span>
+          <span>Verified by: Branch Manager</span>
+          <span>Authorized by: Director (TARPL)</span>
+        </div>
+      </div>
 
     </div>
   );

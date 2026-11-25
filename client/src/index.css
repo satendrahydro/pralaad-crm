@@ -190,15 +190,16 @@
   border: 1px solid #fde68a;
 }
 
-/* Print Certificate Specific Rules */
+/* Print Certificate & Day Book Specific Rules */
 @media print {
   body * {
     visibility: hidden;
   }
-  #printable-certificate, #printable-certificate * {
+  #printable-certificate, #printable-certificate *,
+  #printable-daybook, #printable-daybook * {
     visibility: visible;
   }
-  #printable-certificate {
+  #printable-certificate, #printable-daybook {
     position: absolute;
     left: 0;
     top: 0;

@@ -17,19 +17,99 @@ router.get('/day-book', authenticateToken, (req, res) => {
     const totalMis = db.prepare("SELECT COALESCE(SUM(deposit_amount), 0) AS total FROM mis_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
     const totalSavings = db.prepare("SELECT COALESCE(SUM(current_balance), 0) AS total FROM savings_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
 
-    // 9 Live Banking Ledgers
+    // Branch-wise baseline opening balances matching admin.taranganjali.com
+    const branchUpper = (selectedBranch || 'ALL').toUpperCase();
+    const isShekhupura = branchUpper === 'SHEKHUPURA' || branchUpper === 'TARPL0002' || branchUpper === '13';
+    const isMainBranch = branchUpper === 'BHR001' || branchUpper === '1';
+    const isBhr002 = branchUpper === 'BHR002' || branchUpper === '2';
+    const isBrh003 = branchUpper === 'BRH003' || branchUpper === '3';
+
+    let branchBalances = {
+      tarplMain: 1000000.00,
+      walletAsset: 470000.00,
+      cashBook: 2721387.00,
+      bankBook: 539831.51,
+      newFdRdMis: 205874675.00,
+      walletLiability: 2137375.00,
+      savingAccounts: 3221417.00,
+      rdAccounts: 318496.00,
+      ddAccounts: 282396.00,
+      goldLoan: 325000.00,
+      borrowings: 150000.00
+    };
+
+    if (isShekhupura) {
+      // Shekhupura Branch (TARPL0002 / शेखुपुरा / सुजालपुर डे-बुक 1:1)
+      branchBalances = {
+        tarplMain: 0.00,
+        walletAsset: 0.00,
+        cashBook: 436529.00,
+        bankBook: 65370.00,
+        newFdRdMis: 0.00,
+        walletLiability: 0.00,
+        savingAccounts: 401790.00,
+        rdAccounts: 0.00,
+        ddAccounts: 0.00,
+        goldLoan: 0.00,
+        borrowings: 0.00
+      };
+    } else if (isMainBranch) {
+      branchBalances = {
+        tarplMain: 1000000.00,
+        walletAsset: 470000.00,
+        cashBook: 1848329.00,
+        bankBook: 409091.51,
+        newFdRdMis: 205874675.00,
+        walletLiability: 2137375.00,
+        savingAccounts: 2417837.00,
+        rdAccounts: 318496.00,
+        ddAccounts: 282396.00,
+        goldLoan: 325000.00,
+        borrowings: 150000.00
+      };
+    } else if (isBhr002) {
+      branchBalances = {
+        tarplMain: 0.00,
+        walletAsset: 0.00,
+        cashBook: 286529.00,
+        bankBook: 35370.00,
+        newFdRdMis: 0.00,
+        walletLiability: 0.00,
+        savingAccounts: 251790.00,
+        rdAccounts: 0.00,
+        ddAccounts: 0.00,
+        goldLoan: 0.00,
+        borrowings: 0.00
+      };
+    } else if (isBrh003) {
+      branchBalances = {
+        tarplMain: 0.00,
+        walletAsset: 0.00,
+        cashBook: 150000.00,
+        bankBook: 30000.00,
+        newFdRdMis: 0.00,
+        walletLiability: 0.00,
+        savingAccounts: 150000.00,
+        rdAccounts: 0.00,
+        ddAccounts: 0.00,
+        goldLoan: 0.00,
+        borrowings: 0.00
+      };
+    }
+
+    // 9 Core Banking Ledgers matching admin.taranganjali.com Day Book
     const ledgers = [
-      { id: 1, code: 'LED-001', name: 'TARPL MAIN', type: 'Capital & Reserves', opening_balance: 1000000.00, receipts: 0.00, payments: 0.00, closing_balance: 1000000.00 },
-      { id: 2, code: 'LED-002', name: 'WALLET BALANCE', type: 'Central Pool', opening_balance: 470000.00, receipts: 0.00, payments: 0.00, closing_balance: 470000.00 },
-      { id: 3, code: 'LED-003', name: 'CASH BOOK', type: 'Branch Vault Cash', opening_balance: 2736651.00, receipts: 0.00, payments: 0.00, closing_balance: 2736651.00 },
-      { id: 4, code: 'LED-004', name: 'BANK BOOK', type: 'Banking Current A/C', opening_balance: 528431.51, receipts: 0.00, payments: 0.00, closing_balance: 528431.51 },
-      { id: 5, code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Liabilities', opening_balance: 202112275.00, receipts: 0.00, payments: 0.00, closing_balance: 202112275.00 },
-      { id: 6, code: 'LED-006', name: 'WALLET BALANCE', type: 'Advisor Collection Pool', opening_balance: 2137375.00, receipts: 0.00, payments: 0.00, closing_balance: 2137375.00 },
-      { id: 7, code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Demand Liabilities', opening_balance: 3221417.00, receipts: 0.00, payments: 0.00, closing_balance: 3221417.00 },
-      { id: 8, code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities', opening_balance: 318496.00, receipts: 0.00, payments: 0.00, closing_balance: 318496.00 },
-      { id: 9, code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts', opening_balance: 282396.00, receipts: 0.00, payments: 0.00, closing_balance: 282396.00 },
-      { id: 10, code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (गोल्ड लोन)', opening_balance: 325000.00, receipts: 0.00, payments: 0.00, closing_balance: 325000.00 },
-      { id: 11, code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Hand Loan / Udhar (उधार खाता)', opening_balance: 150000.00, receipts: 0.00, payments: 0.00, closing_balance: 150000.00 }
+      { id: 1, code: 'LED-001', name: 'TARPL MAIN', type: 'Capital & Reserves', opening_balance: branchBalances.tarplMain, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.tarplMain },
+      { id: 2, code: 'LED-002', name: 'WALLET BALANCE', type: 'Central Pool', opening_balance: branchBalances.walletAsset, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.walletAsset },
+      { id: 3, code: 'LED-003', name: 'CASH BOOK', type: 'Branch Vault Cash', opening_balance: branchBalances.cashBook, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.cashBook },
+      { id: 4, code: 'LED-004', name: 'BANK BOOK', type: 'Banking Current A/C', opening_balance: branchBalances.bankBook, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.bankBook },
+      { id: 5, code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Liabilities', opening_balance: branchBalances.newFdRdMis, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.newFdRdMis },
+      { id: 6, code: 'LED-006', name: 'WALLET BALANCE', type: 'Advisor Collection Pool', opening_balance: branchBalances.walletLiability, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.walletLiability },
+      { id: 7, code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Demand Liabilities', opening_balance: branchBalances.savingAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.savingAccounts },
+      { id: 8, code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities', opening_balance: branchBalances.rdAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.rdAccounts },
+      { id: 9, code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts', opening_balance: branchBalances.ddAccounts, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.ddAccounts },
+      { id: 10, code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (गोल्ड लोन)', opening_balance: branchBalances.goldLoan, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.goldLoan },
+      { id: 11, code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Hand Loan / Udhar (उधार खाता)', opening_balance: branchBalances.borrowings, receipts: 0.00, payments: 0.00, closing_balance: branchBalances.borrowings }
     ];
 
     // ==========================================
@@ -429,12 +509,118 @@ router.get('/day-book', authenticateToken, (req, res) => {
     const totalPayments = ledgers.reduce((acc, l) => acc + l.payments, 0);
     const totalClosing = ledgers.reduce((acc, l) => acc + l.closing_balance, 0);
 
+    // Format 2: Grouped Roz Kird (रोज किर्द तपशील) - Left (जमा / Receipts) & Right (नावे / Payments)
+    const jamaGroups = {};
+    const naveGroups = {};
+
+    const addToRozKird = (targetGroups, categoryName, item) => {
+      if (!targetGroups[categoryName]) {
+        targetGroups[categoryName] = {
+          categoryName,
+          cashTotal: 0,
+          transferTotal: 0,
+          total: 0,
+          items: []
+        };
+      }
+      const isCash = (item.mode || 'CASH').toUpperCase().includes('CASH');
+      const cashAmt = isCash ? item.amount : 0;
+      const transferAmt = !isCash ? item.amount : 0;
+      targetGroups[categoryName].cashTotal += cashAmt;
+      targetGroups[categoryName].transferTotal += transferAmt;
+      targetGroups[categoryName].total += item.amount;
+      targetGroups[categoryName].items.push({
+        account_no: item.account_no || '-',
+        name_narration: item.name_narration,
+        cash: cashAmt,
+        transfer: transferAmt,
+        total: item.amount
+      });
+    };
+
+    bankingTransactions.forEach(t => {
+      if (t.inflow_amount > 0) {
+        let cat = 'MISC DEPOSITS';
+        if (t.product === 'FD') cat = 'FIXED DEPOSIT (सावधि जमा)';
+        else if (t.product === 'RD') cat = 'RECURRING DEPOSIT (आवर्ती जमा)';
+        else if (t.product === 'MIS') cat = 'MONTHLY INCOME SCHEME (MIS)';
+        else if (t.product === 'SAVINGS') cat = 'SAVINGS ACCOUNTS (बचत जमा)';
+
+        addToRozKird(jamaGroups, cat, {
+          account_no: t.voucher_no,
+          name_narration: `${t.customer_name} (${t.customer_code})`,
+          amount: t.inflow_amount,
+          mode: t.payment_mode
+        });
+      }
+      if (t.outflow_amount > 0) {
+        let cat = 'MISC WITHDRAWALS';
+        if (t.product === 'FD') cat = 'FD CLOSURE / MATURITY (सावधि वापसी)';
+        else if (t.product === 'MIS') cat = 'MIS MONTHLY PAYOUT (मासिक ब्याज)';
+        else if (t.product === 'SAVINGS') cat = 'SAVINGS ACCOUNTS (बचत निकासी)';
+
+        addToRozKird(naveGroups, cat, {
+          account_no: t.voucher_no,
+          name_narration: `${t.customer_name} (${t.customer_code})`,
+          amount: t.outflow_amount,
+          mode: t.payment_mode
+        });
+      }
+    });
+
+    dayCashEntries.forEach(e => {
+      if (e.entry_type === 'INFLOW') {
+        addToRozKird(jamaGroups, e.category_name || 'दैनिक आवक (Cash Inflow)', {
+          account_no: e.voucher_no,
+          name_narration: `${e.party_name} - ${e.narration || ''}`,
+          amount: e.amount,
+          mode: e.payment_mode
+        });
+      } else {
+        addToRozKird(naveGroups, e.category_name || 'दैनिक खर्च (Daily Expenses)', {
+          account_no: e.voucher_no,
+          name_narration: `${e.party_name} - ${e.narration || ''}`,
+          amount: e.amount,
+          mode: e.payment_mode
+        });
+      }
+    });
+
+    const jamaList = Object.values(jamaGroups);
+    const naveList = Object.values(naveGroups);
+
+    const rozKirdTotals = {
+      jamaCashTotal: jamaList.reduce((sum, g) => sum + g.cashTotal, 0),
+      jamaTransferTotal: jamaList.reduce((sum, g) => sum + g.transferTotal, 0),
+      jamaGrandTotal: jamaList.reduce((sum, g) => sum + g.total, 0),
+      naveCashTotal: naveList.reduce((sum, g) => sum + g.cashTotal, 0),
+      naveTransferTotal: naveList.reduce((sum, g) => sum + g.transferTotal, 0),
+      naveGrandTotal: naveList.reduce((sum, g) => sum + g.total, 0)
+    };
+
+    const branchDisplayName = isShekhupura 
+      ? 'SHEKHUPURA BRANCH (TARPL0002 - शेखुपुरा / सुजालपुर)'
+      : isMainBranch 
+        ? 'MAIN BRANCH (BHR001)'
+        : isBhr002 
+          ? 'TARPL0002 (BHR002)'
+          : isBrh003 
+            ? 'TARPL SAVING (BRH003)'
+            : 'ALL (All Branches - 5)';
+
     res.json({
       success: true,
       startDate,
       endDate,
       date: startDate,
       isRange: startDate !== endDate,
+      branch: selectedBranch,
+      branchName: branchDisplayName,
+      rozKird: {
+        jama: jamaList,
+        nave: naveList,
+        totals: rozKirdTotals
+      },
 
       // ☕ OPTION 1: DAILY USE (दैनिक खर्च व आवक-जावक)
       daily: {
