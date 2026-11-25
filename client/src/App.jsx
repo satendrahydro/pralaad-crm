@@ -1666,30 +1666,26 @@ export default function App() {
               )}
             </div>
 
-            {/* 5. Switch to Customer View-Only App (Super Admin only) */}
-            {!isEmployee && (
-              <button
-                onClick={() => setViewMode('customer')}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer"
-                title="Preview Customer Digital Passbook"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">App</span>
-              </button>
-            )}
+            {/* 5. Switch to Customer View-Only App (Admin & Staff) */}
+            <button
+              onClick={() => setViewMode('customer')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer shrink-0"
+              title="Preview Customer Digital Passbook / Mobile App"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>App</span>
+            </button>
 
-            {/* 6. Download APK (Super Admin only) */}
-            {!isEmployee && (
-              <a
-                href="/Taranganjali_Banking.apk"
-                download="Taranganjali_Banking.apk"
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition"
-                title="Download Android APK File for Mobile"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">APK</span>
-              </a>
-            )}
+            {/* 6. Download APK (Admin & Staff) */}
+            <a
+              href="/Taranganjali_Banking.apk"
+              download="Taranganjali_Banking.apk"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition shrink-0"
+              title="Download Android APK File for Mobile"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>APK</span>
+            </a>
 
             {/* 7. Direct Logout Button */}
             <button
