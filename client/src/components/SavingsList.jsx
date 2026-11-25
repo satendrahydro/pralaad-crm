@@ -437,29 +437,33 @@ export default function SavingsList({ onOpenNewSavings, isEmployee = false, onVi
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {accountDetails.transactions?.map(txn => (
-                      <tr key={txn.id} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 text-slate-600">{formatDate(txn.created_at)}</td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{txn.transaction_number}</td>
-                        <td className="py-2.5 px-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            txn.transaction_type === 'DEPOSIT' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                          }`}>
-                            {txn.transaction_type}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600 truncate max-w-xs">{txn.narration}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-semibold">
-                          {txn.transaction_type === 'WITHDRAWAL' ? formatINR(txn.amount) : '-'}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold">
-                          {txn.transaction_type === 'DEPOSIT' ? formatINR(txn.amount) : '-'}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">
-                          {formatINR(txn.balance_after)}
-                        </td>
-                      </tr>
-                    ))}
+                    {accountDetails.transactions?.map(txn => {
+                      const isCredit = txn.transaction_type === 'DEPOSIT' || txn.transaction_type === 'CREDIT';
+                      const isDebit = txn.transaction_type === 'WITHDRAWAL' || txn.transaction_type === 'DEBIT';
+                      return (
+                        <tr key={txn.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 text-slate-600">{formatDate(txn.created_at)}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{txn.transaction_number}</td>
+                          <td className="py-2.5 px-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isCredit ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}>
+                              {isCredit ? 'CREDIT' : 'DEBIT'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 truncate max-w-xs">{txn.narration}</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-semibold">
+                            {isDebit ? formatINR(txn.amount) : '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold">
+                            {isCredit ? formatINR(txn.amount) : '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">
+                            {formatINR(txn.balance_after)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
