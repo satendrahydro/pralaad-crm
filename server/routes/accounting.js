@@ -1362,6 +1362,8 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
     const minAmount = parseFloat(req.query.minAmount || '0') || 0;
     const maxAmount = parseFloat(req.query.maxAmount || '0') || 0;
     const txType = (req.query.txType || 'ALL').toUpperCase();
+    const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
+    const limit = Math.min(200, Math.max(10, parseInt(req.query.limit || '100', 10) || 100));
 
     const allLedgers = loadLedgersFromDb(branchCtx);
     const targetLedger = allLedgers.find(l => l.code === normalizedCode || l.legacy_code === normalizedCode) || {
@@ -1495,6 +1497,35 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
         }
 
         if (['102', '103', 'LED-007'].includes(targetLedger.code)) {
+          if (targetLedger.code !== '103') {
+            const newSbs = db.prepare(`
+              SELECT s.id, s.account_number, s.current_balance, s.opened_date, s.created_at,
+                     c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+              FROM savings_accounts s
+              JOIN customers c ON s.customer_id = c.id
+              WHERE (date(s.opened_date) BETWEEN ? AND ? OR date(s.created_at) BETWEEN ? AND ?) ${bWhereSb}
+            `).all(startDate, endDate, startDate, endDate);
+            newSbs.forEach(s => {
+              const initAmt = s.current_balance || 0;
+              if (initAmt > 0) {
+                const sbDate = s.opened_date || (s.created_at ? s.created_at.split(' ')[0] : endDate);
+                rawItems.push({
+                  id: `sys-sb-open-${s.id}`,
+                  branch: s.branch_name,
+                  sort_date: sbDate,
+                  date: sbDate.split('-').reverse().join('/'),
+                  voucher_no: s.account_number,
+                  description: `Savings A/C ${s.account_number} Opening Deposit - ${s.full_name} (${s.customer_code})`,
+                  particulars: `${s.full_name} (${s.account_number})`,
+                  narration: 'New Savings Account Initial Deposit',
+                  is_system: 'Yes',
+                  isInflow: true,
+                  amount: initAmt
+                });
+              }
+            });
+          }
+
           const sbTx = db.prepare(`
             SELECT st.id, st.transaction_number, st.transaction_type, st.amount, st.payment_mode, st.narration, date(st.created_at) as tx_date,
                    s.account_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
@@ -1525,6 +1556,35 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
         }
 
         if (['102', '103', 'LED-008'].includes(targetLedger.code)) {
+          if (targetLedger.code !== '103') {
+            const newRds = db.prepare(`
+              SELECT rd.id, rd.rd_number, rd.monthly_installment, rd.start_date, rd.created_at,
+                     c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
+              FROM recurring_deposits rd
+              JOIN customers c ON rd.customer_id = c.id
+              WHERE (date(rd.start_date) BETWEEN ? AND ? OR date(rd.created_at) BETWEEN ? AND ?) ${bWhereRd}
+            `).all(startDate, endDate, startDate, endDate);
+            newRds.forEach(r => {
+              const amt = r.monthly_installment || 0;
+              if (amt > 0) {
+                const rdDate = r.start_date || (r.created_at ? r.created_at.split(' ')[0] : endDate);
+                rawItems.push({
+                  id: `sys-rd-open-${r.id}`,
+                  branch: r.branch_name,
+                  sort_date: rdDate,
+                  date: rdDate.split('-').reverse().join('/'),
+                  voucher_no: r.rd_number,
+                  description: `RD a/c ${r.rd_number} Opening Installment - ${r.full_name} (${r.customer_code})`,
+                  particulars: `${r.full_name} (${r.rd_number})`,
+                  narration: 'New RD Opening Deposit',
+                  is_system: 'Yes',
+                  isInflow: true,
+                  amount: amt
+                });
+              }
+            });
+          }
+
           const rdInst = db.prepare(`
             SELECT rdi.id, rdi.installment_no, rdi.total_collected, rdi.installment_amount, rdi.paid_date, rdi.payment_mode, rdi.transaction_ref,
                    rd.rd_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
@@ -1600,6 +1660,11 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
       return true;
     }).reverse(); // Most recent first matching Prahlad's CASH BOOK ledger
 
+    const totalRows = filteredStatement.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / limit));
+    const safePage = Math.min(page, totalPages);
+    const pagedStatement = filteredStatement.slice((safePage - 1) * limit, safePage * limit);
+
     res.json({
       success: true,
       ledger: {
@@ -1619,9 +1684,15 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
         total_credit: totalCredit,
         net_diff: totalDebit - totalCredit,
         closing_balance: running,
-        statement_count: filteredStatement.length
+        statement_count: totalRows
       },
-      statement: filteredStatement
+      pagination: {
+        page: safePage,
+        limit,
+        totalRows,
+        totalPages
+      },
+      statement: pagedStatement
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

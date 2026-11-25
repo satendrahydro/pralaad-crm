@@ -1352,7 +1352,7 @@ export default function App() {
         <header className="h-16 bg-[#082e20] text-white border-b border-[#1a5d43] sticky top-0 z-30 px-3 sm:px-4 md:px-5 flex items-center justify-between gap-2 shadow-md w-full max-w-full">
           
           {/* Left: Mobile Toggle, Quick Booking, Search Bar & Primary Ledgers */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden p-1.5 rounded-lg text-slate-300 hover:bg-[#0a3d2b] cursor-pointer"
@@ -1384,11 +1384,11 @@ export default function App() {
               title="Quick New Deposit Booking"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Booking</span>
+              <span className="hidden 2xl:inline">New Booking</span>
             </button>
 
             {/* Global Search Bar with Live Multi-Product Dropdown & Ctrl+K */}
-            <div className="hidden md:flex items-center relative w-36 lg:w-48 xl:w-60 transition-all duration-200 shrink" ref={searchContainerRef}>
+            <div className="hidden lg:flex items-center relative flex-1 min-w-[100px] max-w-[175px] transition-all duration-200" ref={searchContainerRef}>
               <Search className="w-3.5 h-3.5 text-emerald-400 absolute left-2.5 top-2.5 pointer-events-none" />
               <input
                 ref={searchInputRef}
@@ -1423,7 +1423,7 @@ export default function App() {
             {/* Direct DAY BOOK Navigation Button (1:1 with Prahlad Top Navbar) */}
             <button
               onClick={() => handleSwitchTab('day_book', 'Day Book', BookOpen, 'bg-amber-600')}
-              className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
+              className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer shrink-0 ${
                 activeTab === 'day_book'
                   ? 'bg-[#D4AF37] text-[#062319] border-[#D4AF37] shadow-xs'
                   : 'bg-[#062319] hover:bg-[#0a3d2b] border-[#1a5d43] text-amber-300'
@@ -1450,7 +1450,7 @@ export default function App() {
             </button>
 
             {/* ACCOUNTS Dropdown (Visible on large screens) */}
-            <div className="relative hidden xl:block" ref={accountsRef}>
+            <div className="relative hidden xl:block shrink-0" ref={accountsRef}>
               <button
                 onClick={() => setAccountsDropdownOpen(!accountsDropdownOpen)}
                 className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#062319] hover:bg-[#0a3d2b] border border-[#1a5d43] text-xs font-bold text-amber-300 uppercase tracking-wider transition cursor-pointer shrink-0"
@@ -1521,7 +1521,7 @@ export default function App() {
           </div>
 
           {/* Right: Branch Selector, FY Selector, Notifications, Customer App, Profile */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-2">
 
             {/* 1. Branch Selector */}
             <div className="relative" ref={branchRef}>
@@ -1531,8 +1531,8 @@ export default function App() {
                 title="Select Operating Branch Desk"
               >
                 <Building2 className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                <span className="hidden sm:inline max-w-[140px] md:max-w-[170px] truncate text-[11px] font-bold text-amber-200">
-                  {selectedBranch.includes('SAVINGS') ? 'Savings Desk' : 'Term Deposits (FD/RD/MIS)'}
+                <span className="hidden sm:inline max-w-[115px] truncate text-[11px] font-bold text-amber-200">
+                  {selectedBranch.includes('SAVINGS') ? 'Savings Desk' : 'FD/RD/MIS Desk'}
                 </span>
                 <ChevronDown className="w-3 h-3 text-emerald-300 shrink-0" />
               </button>

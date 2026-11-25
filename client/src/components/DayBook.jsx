@@ -116,6 +116,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
   const [stmtMinAmt, setStmtMinAmt] = useState('');
   const [stmtMaxAmt, setStmtMaxAmt] = useState('');
   const [stmtTxType, setStmtTxType] = useState('ALL');
+  const [stmtPage, setStmtPage] = useState(1);
 
   // Ledger Accounts Index & Edit Modal State (Matches /accounting/accounts & /edit)
   const [ledgersList, setLedgersList] = useState([]);
@@ -232,6 +233,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
     const minVal = overrides.minAmt !== undefined ? overrides.minAmt : stmtMinAmt;
     const maxVal = overrides.maxAmt !== undefined ? overrides.maxAmt : stmtMaxAmt;
     const typeVal = overrides.txType !== undefined ? overrides.txType : stmtTxType;
+    const pageVal = overrides.page !== undefined ? overrides.page : stmtPage;
 
     try {
       const params = new URLSearchParams({
@@ -242,12 +244,15 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
         search: searchVal || '',
         minAmount: minVal || '',
         maxAmount: maxVal || '',
-        txType: typeVal || 'ALL'
+        txType: typeVal || 'ALL',
+        page: String(pageVal || 1),
+        limit: '100'
       });
       const codeKey = targetLedger.code || targetLedger.name;
       const res = await apiRequest(`/accounting/ledger-statement/${encodeURIComponent(codeKey)}?${params.toString()}`);
       if (res && res.success) {
         setSelectedLedgerStatement(res);
+        if (res.pagination?.page) setStmtPage(res.pagination.page);
       } else {
         setSelectedLedgerStatement({
           ledger: {
@@ -280,7 +285,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
 
   // Handle clicking on ANY ledger card or Eye icon to open 1:1 Statement Drilldown
   const handleOpenLedgerStatement = (ledger) => {
-    const defaultFrom = startDate.slice(0, 8) + '01';
+    const defaultFrom = startDate;
     setStmtLedgerRef(ledger);
     setStmtBranch(selectedBranch);
     setStmtFromDate(defaultFrom);
@@ -290,6 +295,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
     setStmtMinAmt('');
     setStmtMaxAmt('');
     setStmtTxType('ALL');
+    setStmtPage(1);
     setShowStatementModal(true);
     loadLedgerStatement(ledger, {
       branch: selectedBranch,
@@ -299,7 +305,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
       search: '',
       minAmt: '',
       maxAmt: '',
-      txType: 'ALL'
+      txType: 'ALL',
+      page: 1
     });
   };
 
@@ -548,17 +555,17 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                   <React.Fragment key={gIdx}>
                     <tr className="font-bold border-b border-slate-600 bg-slate-50">
                       <td colSpan="2" className="p-1 uppercase border-r border-slate-600">{g.categoryName}</td>
-                      <td className="p-1 text-right font-mono border-r border-slate-600">{g.cashTotal.toFixed(1)}</td>
-                      <td className="p-1 text-right font-mono border-r border-slate-600">{g.transferTotal.toFixed(2)}</td>
-                      <td className="p-1 text-right font-mono">{g.total.toFixed(2)}</td>
+                      <td className="p-1 text-right font-mono border-r border-slate-600">{Number(g.cashTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="p-1 text-right font-mono border-r border-slate-600">{Number(g.transferTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="p-1 text-right font-mono">{Number(g.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>
                     {g.items.map((it, iIdx) => (
                       <tr key={iIdx} className="border-b border-slate-400">
                         <td className="p-1 font-mono text-[10px] border-r border-slate-400">{it.account_no}</td>
                         <td className="p-1 border-r border-slate-400">{it.name_narration}</td>
-                        <td className="p-1 text-right font-mono border-r border-slate-400">{it.cash > 0 ? it.cash.toFixed(1) : '0'}</td>
-                        <td className="p-1 text-right font-mono border-r border-slate-400">{it.transfer > 0 ? it.transfer.toFixed(2) : '0'}</td>
-                        <td className="p-1 text-right font-mono">{''}</td>
+                        <td className="p-1 text-right font-mono border-r border-slate-400">{Number(it.cash || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right font-mono border-r border-slate-400">{Number(it.transfer || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="p-1 text-right font-mono">{Number(it.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
                   </React.Fragment>
@@ -568,9 +575,9 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             <tfoot>
               <tr className="bg-slate-100 font-bold border-t border-slate-700">
                 <td colSpan="2" className="p-1 uppercase border-r border-slate-700">एकूण {sideLabel}</td>
-                <td className="p-1 text-right font-mono border-r border-slate-700">{cashTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td className="p-1 text-right font-mono border-r border-slate-700">{transferTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td className="p-1 text-right font-mono">{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td className="p-1 text-right font-mono border-r border-slate-700">{cashTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="p-1 text-right font-mono border-r border-slate-700">{transferTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="p-1 text-right font-mono">{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               </tr>
             </tfoot>
           </table>
@@ -579,26 +586,26 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
     }
 
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-2.5 sm:p-3 space-y-2.5">
         <div className={`flex items-center justify-between pb-2 border-b-2 ${headerBorder}`}>
-          <span className="text-sm font-black uppercase tracking-wide flex items-center gap-1.5">
+          <span className="text-xs sm:text-sm font-black uppercase tracking-wide flex items-center gap-1.5">
             {isJama ? <ArrowDownLeft className="w-4 h-4 text-emerald-600" /> : <ArrowUpRight className="w-4 h-4 text-rose-600" />}
             <span>{sideLabel} ({isJama ? 'CREDITS / INFLOW' : 'DEBITS / OUTFLOW'})</span>
           </span>
-          <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${isJama ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
-            ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border shrink-0 ${isJama ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+            ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-[11px]">
             <thead className={`font-bold text-[10px] uppercase border-b ${theadCls}`}>
               <tr>
-                <th className="py-2 px-2 text-left">खाते नं.</th>
-                <th className="py-2 px-2 text-left">नाव / नॅरेशन</th>
-                <th className="py-2 px-2 text-right">कॅश (₹)</th>
-                <th className="py-2 px-2 text-right">ट्रान्सफर (₹)</th>
-                <th className="py-2 px-2 text-right">एकूण (₹)</th>
+                <th className="py-1.5 px-1.5 text-left">खाते नं.</th>
+                <th className="py-1.5 px-1.5 text-left">नाव / नॅरेशन</th>
+                <th className="py-1.5 px-1.5 text-right">कॅश (₹)</th>
+                <th className="py-1.5 px-1.5 text-right">ट्रान्सफर (₹)</th>
+                <th className="py-1.5 px-1.5 text-right">एकूण (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -612,18 +619,18 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 groups.map((group, gIdx) => (
                   <React.Fragment key={gIdx}>
                     <tr className={`font-bold ${groupRowCls}`}>
-                      <td colSpan="2" className="py-2 px-2 uppercase text-[11px]">{group.categoryName}</td>
-                      <td className="py-2 px-2 text-right font-mono text-[11px]">{group.cashTotal > 0 ? `₹${group.cashTotal.toLocaleString('en-IN')}` : '-'}</td>
-                      <td className="py-2 px-2 text-right font-mono text-[11px]">{group.transferTotal > 0 ? `₹${group.transferTotal.toLocaleString('en-IN')}` : '-'}</td>
-                      <td className={`py-2 px-2 text-right font-mono text-[11px] font-black ${amountCls}`}>₹{group.total.toLocaleString('en-IN')}</td>
+                      <td colSpan="2" className="py-1.5 px-1.5 uppercase text-[10px]">{group.categoryName}</td>
+                      <td className="py-1.5 px-1.5 text-right font-mono text-[10px] whitespace-nowrap">{group.cashTotal > 0 ? `₹${group.cashTotal.toLocaleString('en-IN')}` : '-'}</td>
+                      <td className="py-1.5 px-1.5 text-right font-mono text-[10px] whitespace-nowrap">{group.transferTotal > 0 ? `₹${group.transferTotal.toLocaleString('en-IN')}` : '-'}</td>
+                      <td className={`py-1.5 px-1.5 text-right font-mono text-[10px] font-black whitespace-nowrap ${amountCls}`}>₹{group.total.toLocaleString('en-IN')}</td>
                     </tr>
                     {group.items.map((item, iIdx) => (
                       <tr key={iIdx} className="hover:bg-slate-50 transition">
-                        <td className="py-1.5 px-2 font-mono text-[10px] text-slate-500 whitespace-nowrap pl-4">{item.account_no}</td>
-                        <td className="py-1.5 px-2 font-medium text-slate-800 truncate max-w-[180px]">{item.name_narration}</td>
-                        <td className="py-1.5 px-2 text-right font-mono text-slate-600">{item.cash > 0 ? `₹${item.cash.toLocaleString('en-IN')}` : '-'}</td>
-                        <td className="py-1.5 px-2 text-right font-mono text-slate-600">{item.transfer > 0 ? `₹${item.transfer.toLocaleString('en-IN')}` : '-'}</td>
-                        <td className={`py-1.5 px-2 text-right font-mono font-bold ${amountCls}`}>₹{item.total.toLocaleString('en-IN')}</td>
+                        <td className="py-1.5 px-1.5 font-mono text-[10px] text-slate-500 whitespace-nowrap pl-2.5">{item.account_no}</td>
+                        <td className="py-1.5 px-1.5 font-medium text-slate-800 truncate max-w-[125px]">{item.name_narration}</td>
+                        <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 whitespace-nowrap">{item.cash > 0 ? `₹${item.cash.toLocaleString('en-IN')}` : '-'}</td>
+                        <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 whitespace-nowrap">{item.transfer > 0 ? `₹${item.transfer.toLocaleString('en-IN')}` : '-'}</td>
+                        <td className={`py-1.5 px-1.5 text-right font-mono font-bold whitespace-nowrap ${amountCls}`}>₹{item.total.toLocaleString('en-IN')}</td>
                       </tr>
                     ))}
                   </React.Fragment>
@@ -632,10 +639,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </tbody>
             <tfoot className={`border-t-2 font-black ${footerCls}`}>
               <tr>
-                <td colSpan="2" className="py-2.5 px-2 uppercase text-xs">एकूण {sideLabel}</td>
-                <td className="py-2.5 px-2 text-right font-mono">₹{cashTotal.toLocaleString('en-IN')}</td>
-                <td className="py-2.5 px-2 text-right font-mono">₹{transferTotal.toLocaleString('en-IN')}</td>
-                <td className={`py-2.5 px-2 text-right font-mono text-sm ${amountCls}`}>₹{grandTotal.toLocaleString('en-IN')}</td>
+                <td colSpan="2" className="py-2 px-1.5 uppercase text-[11px]">एकूण {sideLabel}</td>
+                <td className="py-2 px-1.5 text-right font-mono whitespace-nowrap">₹{cashTotal.toLocaleString('en-IN')}</td>
+                <td className="py-2 px-1.5 text-right font-mono whitespace-nowrap">₹{transferTotal.toLocaleString('en-IN')}</td>
+                <td className={`py-2 px-1.5 text-right font-mono text-xs whitespace-nowrap ${amountCls}`}>₹{grandTotal.toLocaleString('en-IN')}</td>
               </tr>
             </tfoot>
           </table>
@@ -856,15 +863,15 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
 
         {/* PRAHLAD EXACT CENTERED SEARCH STRIP + RIGHT-ALIGNED FORMAT DROPDOWN */}
         {dayBookOption !== 'LEDGERS' && (
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-1">
-            <div className="hidden md:block w-36"></div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
+            <div className="hidden xl:block w-28 shrink-0"></div>
 
             {/* Centered Branch + Date + Green GET button (matches admin.taranganjali.com 1:1) */}
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 flex-1 min-w-0">
               <select
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
-                className="px-3 py-2 bg-white border border-slate-300 rounded text-xs font-medium text-slate-800 min-w-[200px] focus:outline-none focus:border-[#3c8dbc]"
+                className="px-2.5 py-2 bg-white border border-slate-300 rounded text-xs font-medium text-slate-800 w-52 sm:w-56 truncate focus:outline-none focus:border-[#3c8dbc]"
               >
                 <option value="ALL">ALL</option>
                 <option value="BHR001">MAIN BRANCH (BHR001)</option>
@@ -924,12 +931,12 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* Right-aligned Format Selector matching step_7_shot_1.png */}
-            <div className="flex flex-col items-end">
+            <div className="flex flex-col items-end shrink-0">
               <span className="text-[11px] font-bold text-slate-600 mb-0.5">Format:</span>
               <select
                 value={viewFormat}
                 onChange={(e) => setViewFormat(e.target.value)}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-medium text-slate-800 focus:outline-none focus:border-[#3c8dbc] cursor-pointer"
+                className="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs font-medium text-slate-800 focus:outline-none focus:border-[#3c8dbc] cursor-pointer whitespace-nowrap min-w-[125px] shrink-0"
               >
                 <option value="format1">Format 1</option>
                 <option value="format2">Format 2 (रोज किर्द)</option>
@@ -1287,8 +1294,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
 
             {/* COLUMN 1: OPENING (<DD/MM/YYYY>) - Amber/Orange Top Border (#f39c12) */}
             <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#f39c12] border-x border-b border-slate-200 overflow-hidden">
-              <div className="py-3 px-4 border-b border-slate-100 text-center">
-                <h3 className="text-[15px] font-medium text-slate-700 tracking-wide">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+                <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   OPENING ({formattedStart})
                 </h3>
               </div>
@@ -1314,8 +1321,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
 
             {/* COLUMN 2: CURRENT/ CLOSING (<DD/MM/YYYY>) - Red Top Border (#dd4b39) */}
             <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#dd4b39] border-x border-b border-slate-200 overflow-hidden">
-              <div className="py-3 px-4 border-b border-slate-100 text-center">
-                <h3 className="text-[15px] font-medium text-slate-700 tracking-wide">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+                <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   CURRENT/ CLOSING ({formattedEnd})
                 </h3>
               </div>
@@ -1341,8 +1348,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
 
             {/* COLUMN 3: DAY TRANSACTIONS - Green Top Border (#00a65a) */}
             <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#00a65a] border-x border-b border-slate-200 overflow-hidden">
-              <div className="py-3 px-4 border-b border-slate-100 text-center">
-                <h3 className="text-[15px] font-medium text-slate-700 tracking-wide">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+                <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   DAY TRANSACTIONS
                 </h3>
               </div>
@@ -1467,13 +1474,13 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-[#991b1b] tracking-wider">
                     <tr>
-                      <th className="py-3 px-4">NAME</th>
-                      <th className="py-3 px-4">TYPE</th>
-                      <th className="py-3 px-4 text-right">OPENING BAL. ({formattedStart})</th>
-                      <th className="py-3 px-4 text-right">DEBIT</th>
-                      <th className="py-3 px-4 text-right">CREDIT</th>
-                      <th className="py-3 px-4 text-right">CLOSING BAL. ({formattedEnd})</th>
-                      <th className="py-3 px-4 text-center">EYE VIEW</th>
+                      <th className="py-2.5 px-2.5">NAME</th>
+                      <th className="py-2.5 px-2.5">TYPE</th>
+                      <th className="py-2.5 px-2.5 text-right whitespace-nowrap">OPENING ({formattedStart})</th>
+                      <th className="py-2.5 px-2.5 text-right">DEBIT</th>
+                      <th className="py-2.5 px-2.5 text-right">CREDIT</th>
+                      <th className="py-2.5 px-2.5 text-right whitespace-nowrap">CLOSING ({formattedEnd})</th>
+                      <th className="py-2.5 px-2.5 text-center whitespace-nowrap">EYE VIEW</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1481,7 +1488,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                       const f1 = getLedgerFormat1Columns(ledger);
                       return (
                         <tr key={ledger.id || ledger.code} className="hover:bg-slate-50 transition">
-                          <td className="py-3 px-4 font-bold text-[#3c8dbc]">
+                          <td className="py-2.5 px-2.5 font-bold text-[#3c8dbc]">
                             <button
                               type="button"
                               onClick={() => handleOpenLedgerStatement(ledger)}
@@ -1490,7 +1497,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                               {f1.displayName}
                             </button>
                           </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
+                          <td className="py-2.5 px-2.5 whitespace-nowrap">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               f1.displayType === 'Asset'
                                 ? 'bg-blue-50 text-blue-800 border border-blue-200'
@@ -1499,23 +1506,23 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                               {f1.displayType}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-semibold text-slate-800">
+                          <td className="py-2.5 px-2.5 text-right font-mono font-semibold text-slate-800 whitespace-nowrap">
                             {formatAccountingNum(ledger.opening_balance)}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-800">
+                          <td className="py-2.5 px-2.5 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
                             {f1.debit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-slate-800">
+                          <td className="py-2.5 px-2.5 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
                             {f1.credit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-indigo-700 text-sm">
+                          <td className="py-2.5 px-2.5 text-right font-mono font-bold text-indigo-700 text-xs sm:text-sm whitespace-nowrap">
                             {formatAccountingNum(ledger.closing_balance)}
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => handleOpenLedgerStatement(ledger)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold text-[11px] transition cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold text-[11px] transition cursor-pointer"
                               title="View Ledger Statement"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -1528,17 +1535,17 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                   </tbody>
                   <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-black italic text-slate-900">
                     <tr>
-                      <td colSpan="2" className="py-3 px-4 uppercase text-xs">GRAND TOTAL</td>
-                      <td className="py-3 px-4 text-right font-mono text-sm">
+                      <td colSpan="2" className="py-2.5 px-2.5 uppercase text-xs">GRAND TOTAL</td>
+                      <td className="py-2.5 px-2.5 text-right font-mono text-xs sm:text-sm whitespace-nowrap">
                         {formatAccountingNum(activeDayBookLedgers.reduce((s, l) => s + (l.opening_balance || 0), 0))}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-sm">
+                      <td className="py-2.5 px-2.5 text-right font-mono text-xs sm:text-sm whitespace-nowrap">
                         {activeDayBookLedgers.reduce((s, l) => s + getLedgerFormat1Columns(l).debit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-sm">
+                      <td className="py-2.5 px-2.5 text-right font-mono text-xs sm:text-sm whitespace-nowrap">
                         {activeDayBookLedgers.reduce((s, l) => s + getLedgerFormat1Columns(l).credit, 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-indigo-900 text-sm">
+                      <td className="py-2.5 px-2.5 text-right font-mono text-indigo-900 text-xs sm:text-sm whitespace-nowrap">
                         {formatAccountingNum(activeDayBookLedgers.reduce((s, l) => s + (l.closing_balance || 0), 0))}
                       </td>
                       <td></td>
@@ -2259,7 +2266,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             <div className="px-5 py-3.5 bg-[#082e20] text-white flex items-center justify-between border-b border-emerald-800">
               <div>
                 <h3 className="text-lg font-medium flex items-center gap-2">
-                  <span>{selectedLedgerStatement.ledger.type} Ledger - {selectedLedgerStatement.ledger.name} - {selectedLedgerStatement.ledger.name}</span>
+                  <span>{selectedLedgerStatement.ledger.type} Ledger - {selectedLedgerStatement.ledger.name}</span>
                 </h3>
                 <p className="text-[11px] text-emerald-300">
                   Ledgers &gt; {selectedLedgerStatement.ledger.type} &gt; {selectedLedgerStatement.ledger.name}
@@ -2312,7 +2319,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 </label>
                 <button
                   type="button"
-                  onClick={() => loadLedgerStatement(stmtLedgerRef)}
+                  onClick={() => {
+                    setStmtPage(1);
+                    loadLedgerStatement(stmtLedgerRef, { page: 1 });
+                  }}
                   className="px-4 py-1.5 bg-[#f39c12] hover:bg-[#e08e0b] text-white font-bold text-xs rounded uppercase cursor-pointer"
                 >
                   SEARCH
@@ -2410,7 +2420,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => loadLedgerStatement(stmtLedgerRef)}
+                      onClick={() => {
+                        setStmtPage(1);
+                        loadLedgerStatement(stmtLedgerRef, { page: 1 });
+                      }}
                       className="px-3 py-1.5 bg-[#3c8dbc] hover:bg-[#367fa9] text-white font-bold text-xs rounded inline-flex items-center gap-1 cursor-pointer"
                     >
                       <Search className="w-3 h-3" /> SEARCH
@@ -2418,8 +2431,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     <button
                       type="button"
                       onClick={() => {
-                        setStmtSearch(''); setStmtMinAmt(''); setStmtMaxAmt(''); setStmtTxType('ALL');
-                        loadLedgerStatement(stmtLedgerRef, { search: '', minAmt: '', maxAmt: '', txType: 'ALL' });
+                        setStmtSearch(''); setStmtMinAmt(''); setStmtMaxAmt(''); setStmtTxType('ALL'); setStmtPage(1);
+                        loadLedgerStatement(stmtLedgerRef, { search: '', minAmt: '', maxAmt: '', txType: 'ALL', page: 1 });
                       }}
                       className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded inline-flex items-center gap-1 cursor-pointer"
                     >
@@ -2484,6 +2497,45 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     </tbody>
                   </table>
                 </div>
+
+                {selectedLedgerStatement.pagination && selectedLedgerStatement.pagination.totalRows > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 border-t border-slate-200 text-xs">
+                    <span className="text-slate-600 font-medium">
+                      Showing <strong className="text-slate-900">{selectedLedgerStatement.statement?.length || 0}</strong> of{' '}
+                      <strong className="text-slate-900">{selectedLedgerStatement.pagination.totalRows.toLocaleString('en-IN')}</strong> rows
+                      {' '}• Page <strong className="text-slate-900">{selectedLedgerStatement.pagination.page}</strong> of{' '}
+                      <strong className="text-slate-900">{selectedLedgerStatement.pagination.totalPages}</strong>
+                    </span>
+                    {selectedLedgerStatement.pagination.totalPages > 1 && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={selectedLedgerStatement.pagination.page <= 1 || loadingStatement}
+                          onClick={() => {
+                            const nextP = Math.max(1, selectedLedgerStatement.pagination.page - 1);
+                            setStmtPage(nextP);
+                            loadLedgerStatement(stmtLedgerRef, { page: nextP });
+                          }}
+                          className="px-3 py-1 bg-white border border-slate-300 rounded font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
+                        >
+                          ← Prev
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedLedgerStatement.pagination.page >= selectedLedgerStatement.pagination.totalPages || loadingStatement}
+                          onClick={() => {
+                            const nextP = Math.min(selectedLedgerStatement.pagination.totalPages, selectedLedgerStatement.pagination.page + 1);
+                            setStmtPage(nextP);
+                            loadLedgerStatement(stmtLedgerRef, { page: nextP });
+                          }}
+                          className="px-3 py-1 bg-white border border-slate-300 rounded font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
