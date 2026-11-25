@@ -466,7 +466,7 @@ export default function NewFDModal({
                   <input
                     type="number"
                     required
-                    min="1"
+                    min="0"
                     max="360"
                     value={tenureMonths}
                     onChange={(e) => setTenureMonths(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}

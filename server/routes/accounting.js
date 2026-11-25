@@ -6,146 +6,51 @@ const { authenticateToken } = require('../middleware/auth');
 // 1. GET /api/accounting/day-book
 router.get('/day-book', authenticateToken, (req, res) => {
   try {
-    const selectedDate = req.query.date || new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    const startDate = req.query.startDate || req.query.date || today;
+    const endDate = req.query.endDate || req.query.date || startDate;
+    const selectedBranch = req.query.branch || 'ALL';
 
-    // Compute live balances from database
+    // Compute live total balances from database for ledger references
     const totalFd = db.prepare("SELECT COALESCE(SUM(principal_amount), 0) AS total FROM fixed_deposits WHERE status = 'ACTIVE'").get()?.total || 0;
     const totalRd = db.prepare("SELECT COALESCE(SUM(monthly_installment), 0) AS total FROM recurring_deposits WHERE status = 'ACTIVE'").get()?.total || 0;
     const totalMis = db.prepare("SELECT COALESCE(SUM(deposit_amount), 0) AS total FROM mis_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
     const totalSavings = db.prepare("SELECT COALESCE(SUM(current_balance), 0) AS total FROM savings_accounts WHERE status = 'ACTIVE'").get()?.total || 0;
 
-    // 9 Live Banking Ledgers (Matches Taranganjali Live Day Book)
+    // 9 Live Banking Ledgers
     const ledgers = [
-      {
-        id: 1,
-        code: 'LED-001',
-        name: 'TARPL MAIN',
-        type: 'Capital & Reserves',
-        opening_balance: 1000000.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 1000000.00
-      },
-      {
-        id: 2,
-        code: 'LED-002',
-        name: 'WALLET BALANCE',
-        type: 'Central Pool',
-        opening_balance: 470000.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 470000.00
-      },
-      {
-        id: 3,
-        code: 'LED-003',
-        name: 'CASH BOOK',
-        type: 'Branch Vault Cash',
-        opening_balance: 2736651.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 2736651.00
-      },
-      {
-        id: 4,
-        code: 'LED-004',
-        name: 'BANK BOOK',
-        type: 'Banking Current A/C',
-        opening_balance: 528431.51,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 528431.51
-      },
-      {
-        id: 5,
-        code: 'LED-005',
-        name: 'NEW FD RD MIS',
-        type: 'Term Deposit Liabilities',
-        opening_balance: 202112275.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 202112275.00
-      },
-      {
-        id: 6,
-        code: 'LED-006',
-        name: 'WALLET BALANCE',
-        type: 'Advisor Collection Pool',
-        opening_balance: 2137375.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 2137375.00
-      },
-      {
-        id: 7,
-        code: 'LED-007',
-        name: 'SAVING ACCOUNTS',
-        type: 'Demand Liabilities',
-        opening_balance: 3221417.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 3221417.00
-      },
-      {
-        id: 8,
-        code: 'LED-008',
-        name: 'RD ACCOUNTS',
-        type: 'Recurring Liabilities',
-        opening_balance: 318496.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 318496.00
-      },
-      {
-        id: 9,
-        code: 'LED-009',
-        name: 'DD ACCOUNTS',
-        type: 'Daily Deposit Accounts',
-        opening_balance: 282396.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 282396.00
-      },
-      {
-        id: 10,
-        code: 'LED-010',
-        name: 'GOLD LOAN BOOK',
-        type: 'Gold Loan Assets (गोल्ड लोन)',
-        opening_balance: 325000.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 325000.00
-      },
-      {
-        id: 11,
-        code: 'LED-011',
-        name: 'BORROWINGS & UDHAR',
-        type: 'Hand Loan / Udhar (उधार खाता)',
-        opening_balance: 150000.00,
-        receipts: 0.00,
-        payments: 0.00,
-        closing_balance: 150000.00
-      }
+      { id: 1, code: 'LED-001', name: 'TARPL MAIN', type: 'Capital & Reserves', opening_balance: 1000000.00, receipts: 0.00, payments: 0.00, closing_balance: 1000000.00 },
+      { id: 2, code: 'LED-002', name: 'WALLET BALANCE', type: 'Central Pool', opening_balance: 470000.00, receipts: 0.00, payments: 0.00, closing_balance: 470000.00 },
+      { id: 3, code: 'LED-003', name: 'CASH BOOK', type: 'Branch Vault Cash', opening_balance: 2736651.00, receipts: 0.00, payments: 0.00, closing_balance: 2736651.00 },
+      { id: 4, code: 'LED-004', name: 'BANK BOOK', type: 'Banking Current A/C', opening_balance: 528431.51, receipts: 0.00, payments: 0.00, closing_balance: 528431.51 },
+      { id: 5, code: 'LED-005', name: 'NEW FD RD MIS', type: 'Term Deposit Liabilities', opening_balance: 202112275.00, receipts: 0.00, payments: 0.00, closing_balance: 202112275.00 },
+      { id: 6, code: 'LED-006', name: 'WALLET BALANCE', type: 'Advisor Collection Pool', opening_balance: 2137375.00, receipts: 0.00, payments: 0.00, closing_balance: 2137375.00 },
+      { id: 7, code: 'LED-007', name: 'SAVING ACCOUNTS', type: 'Demand Liabilities', opening_balance: 3221417.00, receipts: 0.00, payments: 0.00, closing_balance: 3221417.00 },
+      { id: 8, code: 'LED-008', name: 'RD ACCOUNTS', type: 'Recurring Liabilities', opening_balance: 318496.00, receipts: 0.00, payments: 0.00, closing_balance: 318496.00 },
+      { id: 9, code: 'LED-009', name: 'DD ACCOUNTS', type: 'Daily Deposit Accounts', opening_balance: 282396.00, receipts: 0.00, payments: 0.00, closing_balance: 282396.00 },
+      { id: 10, code: 'LED-010', name: 'GOLD LOAN BOOK', type: 'Gold Loan Assets (गोल्ड लोन)', opening_balance: 325000.00, receipts: 0.00, payments: 0.00, closing_balance: 325000.00 },
+      { id: 11, code: 'LED-011', name: 'BORROWINGS & UDHAR', type: 'Hand Loan / Udhar (उधार खाता)', opening_balance: 150000.00, receipts: 0.00, payments: 0.00, closing_balance: 150000.00 }
     ];
 
-    // Fetch both Inflow (Input) and Outflow (Output) cash entries for selectedDate
+    // ==========================================
+    // OPTION 1: DAILY USE (दैनिक खर्च व आवक-जावक)
+    // ==========================================
     let dayCashEntries = [];
     try {
       dayCashEntries = db.prepare(`
         SELECT * FROM day_book_cash_entries 
-        WHERE entry_date = ? 
-        ORDER BY id DESC
-      `).all(selectedDate);
+        WHERE entry_date BETWEEN ? AND ? 
+        ORDER BY entry_date DESC, id DESC
+      `).all(startDate, endDate);
     } catch(e) {
       dayCashEntries = [];
     }
 
-    // Fallback: If no cash entries exist yet, check daily_expenses
     if (dayCashEntries.length === 0) {
       try {
         const legacyExpenses = db.prepare(`
-          SELECT * FROM daily_expenses WHERE expense_date = ? ORDER BY id DESC
-        `).all(selectedDate);
+          SELECT * FROM daily_expenses WHERE expense_date BETWEEN ? AND ? ORDER BY expense_date DESC, id DESC
+        `).all(startDate, endDate);
         dayCashEntries = legacyExpenses.map(e => ({
           id: e.id,
           voucher_no: e.expense_voucher_no,
@@ -163,13 +68,12 @@ router.get('/day-book', authenticateToken, (req, res) => {
       } catch(e) {}
     }
 
-    // Separate Cash & Bank for Inflows (Input) and Outflows (Output)
     const cashInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && e.payment_mode === 'CASH').reduce((sum, e) => sum + e.amount, 0);
     const bankInflows = dayCashEntries.filter(e => e.entry_type === 'INFLOW' && e.payment_mode === 'BANK_ONLINE').reduce((sum, e) => sum + e.amount, 0);
     const cashOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && e.payment_mode === 'CASH').reduce((sum, e) => sum + e.amount, 0);
     const bankOutflows = dayCashEntries.filter(e => e.entry_type === 'OUTFLOW' && e.payment_mode === 'BANK_ONLINE').reduce((sum, e) => sum + e.amount, 0);
 
-    // Apply Inflow & Outflow adjustments to CASH BOOK (LED-003) & BANK BOOK (LED-004)
+    // Apply adjustments to Ledgers
     const cashLedger = ledgers.find(l => l.code === 'LED-003');
     if (cashLedger) {
       cashLedger.receipts += cashInflows;
@@ -183,37 +87,18 @@ router.get('/day-book', authenticateToken, (req, res) => {
       bankLedger.closing_balance = bankLedger.opening_balance + bankLedger.receipts - bankLedger.payments;
     }
 
-    // Apply Gold Loan adjustments to GOLD LOAN BOOK (LED-010)
-    const goldLedger = ledgers.find(l => l.code === 'LED-010');
-    if (goldLedger) {
-      const glDisbursed = dayCashEntries.filter(e => e.category === 'GOLD_LOAN_DISBURSEMENT').reduce((sum, e) => sum + e.amount, 0);
-      const glRecovered = dayCashEntries.filter(e => e.category === 'GOLD_LOAN_RECOVERY').reduce((sum, e) => sum + e.amount, 0);
-      goldLedger.payments += glDisbursed;
-      goldLedger.receipts += glRecovered;
-      goldLedger.closing_balance = goldLedger.opening_balance + glDisbursed - glRecovered;
-    }
-
-    // Apply Udhar adjustments to BORROWINGS & UDHAR (LED-011)
-    const udharLedger = ledgers.find(l => l.code === 'LED-011');
-    if (udharLedger) {
-      const udharIn = dayCashEntries.filter(e => e.category === 'BORROWING_INFLOW').reduce((sum, e) => sum + e.amount, 0);
-      const udharOut = dayCashEntries.filter(e => e.category === 'BORROWING_REPAYMENT').reduce((sum, e) => sum + e.amount, 0);
-      udharLedger.receipts += udharIn;
-      udharLedger.payments += udharOut;
-      udharLedger.closing_balance = udharLedger.opening_balance + udharIn - udharOut;
-    }
-
-    // Convert all Inflow & Outflow entries into Day Book Vouchers
     const cashVouchers = dayCashEntries.map(e => ({
       id: `entry-${e.id}`,
       voucher_no: e.voucher_no,
+      date: e.entry_date,
       time: e.created_at ? e.created_at.split(' ')[1]?.slice(0, 5) || '11:00 AM' : '11:00 AM',
       ledger: e.payment_mode === 'CASH' ? 'CASH BOOK' : 'BANK BOOK',
       account: `${e.category_name} (${e.party_name})`,
       category: e.category,
       category_name: e.category_name,
       party_name: e.party_name,
-      entry_type: e.entry_type, // 'INFLOW' (Input) | 'OUTFLOW' (Output)
+      entry_type: e.entry_type,
+      payment_mode: e.payment_mode,
       type: e.entry_type === 'INFLOW' ? 'RECEIPT' : 'EXPENSE',
       dr_cr: e.entry_type === 'INFLOW'
         ? `DR ${e.payment_mode === 'CASH' ? 'Cash Book' : 'Bank Book'} / CR ${e.category_name}`
@@ -224,85 +109,407 @@ router.get('/day-book', authenticateToken, (req, res) => {
       reference_no: e.reference_no
     }));
 
+    // ==========================================
+    // OPTION 2: BANKING DAY BOOK (कोर बैंकिंग)
+    // ==========================================
+    // 1. New Fixed Deposits (FD) in Date Range
+    let fds = [];
+    try {
+      fds = db.prepare(`
+        SELECT fd.id, fd.fd_number, fd.principal_amount, fd.annual_rate, fd.tenure_months, 
+               fd.compounding_frequency, fd.start_date, fd.maturity_date, fd.status, fd.created_at,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM fixed_deposits fd
+        JOIN customers c ON fd.customer_id = c.id
+        WHERE (date(fd.start_date) BETWEEN ? AND ? OR date(fd.created_at) BETWEEN ? AND ?)
+        ORDER BY fd.created_at DESC
+      `).all(startDate, endDate, startDate, endDate);
+    } catch(e) { fds = []; }
+
+    // 1b. Premature / Matured FD Closures in Date Range
+    let fdClosures = [];
+    try {
+      fdClosures = db.prepare(`
+        SELECT fd.id, fd.fd_number, fd.principal_amount, fd.premature_interest_paid, fd.closed_date, fd.status,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM fixed_deposits fd
+        JOIN customers c ON fd.customer_id = c.id
+        WHERE fd.status IN ('CLOSED_PREMATURE', 'MATURED')
+          AND date(fd.closed_date) BETWEEN ? AND ?
+        ORDER BY fd.closed_date DESC
+      `).all(startDate, endDate);
+    } catch(e) { fdClosures = []; }
+
+    // 2. New Recurring Deposits (RD) in Date Range
+    let rds = [];
+    try {
+      rds = db.prepare(`
+        SELECT rd.id, rd.rd_number, rd.monthly_installment, rd.annual_rate, rd.tenure_months,
+               rd.start_date, rd.maturity_date, rd.status, rd.created_at,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM recurring_deposits rd
+        JOIN customers c ON rd.customer_id = c.id
+        WHERE (date(rd.start_date) BETWEEN ? AND ? OR date(rd.created_at) BETWEEN ? AND ?)
+        ORDER BY rd.created_at DESC
+      `).all(startDate, endDate, startDate, endDate);
+    } catch(e) { rds = []; }
+
+    // 2b. RD Installments collected in Date Range
+    let rdInstallments = [];
+    try {
+      rdInstallments = db.prepare(`
+        SELECT rdi.id, rdi.installment_no, rdi.installment_amount, rdi.paid_date, rdi.late_fee, rdi.total_collected,
+               rdi.payment_mode, rdi.transaction_ref, rd.rd_number,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM rd_installments rdi
+        JOIN recurring_deposits rd ON rdi.rd_id = rd.id
+        JOIN customers c ON rd.customer_id = c.id
+        WHERE rdi.status = 'PAID' AND date(rdi.paid_date) BETWEEN ? AND ?
+        ORDER BY rdi.paid_date DESC
+      `).all(startDate, endDate);
+    } catch(e) { rdInstallments = []; }
+
+    // 3. New Monthly Income Schemes (MIS) in Date Range
+    let misAccounts = [];
+    try {
+      misAccounts = db.prepare(`
+        SELECT m.id, m.mis_number, m.deposit_amount, m.annual_rate, m.tenure_months, m.monthly_payout,
+               m.start_date, m.maturity_date, m.status, m.created_at,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM mis_accounts m
+        JOIN customers c ON m.customer_id = c.id
+        WHERE (date(m.start_date) BETWEEN ? AND ? OR date(m.created_at) BETWEEN ? AND ?)
+        ORDER BY m.created_at DESC
+      `).all(startDate, endDate, startDate, endDate);
+    } catch(e) { misAccounts = []; }
+
+    // 3b. MIS Monthly Payouts in Date Range
+    let misPayouts = [];
+    try {
+      misPayouts = db.prepare(`
+        SELECT msp.id, msp.month_no, msp.payout_amount, msp.net_payable, msp.paid_date, msp.payment_reference,
+               m.mis_number, c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM mis_payout_schedules msp
+        JOIN mis_accounts m ON msp.mis_id = m.id
+        JOIN customers c ON m.customer_id = c.id
+        WHERE msp.status = 'PAID' AND date(msp.paid_date) BETWEEN ? AND ?
+        ORDER BY msp.paid_date DESC
+      `).all(startDate, endDate);
+    } catch(e) { misPayouts = []; }
+
+    // 4. New Savings Accounts in Date Range
+    let savingsAccounts = [];
+    try {
+      savingsAccounts = db.prepare(`
+        SELECT s.id, s.account_number, s.current_balance, s.minimum_balance, s.opened_date, s.status, s.created_at,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM savings_accounts s
+        JOIN customers c ON s.customer_id = c.id
+        WHERE (date(s.opened_date) BETWEEN ? AND ? OR date(s.created_at) BETWEEN ? AND ?)
+        ORDER BY s.created_at DESC
+      `).all(startDate, endDate, startDate, endDate);
+    } catch(e) { savingsAccounts = []; }
+
+    // 4b. Savings Passbook Transactions (Deposits vs Withdrawals) in Date Range
+    let savingsTxns = [];
+    try {
+      savingsTxns = db.prepare(`
+        SELECT st.id, st.transaction_number, st.transaction_type, st.amount, st.balance_after,
+               st.payment_mode, st.narration, st.created_at, s.account_number,
+               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
+        FROM savings_transactions st
+        JOIN savings_accounts s ON st.account_id = s.id
+        JOIN customers c ON s.customer_id = c.id
+        WHERE date(st.created_at) BETWEEN ? AND ?
+        ORDER BY st.created_at DESC
+      `).all(startDate, endDate);
+    } catch(e) { savingsTxns = []; }
+
+    // Combine All Banking Activities into Unified Ledger Table
+    const bankingTransactions = [];
+
+    // FDs
+    fds.forEach(fd => {
+      bankingTransactions.push({
+        id: `fd-${fd.id}`,
+        created_at: fd.created_at || `${fd.start_date} 10:00:00`,
+        date: fd.start_date || (fd.created_at ? fd.created_at.split(' ')[0] : startDate),
+        time: fd.created_at ? fd.created_at.split(' ')[1]?.slice(0, 5) : '10:30 AM',
+        voucher_no: fd.fd_number,
+        customer_name: fd.customer_name,
+        customer_code: fd.customer_code,
+        customer_phone: fd.customer_phone,
+        product: 'FD',
+        action_type: 'NEW_FD',
+        action_label: 'New Fixed Deposit (सावधि जमा खोला)',
+        inflow_amount: fd.principal_amount,
+        outflow_amount: 0,
+        payment_mode: 'BANK / CASH',
+        narration: `Tenure: ${fd.tenure_months}M @ ${fd.annual_rate}% p.a. (${fd.compounding_frequency})`,
+        status: fd.status
+      });
+    });
+
+    // FD Closures
+    fdClosures.forEach(c => {
+      const isMatured = c.status === 'MATURED';
+      bankingTransactions.push({
+        id: `close-fd-${c.id}`,
+        created_at: `${c.closed_date} 16:00:00`,
+        date: c.closed_date,
+        time: '04:00 PM',
+        voucher_no: c.fd_number,
+        customer_name: c.customer_name,
+        customer_code: c.customer_code,
+        customer_phone: c.customer_phone,
+        product: 'FD',
+        action_type: isMatured ? 'FD_MATURED' : 'FD_PREMATURE',
+        action_label: isMatured ? 'FD Maturity Payout (सावधि परिपक्वता भुगतान)' : 'FD Premature Closure (समयपूर्व बंदी भुगतान)',
+        inflow_amount: 0,
+        outflow_amount: c.principal_amount + (c.premature_interest_paid || 0),
+        payment_mode: 'BANK / CASH',
+        narration: `Capital & Interest payout released to member`,
+        status: c.status
+      });
+    });
+
+    // RDs
+    rds.forEach(rd => {
+      bankingTransactions.push({
+        id: `rd-${rd.id}`,
+        created_at: rd.created_at || `${rd.start_date} 11:00:00`,
+        date: rd.start_date || (rd.created_at ? rd.created_at.split(' ')[0] : startDate),
+        time: rd.created_at ? rd.created_at.split(' ')[1]?.slice(0, 5) : '11:00 AM',
+        voucher_no: rd.rd_number,
+        customer_name: rd.customer_name,
+        customer_code: rd.customer_code,
+        customer_phone: rd.customer_phone,
+        product: 'RD',
+        action_type: 'NEW_RD',
+        action_label: 'New RD Account (आवर्ती जमा खोला)',
+        inflow_amount: rd.monthly_installment,
+        outflow_amount: 0,
+        payment_mode: 'CASH',
+        narration: `Monthly Installment ₹${rd.monthly_installment.toLocaleString('en-IN')} for ${rd.tenure_months}M`,
+        status: rd.status
+      });
+    });
+
+    // RD Installments
+    rdInstallments.forEach(rdi => {
+      bankingTransactions.push({
+        id: `rdi-${rdi.id}`,
+        created_at: `${rdi.paid_date} 12:00:00`,
+        date: rdi.paid_date,
+        time: '12:00 PM',
+        voucher_no: rdi.transaction_ref || rdi.rd_number,
+        customer_name: rdi.customer_name,
+        customer_code: rdi.customer_code,
+        customer_phone: rdi.customer_phone,
+        product: 'RD',
+        action_type: 'RD_INSTALLMENT',
+        action_label: `RD Installment #${rdi.installment_no} (किश्त जमा)`,
+        inflow_amount: rdi.total_collected || rdi.installment_amount,
+        outflow_amount: 0,
+        payment_mode: rdi.payment_mode || 'CASH',
+        narration: `RD ${rdi.rd_number} Installment #${rdi.installment_no} collected (Late fee: ₹${rdi.late_fee || 0})`,
+        status: 'PAID'
+      });
+    });
+
+    // MIS Accounts
+    misAccounts.forEach(m => {
+      bankingTransactions.push({
+        id: `mis-${m.id}`,
+        created_at: m.created_at || `${m.start_date} 11:30:00`,
+        date: m.start_date || (m.created_at ? m.created_at.split(' ')[0] : startDate),
+        time: m.created_at ? m.created_at.split(' ')[1]?.slice(0, 5) : '11:30 AM',
+        voucher_no: m.mis_number,
+        customer_name: m.customer_name,
+        customer_code: m.customer_code,
+        customer_phone: m.customer_phone,
+        product: 'MIS',
+        action_type: 'NEW_MIS',
+        action_label: 'New MIS Booking (मासिक आय खाता खोला)',
+        inflow_amount: m.deposit_amount,
+        outflow_amount: 0,
+        payment_mode: 'BANK / CASH',
+        narration: `Deposit ₹${m.deposit_amount.toLocaleString('en-IN')} | Monthly Payout: ₹${m.monthly_payout.toLocaleString('en-IN')}`,
+        status: m.status
+      });
+    });
+
+    // MIS Payouts
+    misPayouts.forEach(msp => {
+      bankingTransactions.push({
+        id: `misp-${msp.id}`,
+        created_at: `${msp.paid_date} 14:00:00`,
+        date: msp.paid_date,
+        time: '02:00 PM',
+        voucher_no: msp.payment_reference || msp.mis_number,
+        customer_name: msp.customer_name,
+        customer_code: msp.customer_code,
+        customer_phone: msp.customer_phone,
+        product: 'MIS',
+        action_type: 'MIS_PAYOUT',
+        action_label: `MIS Month #${msp.month_no} Payout (मासिक ब्याज भुगतान)`,
+        inflow_amount: 0,
+        outflow_amount: msp.payout_amount || msp.net_payable,
+        payment_mode: 'BANK_ONLINE',
+        narration: `Interest credited for MIS ${msp.mis_number}`,
+        status: 'PAID'
+      });
+    });
+
+    // Savings Accounts
+    savingsAccounts.forEach(s => {
+      bankingTransactions.push({
+        id: `sb-${s.id}`,
+        created_at: s.created_at || `${s.opened_date} 10:00:00`,
+        date: s.opened_date || (s.created_at ? s.created_at.split(' ')[0] : startDate),
+        time: s.created_at ? s.created_at.split(' ')[1]?.slice(0, 5) : '10:00 AM',
+        voucher_no: s.account_number,
+        customer_name: s.customer_name,
+        customer_code: s.customer_code,
+        customer_phone: s.customer_phone,
+        product: 'SAVINGS',
+        action_type: 'NEW_SAVINGS',
+        action_label: 'New Savings A/C (बचत खाता खोला)',
+        inflow_amount: s.current_balance > 0 ? s.current_balance : 0,
+        outflow_amount: 0,
+        payment_mode: 'CASH',
+        narration: `Savings Account opened with initial deposit ₹${(s.current_balance || 0).toLocaleString('en-IN')}`,
+        status: s.status
+      });
+    });
+
+    // Savings Transactions (Deposits vs Withdrawals)
+    savingsTxns.forEach(st => {
+      const isDeposit = st.transaction_type === 'DEPOSIT' || st.transaction_type === 'CREDIT';
+      bankingTransactions.push({
+        id: `st-${st.id}`,
+        created_at: st.created_at,
+        date: st.created_at ? st.created_at.split(' ')[0] : startDate,
+        time: st.created_at ? st.created_at.split(' ')[1]?.slice(0, 5) : '01:00 PM',
+        voucher_no: st.transaction_number || st.account_number,
+        customer_name: st.customer_name,
+        customer_code: st.customer_code,
+        customer_phone: st.customer_phone,
+        product: 'SAVINGS',
+        action_type: isDeposit ? 'SAVINGS_DEPOSIT' : 'SAVINGS_WITHDRAWAL',
+        action_label: isDeposit ? 'Savings Cash Deposit (बचत जमा)' : 'Savings Cash Withdrawal (बचत निकासी)',
+        inflow_amount: isDeposit ? st.amount : 0,
+        outflow_amount: !isDeposit ? st.amount : 0,
+        payment_mode: st.payment_mode || 'CASH',
+        narration: `${st.narration} (A/C: ${st.account_number})`,
+        status: 'COMPLETED'
+      });
+    });
+
+    // Sort Banking Transactions by created_at / date DESC
+    bankingTransactions.sort((a, b) => (b.created_at || b.date).localeCompare(a.created_at || a.date));
+
+    // Banking Totals
+    const totalBankingInflow = bankingTransactions.reduce((acc, t) => acc + (t.inflow_amount || 0), 0);
+    const totalBankingOutflow = bankingTransactions.reduce((acc, t) => acc + (t.outflow_amount || 0), 0);
+    const netBankingLiquidity = totalBankingInflow - totalBankingOutflow;
+
+    const fdPrincipalTotal = fds.reduce((sum, f) => sum + f.principal_amount, 0);
+    const fdClosedTotal = fdClosures.reduce((sum, f) => sum + f.principal_amount + (f.premature_interest_paid || 0), 0);
+    const rdInstallmentCommitTotal = rds.reduce((sum, r) => sum + r.monthly_installment, 0);
+    const rdCollectedTotal = rdInstallments.reduce((sum, r) => sum + (r.total_collected || r.installment_amount), 0);
+    const misDepositTotal = misAccounts.reduce((sum, m) => sum + m.deposit_amount, 0);
+    const misPayoutTotal = misPayouts.reduce((sum, m) => sum + (m.payout_amount || m.net_payable), 0);
+    const sbInitialTotal = savingsAccounts.reduce((sum, s) => sum + (s.current_balance || 0), 0);
+    const sbDepositsTotal = savingsTxns.filter(t => t.transaction_type === 'DEPOSIT' || t.transaction_type === 'CREDIT').reduce((sum, t) => sum + t.amount, 0);
+    const sbWithdrawalsTotal = savingsTxns.filter(t => t.transaction_type === 'WITHDRAWAL' || t.transaction_type === 'DEBIT').reduce((sum, t) => sum + t.amount, 0);
+
     const totalOpening = ledgers.reduce((acc, l) => acc + l.opening_balance, 0);
     const totalReceipts = ledgers.reduce((acc, l) => acc + l.receipts, 0);
     const totalPayments = ledgers.reduce((acc, l) => acc + l.payments, 0);
     const totalClosing = ledgers.reduce((acc, l) => acc + l.closing_balance, 0);
 
-    // Operational Day Book Banking Vouchers
-    const recentVouchers = [
-      ...cashVouchers,
-      {
-        id: 101,
-        voucher_no: 'VCH-2026-0042',
-        time: '10:15 AM',
-        ledger: 'CASH BOOK',
-        account: 'M00001 - Prahlad Singh',
-        type: 'RECEIPT',
-        dr_cr: 'DR Cash / CR Savings',
-        amount: 25000.00,
-        narration: 'Cash deposit into Savings A/C SB-00001'
-      },
-      {
-        id: 102,
-        voucher_no: 'VCH-2026-0043',
-        time: '11:30 AM',
-        ledger: 'BANK BOOK',
-        account: 'M00002 - Narpat Singh',
-        type: 'RECEIPT',
-        dr_cr: 'DR Bank / CR FD Term Deposit',
-        amount: 100000.00,
-        narration: 'NEFT credit for new Fixed Deposit booking'
-      },
-      {
-        id: 103,
-        voucher_no: 'VCH-2026-0044',
-        time: '01:45 PM',
-        ledger: 'RD ACCOUNTS',
-        account: 'M00003 - Satendra Kumar',
-        type: 'RECEIPT',
-        dr_cr: 'DR Cash / CR RD Installment',
-        amount: 5000.00,
-        narration: 'Monthly installment received via ADV0001'
-      },
-      {
-        id: 104,
-        voucher_no: 'VCH-2026-0045',
-        time: '03:10 PM',
-        ledger: 'SAVING ACCOUNTS',
-        account: 'M00004 - Rahul Sharma',
-        type: 'PAYMENT',
-        dr_cr: 'DR Savings / CR Cash',
-        amount: 12000.00,
-        narration: 'Cash withdrawal from Savings A/C'
-      }
-    ];
-
     res.json({
       success: true,
-      date: selectedDate,
+      startDate,
+      endDate,
+      date: startDate,
+      isRange: startDate !== endDate,
+
+      // ☕ OPTION 1: DAILY USE (दैनिक खर्च व आवक-जावक)
+      daily: {
+        summary: {
+          total_inflow: cashInflows + bankInflows,
+          total_outflow: cashOutflows + bankOutflows,
+          net_cashflow: (cashInflows + bankInflows) - (cashOutflows + bankOutflows),
+          inflows: { total: cashInflows + bankInflows, cash: cashInflows, bank: bankInflows },
+          outflows: { total: cashOutflows + bankOutflows, cash: cashOutflows, bank: bankOutflows },
+          total_vouchers: dayCashEntries.length
+        },
+        entries: dayCashEntries,
+        vouchers: cashVouchers
+      },
+
+      // 🏦 OPTION 2: BANKING (कोर बैंकिंग डे-बुक)
+      banking: {
+        summary: {
+          total_inflow: totalBankingInflow,
+          total_outflow: totalBankingOutflow,
+          net_liquidity: netBankingLiquidity,
+          total_new_accounts: fds.length + rds.length + misAccounts.length + savingsAccounts.length,
+          fd: {
+            opened_count: fds.length,
+            opened_amount: fdPrincipalTotal,
+            closed_count: fdClosures.length,
+            closed_amount: fdClosedTotal
+          },
+          rd: {
+            opened_count: rds.length,
+            opened_installment: rdInstallmentCommitTotal,
+            installments_paid_count: rdInstallments.length,
+            installments_paid_amount: rdCollectedTotal
+          },
+          mis: {
+            opened_count: misAccounts.length,
+            opened_amount: misDepositTotal,
+            payouts_count: misPayouts.length,
+            payouts_amount: misPayoutTotal
+          },
+          savings: {
+            opened_count: savingsAccounts.length,
+            opening_deposit: sbInitialTotal,
+            total_deposits: sbDepositsTotal,
+            total_withdrawals: sbWithdrawalsTotal,
+            txns_count: savingsTxns.length
+          }
+        },
+        transactions: bankingTransactions,
+        productBreakdown: {
+          fds,
+          rds,
+          rdInstallments,
+          misAccounts,
+          misPayouts,
+          savingsAccounts,
+          savingsTxns
+        }
+      },
+
+      // Legacy backwards-compatibility
       summary: {
         total_opening: totalOpening,
         total_receipts: totalReceipts,
         total_payments: totalPayments,
         total_closing: totalClosing,
-        inflows: {
-          total: cashInflows + bankInflows,
-          cash: cashInflows,
-          bank: bankInflows
-        },
-        outflows: {
-          total: cashOutflows + bankOutflows,
-          cash: cashOutflows,
-          bank: bankOutflows
-        },
+        inflows: { total: cashInflows + bankInflows, cash: cashInflows, bank: bankInflows },
+        outflows: { total: cashOutflows + bankOutflows, cash: cashOutflows, bank: bankOutflows },
         net_cashflow: (cashInflows + bankInflows) - (cashOutflows + bankOutflows),
         total_expenses: cashOutflows + bankOutflows
       },
       entries: dayCashEntries,
       expenses: dayCashEntries.filter(e => e.entry_type === 'OUTFLOW'),
       ledgers,
-      vouchers: recentVouchers
+      vouchers: cashVouchers
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

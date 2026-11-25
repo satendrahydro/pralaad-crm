@@ -295,7 +295,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
                 <div className="mt-2 relative animate-fadeIn">
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="360"
                     required
                     value={tenureMonths}

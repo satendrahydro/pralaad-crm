@@ -330,7 +330,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                 <div className="mt-2 relative animate-fadeIn">
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max="360"
                     required
                     value={tenureMonths}
