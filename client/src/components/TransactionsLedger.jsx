@@ -284,6 +284,17 @@ export default function TransactionsLedger() {
         detail={selectedTxDetail}
         loading={loadingTxDetail}
         onClose={() => setSelectedTxDetail(null)}
+        onOpenLedger={(targetName) => {
+          const u = String(targetName || '').toUpperCase();
+          const nextCode = u.includes('CASH') ? '102'
+            : u.includes('BANK') ? '103'
+            : u.includes('RD ACCOUNT') ? 'LED-008'
+            : u.includes('SAVING') ? 'LED-007'
+            : u.includes('FD') ? 'LED-005'
+            : null;
+          setSelectedTxDetail(null);
+          if (nextCode) setLedgerCode(nextCode);
+        }}
         formatAccountingNum={formatNum}
       />
     </div>

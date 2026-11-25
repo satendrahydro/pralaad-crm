@@ -2635,6 +2635,27 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
         detail={selectedTxDetail}
         loading={loadingTxDetail}
         onClose={() => setSelectedTxDetail(null)}
+        onOpenLedger={(targetName) => {
+          const upper = String(targetName || '').toUpperCase();
+          const pool = [...(data?.ledgers || []), ...(ledgersList || [])];
+          const matched = pool.find((l) => {
+            const n = String(l.name || '').toUpperCase();
+            return n && (upper.includes(n) || (upper.includes('FD') && n.includes('FD')) || (upper.includes('SAVING') && n.includes('SAVING')) || (upper.includes('RD ACCOUNT') && n.includes('RD ACCOUNT')));
+          });
+          setSelectedTxDetail(null);
+          if (matched) {
+            handleOpenLedgerStatement(matched);
+          } else {
+            const fallbackCode = upper.includes('CASH') ? '102'
+              : upper.includes('BANK') ? '103'
+              : upper.includes('RD ACCOUNT') ? 'LED-008'
+              : upper.includes('SAVING') ? 'LED-007'
+              : upper.includes('FD') ? 'LED-005'
+              : upper.includes('TARPL') ? 'LED-002'
+              : null;
+            if (fallbackCode) handleOpenLedgerStatement({ code: fallbackCode, name: targetName });
+          }
+        }}
         formatAccountingNum={formatAccountingNum}
       />
 
