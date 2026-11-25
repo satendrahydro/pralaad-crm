@@ -10,4 +10,6 @@ server/fd_crm_taranganjali_real_production.sqlite
 
 
 *.apk
+*.sqlite-shm
+*.sqlite-wal
 

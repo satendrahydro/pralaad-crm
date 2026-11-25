@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { requirePermission, getUserPermissions } = require('../middleware/permissions');
@@ -282,10 +283,13 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
       is_senior_citizen = COALESCE(?, is_senior_citizen),
       login_id = COALESCE(?, login_id),
       login_password = COALESCE(?, login_password),
+      password_hash = COALESCE(?, password_hash),
       app_access_enabled = COALESCE(?, app_access_enabled),
       status = COALESCE(?, status)
     WHERE id = ?
   `);
+
+  const hashVal = login_password ? bcrypt.hashSync(login_password.trim(), 10) : null;
 
   stmt.run(
     full_name, father_name, branch, phone, email,
@@ -296,6 +300,7 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
     is_senior_citizen !== undefined ? (is_senior_citizen ? 1 : 0) : null,
     login_id ? login_id.trim() : null,
     login_password ? login_password.trim() : null,
+    hashVal,
     app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : null,
     status || null,
     req.params.id

@@ -663,6 +663,15 @@ export default function Customers({
                             <FileText className="w-3.5 h-3.5" />
                           </button>
 
+                          {/* 📱 App Password & Access */}
+                          <button
+                            onClick={() => onViewPortfolio && onViewPortfolio(c.id, 'APP_ACCESS')}
+                            className="p-1 hover:bg-indigo-50 text-indigo-600 rounded transition cursor-pointer"
+                            title="Set/Change Mobile App Password & Access (मोबाइल ऐप पासवर्ड सेट करें)"
+                          >
+                            <Key className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* WhatsApp Credentials */}
                           <button
                             onClick={() => handleShareCredentialsOnWhatsApp(c)}
@@ -845,6 +854,13 @@ export default function Customers({
                       className="py-1 bg-amber-50 hover:bg-amber-600 text-amber-800 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
                     >
                       + MIS
+                    </button>
+                    <button
+                      onClick={() => onViewPortfolio && onViewPortfolio(c.id, 'APP_ACCESS')}
+                      className="py-1 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white rounded text-[10px] font-bold transition text-center cursor-pointer"
+                      title="Set App Password"
+                    >
+                      🔑 App
                     </button>
                     <button
                       onClick={() => onViewPortfolio && onViewPortfolio(c.id)}

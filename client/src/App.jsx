@@ -266,6 +266,7 @@ export default function App() {
   const [savingsCustomerId, setSavingsCustomerId] = useState(null);
   const [customerPortfolioModalOpen, setCustomerPortfolioModalOpen] = useState(false);
   const [portfolioCustomerId, setPortfolioCustomerId] = useState(null);
+  const [portfolioInitialTab, setPortfolioInitialTab] = useState('OVERVIEW');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Core Banking Accounting & SMS Modals / Dropdowns
@@ -1919,8 +1920,9 @@ export default function App() {
                 setMisCustomerId(cid);
                 setNewMISModalOpen(true);
               }}
-              onViewPortfolio={(cid) => {
+              onViewPortfolio={(cid, tab = 'OVERVIEW') => {
                 setPortfolioCustomerId(cid);
+                setPortfolioInitialTab(tab || 'OVERVIEW');
                 setCustomerPortfolioModalOpen(true);
               }}
             />
@@ -2202,9 +2204,11 @@ export default function App() {
       <UnifiedCustomerProfileModal
         customerId={portfolioCustomerId}
         isOpen={customerPortfolioModalOpen}
+        initialTab={portfolioInitialTab}
         onClose={() => {
           setCustomerPortfolioModalOpen(false);
           setPortfolioCustomerId(null);
+          setPortfolioInitialTab('OVERVIEW');
         }}
         onOpenFD={(cust) => {
           setNewFDInitialData({
