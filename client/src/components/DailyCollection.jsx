@@ -10,6 +10,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function DailyCollection() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -148,10 +149,8 @@ export default function DailyCollection() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <input
-              type="date"
+          <div className="flex items-center bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
+            <DateInput
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="bg-transparent border-none text-xs font-bold text-slate-800 focus:outline-none"

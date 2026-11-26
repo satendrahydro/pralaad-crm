@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, UserPlus, Smartphone, Key } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
   const [customers, setCustomers] = useState([]);
@@ -363,8 +364,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1">Deposit Start Date</label>
-              <input
-                type="date"
+              <DateInput
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}

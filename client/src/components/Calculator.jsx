@@ -12,6 +12,7 @@ import {
   Table as TableIcon
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function Calculator({ onBookFromCalc }) {
   const [principal, setPrincipal] = useState(500000);
@@ -356,15 +357,11 @@ export default function Calculator({ onBookFromCalc }) {
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
               Deposit Start Date (जमा तिथि)
             </label>
-            <div className="relative">
-              <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm"
-              />
-            </div>
+            <DateInput
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm"
+            />
           </div>
 
         </div>

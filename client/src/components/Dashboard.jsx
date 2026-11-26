@@ -52,6 +52,7 @@ import {
   Legend 
 } from 'recharts';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 // Premium Banking FinTech Palette: Forest Green & Golden Yellow
 const FINTECH_COLORS = {
@@ -735,8 +736,7 @@ export default function Dashboard({
           <span className="font-bold text-slate-700">Custom Date Range:</span>
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400">From</span>
-            <input 
-              type="date"
+            <DateInput
               id="dashboard-date-from"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
@@ -745,8 +745,7 @@ export default function Dashboard({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400">To</span>
-            <input 
-              type="date"
+            <DateInput
               id="dashboard-date-to"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}

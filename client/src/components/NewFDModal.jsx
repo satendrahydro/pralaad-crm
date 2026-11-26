@@ -13,6 +13,7 @@ import {
   Key
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function NewFDModal({ 
   isOpen, 
@@ -487,8 +488,7 @@ export default function NewFDModal({
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Deposit Start Date
               </label>
-              <input
-                type="date"
+              <DateInput
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}

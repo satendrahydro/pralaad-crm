@@ -23,6 +23,7 @@ import {
 import { formatINR, formatDate, apiRequest } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
 import PaginationBar from './PaginationBar';
+import DateInput from './DateInput';
 
 export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomerProfile }) {
   const [rds, setRds] = useState([]);
@@ -578,8 +579,7 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
                 <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
                   Collection Date (जमा करने की तारीख) *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   max={new Date().toISOString().split('T')[0]}
                   value={collectDate}

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../utils';
 import PaginationBar from './PaginationBar';
+import DateInput from './DateInput';
 
 export default function BorrowingsRegister() {
   const [udhars, setUdhars] = useState([]);
@@ -431,8 +432,7 @@ export default function BorrowingsRegister() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Return Due Date
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={formData.due_date}
                     onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"

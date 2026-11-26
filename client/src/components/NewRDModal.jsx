@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, AlertCircle, UserPlus, Smartphone, Key } from 'lucide-react';
 import { formatINR, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
   const [customers, setCustomers] = useState([]);
@@ -328,8 +329,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1">First Deposit Date</label>
-              <input
-                type="date"
+              <DateInput
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}

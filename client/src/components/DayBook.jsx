@@ -45,6 +45,7 @@ import {
 import { apiRequest, formatINR, formatDate } from '../utils';
 import TarplLogo from './TarplLogo';
 import TransactionBackgroundModal from './TransactionBackgroundModal';
+import DateInput from './DateInput';
 
 // Standard INPUT (आवक / Cash In / Receipt) Categories
 const INPUT_CATEGORIES = [
@@ -922,9 +923,8 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <option value="SHEKHUPURA">SHEKHUPURA BRANCH (शेखुपुरा / सुजालपुर)</option>
               </select>
 
-              <div className="flex items-center border border-slate-300 rounded bg-white px-2.5 py-1.5">
-                <input
-                  type="date"
+              <div className="flex items-center border border-slate-300 rounded bg-white px-2 py-1">
+                <DateInput
                   value={startDate}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -932,19 +932,18 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     if (!showCustomRange) setEndDate(val);
                     setDatePreset('CUSTOM');
                   }}
-                  className="text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                  className="text-xs font-medium text-slate-800 focus:outline-none"
                 />
                 {showCustomRange && (
                   <>
                     <span className="mx-1.5 text-slate-400 text-xs">→</span>
-                    <input
-                      type="date"
+                    <DateInput
                       value={endDate}
                       onChange={(e) => {
                         setEndDate(e.target.value);
                         setDatePreset('CUSTOM');
                       }}
-                      className="text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                      className="text-xs font-medium text-slate-800 focus:outline-none"
                     />
                   </>
                 )}
@@ -2105,8 +2104,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Entry Date (दिनांक) *
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={formData.entry_date}
                     onChange={(e) => setFormData(prev => ({ ...prev, entry_date: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 bg-white"
@@ -2363,15 +2361,13 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                   <option value="BRH003">TARPL SAVING (BRH003)</option>
                   <option value="SHEKHUPURA">SHEKHUPURA BRANCH (शेखुपुरा / सुजालपुर)</option>
                 </select>
-                <input
-                  type="date"
+                <DateInput
                   value={stmtFromDate}
                   onChange={(e) => setStmtFromDate(e.target.value)}
                   className="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800"
                 />
                 <span className="text-slate-400 font-bold">-</span>
-                <input
-                  type="date"
+                <DateInput
                   value={stmtToDate}
                   onChange={(e) => setStmtToDate(e.target.value)}
                   className="px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800"

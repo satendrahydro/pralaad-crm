@@ -15,6 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function FDDetailModal({ 
   fdId, 
@@ -419,8 +420,7 @@ export default function FDDetailModal({
                   <form onSubmit={handleConfirmSchedulePaid} className="space-y-3 text-xs">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Disbursed Date (डिसबर्स तारीख) *</label>
-                      <input
-                        type="date"
+                      <DateInput
                         required
                         max={new Date().toISOString().split('T')[0]}
                         value={payDate}

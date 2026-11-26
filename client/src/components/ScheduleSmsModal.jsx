@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, MessageSquare, Send, CheckCircle2, Users, Calendar } from 'lucide-react';
 import { apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function ScheduleSmsModal({ isOpen, onClose }) {
   const [audience, setAudience] = useState('ALL_MEMBERS');
@@ -128,8 +129,7 @@ export default function ScheduleSmsModal({ isOpen, onClose }) {
 
           <div>
             <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dispatch Date</label>
-            <input
-              type="date"
+            <DateInput
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
               className="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold text-slate-800"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle, CheckCircle, Calculator } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) {
   const [withdrawalDate, setWithdrawalDate] = useState(new Date().toISOString().split('T')[0]);
@@ -110,8 +111,7 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 Liquidation Date
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={withdrawalDate}
                 onChange={(e) => setWithdrawalDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiRequest, formatDate, formatINR } from '../utils';
 import PaginationBar from './PaginationBar';
+import DateInput from './DateInput';
 
 export default function GoldLoanList() {
   const [loans, setLoans] = useState([]);
@@ -844,8 +845,7 @@ export default function GoldLoanList() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Disbursal Date (डिसबर्स किस तारीख पर किया गया) *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   value={newLoan.disbursal_date}
                   onChange={(e) => setNewLoan(prev => ({ ...prev, disbursal_date: e.target.value }))}
@@ -930,8 +930,7 @@ export default function GoldLoanList() {
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Repayment Date (जमा करने की तारीख) *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   value={repayDate}
                   onChange={(e) => setRepayDate(e.target.value)}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, AlertTriangle, BookOpen, ArrowRight } from 'lucide-react';
 import { apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function NewJournalEntryModal({ isOpen, onClose, onSuccess }) {
   const [voucherDate, setVoucherDate] = useState(new Date().toISOString().split('T')[0]);
@@ -110,8 +111,7 @@ export default function NewJournalEntryModal({ isOpen, onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Voucher Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={voucherDate}
                 onChange={(e) => setVoucherDate(e.target.value)}
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-300 font-semibold text-slate-800"

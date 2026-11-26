@@ -16,6 +16,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function Payouts() {
   const [data, setData] = useState([]);
@@ -544,8 +545,7 @@ export default function Payouts() {
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Disbursed Date (डिसबर्स किस तारीख पर किया गया - आज या पूर्व तिथि) *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   max={new Date().toISOString().split('T')[0]}
                   value={disbursalDate}

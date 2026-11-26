@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate, apiRequest } from '../utils';
 import PaginationBar from './PaginationBar';
+import DateInput from './DateInput';
 
 export default function LoansAgainstDeposit({ 
   loanType = 'DEPOSIT', 
@@ -916,8 +917,7 @@ export default function LoansAgainstDeposit({
               {/* Disbursal Date */}
               <div>
                 <label className="font-semibold text-slate-700 block mb-1">Disbursal Date (डिसबर्स किस तारीख पर किया गया) *</label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   value={disbursalDate}
                   onChange={(e) => setDisbursalDate(e.target.value)}
@@ -1010,8 +1010,7 @@ export default function LoansAgainstDeposit({
 
               <div>
                 <label className="font-bold text-slate-700 uppercase block mb-1">Repayment Date (जमा करने की तारीख) *</label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   value={repayDate}
                   onChange={(e) => setRepayDate(e.target.value)}

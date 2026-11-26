@@ -29,6 +29,7 @@ import {
 import { formatINR, formatDate, apiRequest } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
 import PaginationBar from './PaginationBar';
+import DateInput from './DateInput';
 
 export default function MISList({ onOpenNewMIS, isEmployee = false, onViewCustomerProfile }) {
   const [accounts, setAccounts] = useState([]);
@@ -934,8 +935,7 @@ export default function MISList({ onOpenNewMIS, isEmployee = false, onViewCustom
                 <label className="text-xs font-bold text-slate-700 block mb-1">
                   Disbursement Date (डिसबर्स करने की तारीख - आज या पूर्व तिथि) *
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   max={new Date().toISOString().split('T')[0]}
                   value={disbursalDate}
