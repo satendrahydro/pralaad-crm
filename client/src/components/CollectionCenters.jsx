@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Briefcase
 } from 'lucide-react';
-import { formatINR, apiRequest } from '../utils';
+import { formatINR, apiRequest, getApiBase } from '../utils';
 
 export default function CollectionCenters() {
   const [centers, setCenters] = useState([]);
@@ -56,7 +56,7 @@ export default function CollectionCenters() {
   const fetchMeta = async () => {
     try {
       const [brRes, advRes] = await Promise.all([
-        fetch('/api/branches').then(r => r.json()),
+        fetch(`${getApiBase()}/branches`).then(r => r.json()),
         apiRequest('/agents/all-agents')
       ]);
       if (brRes.success) setBranches(brRes.branches || []);

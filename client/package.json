@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
+    "build:collector": "vite build --mode collector",
+    "lint": "oxlint src",
     "preview": "vite preview"
   },
   "dependencies": {

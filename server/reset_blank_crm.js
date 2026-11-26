@@ -58,9 +58,9 @@ function resetToBlankCRM() {
       }
     }
 
-    // Remove temporary audit/test users while preserving main admin account
+    // Remove temporary audit/test users while preserving main Super Admin account
     try {
-      db.prepare("DELETE FROM users WHERE username != 'admin'").run();
+      db.prepare("DELETE FROM users WHERE id != 1 AND role != 'admin'").run();
     } catch (e) {}
 
     // Reset summary counters on configuration masters

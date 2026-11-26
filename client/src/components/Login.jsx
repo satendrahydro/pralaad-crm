@@ -28,12 +28,24 @@ import { apiRequest } from '../utils';
 import TarplLogo from './TarplLogo';
 import tarplLogoJpg from '../assets/LOGO_OF_TARPL.jpg';
 import bgAdminJpg from '../assets/bg-admin.jpg';
+import { getDefaultServerUrl } from '../utils';
+import DeveloperContactModal from './DeveloperContactModal';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(() => localStorage.getItem('pralaad_server_url') || getDefaultServerUrl());
+  const [serverSavedMsg, setServerSavedMsg] = useState('');
+  const isNativeApp = Boolean(
+    window.Capacitor ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.protocol === 'file:' ||
+    import.meta.env.VITE_APP_MODE === 'collector'
+  );
 
   // Security Whitepaper / Modal State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -389,11 +401,63 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Footer: Powered by Crafted Reach & Security Badges */}
+        {/* Footer: Powered by Crafted Reach, Server URL (APK) & Security Badges */}
         <div className="mt-5 pt-3.5 border-t border-slate-100 text-center">
-          <div className="text-xs text-slate-600">
-            <strong>Powered by <b className="text-[#062319] font-extrabold tracking-wide">Crafted Reach ®</b></strong>. All rights reserved.
+          <div className="text-xs text-slate-600 flex items-center justify-center gap-1.5 flex-wrap">
+            <span><strong>Powered by <b className="text-[#062319] font-extrabold tracking-wide">Crafted Reach ®</b></strong>. All rights reserved.</span>
+            <span className="text-slate-300">•</span>
+            <button
+              type="button"
+              onClick={() => setShowContactModal(true)}
+              className="text-indigo-700 hover:text-indigo-900 font-bold underline underline-offset-2 cursor-pointer"
+            >
+              Contact Us
+            </button>
           </div>
+
+          {isNativeApp && (
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setServerSavedMsg('');
+                  setShowServerConfig(v => !v);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-[10px] font-bold cursor-pointer"
+              >
+                <Smartphone className="w-3 h-3 text-indigo-600" />
+                <span>Collector Server URL Setup</span>
+              </button>
+              {showServerConfig && (
+                <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-left space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-600">CRM Server URL (e.g. https://... or http://192.168.x.x:5000)</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="url"
+                      value={serverUrlInput}
+                      onChange={(e) => setServerUrlInput(e.target.value)}
+                      placeholder="https://your-server-url"
+                      className="flex-1 px-2.5 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cleaned = (serverUrlInput || '').trim().replace(/\/$/, '');
+                        if (cleaned) localStorage.setItem('pralaad_server_url', cleaned);
+                        else localStorage.removeItem('pralaad_server_url');
+                        setServerSavedMsg('Saved! Reloading...');
+                        setTimeout(() => window.location.reload(), 400);
+                      }}
+                      className="px-2.5 py-1 bg-[#082e20] text-white text-[10px] font-bold rounded cursor-pointer"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {serverSavedMsg && <p className="text-[10px] font-bold text-emerald-700">{serverSavedMsg}</p>}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Security Badges: 256-Bit SSL + 6-Layer Banking Encryption */}
           <div className="mt-3 flex flex-col items-center gap-2">
@@ -416,6 +480,11 @@ export default function Login({ onLoginSuccess }) {
         </div>
 
       </div>
+
+      <DeveloperContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
 
       {/* ======================================================== */}
       {/* SECURITY ARCHITECTURE WHITEPAPER MODAL                   */}

@@ -15,18 +15,21 @@ import {
   Lock,
   Phone,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Pencil
 } from 'lucide-react';
 import { apiRequest } from '../utils';
+import EditUserModal from './EditUserModal';
 
 export default function Settings() {
-  const [currentUser] = useState(() => {
+  const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('pralaad_fd_user'));
     } catch {
       return null;
     }
   });
+  const [editingUser, setEditingUser] = useState(null);
 
   const isSuperAdmin = currentUser?.role === 'admin';
   const [activeTab, setActiveTab] = useState('company'); // 'company' | 'staff' | 'slabs'
@@ -596,6 +599,16 @@ export default function Settings() {
                           <div className="inline-flex items-center gap-1.5">
                             <button
                               type="button"
+                              onClick={() => setEditingUser(u)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:text-purple-700 hover:bg-purple-50 rounded-lg border border-slate-200 transition cursor-pointer flex items-center gap-1"
+                              title="Edit Name / Username / Phone"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
                               onClick={() => {
                                 setSelectedStaff(u);
                                 setNewPassword('');
@@ -833,6 +846,21 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      <EditUserModal
+        isOpen={Boolean(editingUser)}
+        user={editingUser}
+        isSelf={editingUser?.id === currentUser?.id}
+        onClose={() => setEditingUser(null)}
+        onSaved={(res) => {
+          if (res.user && res.user.id === currentUser?.id) {
+            setCurrentUser(res.user);
+          }
+          setStaffSuccess(res.message);
+          fetchStaff();
+          setTimeout(() => setStaffSuccess(''), 3000);
+        }}
+      />
 
     </div>
   );

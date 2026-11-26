@@ -16,7 +16,7 @@ import {
   Calendar,
   Briefcase
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, getApiBase } from '../utils';
 
 export default function AgentsList({ onBackToRanks }) {
   const [agents, setAgents] = useState([]);
@@ -63,7 +63,7 @@ export default function AgentsList({ onBackToRanks }) {
     try {
       const [ranksRes, branchesRes] = await Promise.all([
         apiRequest('/agent-ranks'),
-        fetch('/api/branches').then(r => r.json())
+        fetch(`${getApiBase()}/branches`).then(r => r.json())
       ]);
       if (ranksRes.success) setRanks(ranksRes.ranks || []);
       if (branchesRes.success) setBranches(branchesRes.branches || []);

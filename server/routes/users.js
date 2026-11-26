@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const db = require('../db');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, requireAdmin, JWT_SECRET } = require('../middleware/auth');
 
 // All endpoints in this router are restricted to Super Admin
 router.use(authenticateToken, requireAdmin);
@@ -522,5 +523,74 @@ router.post('/customer/:id/reset-password', (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
+// PUT /api/users/staff/:id or PUT /api/users/:id - Edit Super Admin / Staff Name, Username, Phone & Role
+router.put('/staff/:id', handleUpdateStaffUser);
+router.put('/:id', handleUpdateStaffUser);
+
+function handleUpdateStaffUser(req, res) {
+  try {
+    const targetId = parseInt(req.params.id);
+    const { full_name, username, phone = '', role } = req.body;
+
+    if (!full_name || !full_name.trim() || !username || !username.trim()) {
+      return res.status(400).json({ success: false, message: 'Full Name and Username are required.' });
+    }
+
+    const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    const cleanUsername = username.trim().toLowerCase();
+    const dup = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? AND id != ?').get(cleanUsername, targetId);
+    if (dup) {
+      return res.status(400).json({ success: false, message: `Username '${cleanUsername}' is already taken.` });
+    }
+
+    const nextRole = (targetId === req.user.id)
+      ? existing.role
+      : (role === 'admin' ? 'admin' : role === 'employee' ? 'employee' : existing.role);
+
+    db.prepare(`
+      UPDATE users
+      SET full_name = ?, username = ?, phone = ?, role = ?
+      WHERE id = ?
+    `).run(full_name.trim(), cleanUsername, phone ? String(phone).trim() : null, nextRole, targetId);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (?, 'UPDATE_STAFF_USER', 'USER', ?, ?)
+      `).run(
+        req.user.id,
+        String(targetId),
+        `Updated user profile: ${existing.username} -> ${cleanUsername} (${full_name.trim()})`
+      );
+    } catch (e) {}
+
+    const updated = db.prepare(`
+      SELECT id, username, full_name, role, phone, COALESCE(is_active, 1) as is_active, created_at
+      FROM users WHERE id = ?
+    `).get(targetId);
+
+    const token = (targetId === req.user.id)
+      ? jwt.sign(
+          { id: updated.id, username: updated.username, role: updated.role, full_name: updated.full_name },
+          JWT_SECRET,
+          { expiresIn: '7d' }
+        )
+      : undefined;
+
+    res.json({
+      success: true,
+      message: `Profile updated for '${updated.full_name}' (@${updated.username}).`,
+      user: updated,
+      ...(token ? { token } : {})
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
 
 module.exports = router;

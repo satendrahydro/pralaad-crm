@@ -67,7 +67,7 @@ const Payouts = lazy(() => import('./components/Payouts'));
 const Subscription = lazy(() => import('./components/Subscription'));
 const Settings = lazy(() => import('./components/Settings'));
 const WhatsAppReminders = lazy(() => import('./components/WhatsAppReminders'));
-const CustomerApp = lazy(() => import('./components/CustomerApp'));
+import DeveloperContactModal from './components/DeveloperContactModal';
 const UserManagement = lazy(() => import('./components/UserManagement'));
 const StaffPermissions = lazy(() => import('./components/StaffPermissions'));
 
@@ -146,12 +146,19 @@ export default function App() {
         setCommercialLockReason(e.detail.message);
       }
     };
+    const handleUserUpdated = (e) => {
+      if (e.detail) setUser(e.detail);
+    };
     window.addEventListener('commercial_lock_triggered', handleTrigger);
-    return () => window.removeEventListener('commercial_lock_triggered', handleTrigger);
+    window.addEventListener('pralaad_user_updated', handleUserUpdated);
+    return () => {
+      window.removeEventListener('commercial_lock_triggered', handleTrigger);
+      window.removeEventListener('pralaad_user_updated', handleUserUpdated);
+    };
   }, []);
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [viewMode, setViewMode] = useState('staff'); // 'staff' | 'customer'
+  const [developerContactOpen, setDeveloperContactOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -170,7 +177,7 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    fetch('/api/branches')
+    fetch(`${getApiBase()}/branches`)
       .then(res => res.json())
       .then(data => {
         if (data && data.success && Array.isArray(data.branches) && data.branches.length > 0) {
@@ -772,37 +779,8 @@ export default function App() {
     );
   }
 
-  if (viewMode === 'customer') {
-    return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs font-semibold text-slate-500">Loading Customer App...</div>}>
-        <CustomerApp 
-          onSwitchToStaffCRM={() => setViewMode('staff')}
-          onPrintCertificate={handlePrintCertificate}
-        />
-        <Certificate
-          fdId={certFDId}
-          isOpen={certModalOpen}
-          onClose={() => setCertModalOpen(false)}
-        />
-      </Suspense>
-    );
-  }
-
   if (!token) {
-    return (
-      <div className="relative">
-        <div className="absolute top-4 right-4 z-50">
-          <button
-            onClick={() => setViewMode('customer')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
-          >
-            <Smartphone className="w-4 h-4" />
-            Switch to Client Mobile App
-          </button>
-        </div>
-        <Login onLoginSuccess={handleLoginSuccess} />
-      </div>
-    );
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   const isEmployee = user?.role === 'employee';
@@ -868,7 +846,7 @@ export default function App() {
       title: 'USER & ACCESS MANAGEMENT',
       items: [
         { id: 'roles_permissions', label: 'Permissions / Roles', icon: ShieldCheck, color: 'bg-emerald-600', badge: 'Matrix' },
-        { id: 'users', label: 'Staff & Mobile Users', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
+        { id: 'users', label: 'Staff & Roles Admin', icon: UserCheck, color: 'bg-indigo-600', badge: 'Admin' },
         { id: 'staff_permissions', label: 'Staff Guard Matrix', icon: ShieldCheck, color: 'bg-cyan-600', badge: 'Security' },
         { id: 'audit_logs', label: 'Audit Trail (एंटी-फ्रॉड)', icon: ShieldCheck, color: 'bg-rose-600', badge: 'Anti-Fraud' }
       ]
@@ -1668,16 +1646,6 @@ export default function App() {
               )}
             </div>
 
-            {/* 5. Switch to Customer View-Only App (Admin & Staff) */}
-            <button
-              onClick={() => setViewMode('customer')}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition cursor-pointer shrink-0"
-              title="Preview Customer Digital Passbook / Mobile App"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden 2xl:inline">App</span>
-            </button>
-
             {/* 6. Download APK (Admin & Staff) */}
             <a
               href="/Taranganjali_Banking.apk"
@@ -1742,6 +1710,12 @@ export default function App() {
                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> License & APIs
+                  </button>
+                  <button
+                    onClick={() => { setDeveloperContactOpen(true); setProfileDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 cursor-pointer"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-emerald-600" /> Contact Us / Support
                   </button>
                   <div className="border-t border-slate-100 my-1"></div>
                   <button
@@ -2266,6 +2240,11 @@ export default function App() {
         onClose={() => setScheduleSmsModalOpen(false)}
       />
       </Suspense>
+
+      <DeveloperContactModal
+        isOpen={developerContactOpen}
+        onClose={() => setDeveloperContactOpen(false)}
+      />
 
       {/* ======================================================== */}
       {/* STICKY BOTTOM MOBILE NAVIGATION BAR                      */}

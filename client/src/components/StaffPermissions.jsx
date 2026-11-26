@@ -216,7 +216,7 @@ export default function StaffPermissions() {
       title: 'OPERATIONS',
       color: 'purple',
       icon: ShieldCheck,
-      keys: ['app_access_request', 'reports_view', 'csv_export', 'receipt_print', 'cert_print']
+      keys: ['reports_view', 'csv_export', 'receipt_print', 'cert_print']
     }
   ];
 

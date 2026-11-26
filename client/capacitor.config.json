@@ -1,7 +1,7 @@
 {
   "appId": "com.pralaad.wealthapp",
-  "appName": "Taranganjali",
-  "webDir": "dist",
+  "appName": "Taranganjali Collector",
+  "webDir": "dist-collector",
   "bundledWebRuntime": false,
   "server": {
     "cleartext": true

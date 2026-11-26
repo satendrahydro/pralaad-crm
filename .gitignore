@@ -1,6 +1,7 @@
 node_modules/
 client/node_modules/
 client/android/
+client/dist-collector/
 .env
 *.log
 server/backups/
