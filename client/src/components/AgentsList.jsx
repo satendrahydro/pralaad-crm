@@ -289,6 +289,116 @@ export default function AgentsList({ onBackToRanks }) {
         </div>
       </div>
 
+      {/* 5. Enroll New Advisor Modal */}
+      {newAgentModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-fadeIn">
+            <div className="px-5 py-4 bg-teal-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-teal-200" />
+                <h3 className="text-sm font-bold">Enroll New Field Advisor</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewAgentModal(false)}
+                className="p-1 rounded-lg hover:bg-white/15 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateAgent} className="p-5 space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Rajesh Verma"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="9876543210"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Commission %</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="50"
+                    value={formCommRate}
+                    onChange={(e) => setFormCommRate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  placeholder="advisor@tarpl.com"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-600"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Branch</label>
+                  <select
+                    value={formBranchId}
+                    onChange={(e) => setFormBranchId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.branch_name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Designation Rank</label>
+                  <select
+                    value={formRankId}
+                    onChange={(e) => setFormRankId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white"
+                  >
+                    {ranks.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setNewAgentModal(false)}
+                  className="px-4 py-2 rounded-xl font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl font-bold bg-teal-700 hover:bg-teal-800 text-white cursor-pointer"
+                >
+                  Enroll Advisor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

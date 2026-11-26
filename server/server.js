@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const zlib = require('zlib');
 require('dotenv').config();
 
 // Ensure DB is initialized
@@ -190,8 +192,45 @@ app.get('/api/audit-logs', (req, res) => {
   }
 });
 
-// Serve frontend in production build if client/dist exists
+// Serve Android APK cleanly from parent release folder without bundling it inside client/public or client/dist
+app.get('/Taranganjali_Banking.apk', (req, res) => {
+  const candidates = [
+    path.join(__dirname, '../../Taranganjali_Banking.apk'),
+    path.join(__dirname, '../../Pralaad_Wealth.apk'),
+    path.join(__dirname, '../../FD_Wealth.apk')
+  ];
+  const apkPath = candidates.find(p => fs.existsSync(p));
+  if (!apkPath) {
+    return res.status(404).send('Android APK file not found on server.');
+  }
+  return res.download(apkPath, 'Taranganjali_Banking.apk');
+});
+
+// Serve frontend in production build if client/dist exists (with gzip & immutable /assets caching)
 const clientDistPath = path.join(__dirname, '../client/dist');
+const staticGzipCache = new Map();
+
+app.use('/assets', (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  const safePath = path.normalize(req.path).replace(/^(\.\.[/\\])+/, '');
+  const fullPath = path.join(clientDistPath, 'assets', safePath);
+  if (!fullPath.startsWith(path.join(clientDistPath, 'assets')) || !/\.(js|css|svg)$/i.test(fullPath) || !fs.existsSync(fullPath)) {
+    return next();
+  }
+  const acceptGzip = String(req.headers['accept-encoding'] || '').includes('gzip');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Vary', 'Accept-Encoding');
+  res.type(path.extname(fullPath));
+  if (!acceptGzip) return res.sendFile(fullPath);
+
+  let gz = staticGzipCache.get(fullPath);
+  if (!gz) {
+    gz = zlib.gzipSync(fs.readFileSync(fullPath), { level: 6 });
+    if (staticGzipCache.size < 120) staticGzipCache.set(fullPath, gz);
+  }
+  res.setHeader('Content-Encoding', 'gzip');
+  return res.send(gz);
+});
 
 // Disable caching for HTML entry point so updates are seen instantly
 app.use((req, res, next) => {
@@ -210,6 +249,8 @@ app.use(express.static(clientDistPath, {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+    } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
 }));

@@ -117,7 +117,7 @@ export default function Dashboard({
 
   const handleMarkPaid = async (scheduleId) => {
     try {
-      await apiRequest(`/fds/schedules/${scheduleId}/pay`, {
+      await apiRequest(`/fds/schedule/${scheduleId}/mark-paid`, {
         method: 'POST',
         body: JSON.stringify({
           payment_reference: `DIRECT-BANK-NEFT-${Date.now().toString().slice(-6)}`

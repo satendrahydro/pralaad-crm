@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { 
   TrendingUp, 
   LayoutDashboard, 
@@ -56,58 +56,59 @@ import {
 } from 'lucide-react';
 
 import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import CalculatorComponent from './components/Calculator';
-import FDList from './components/FDList';
-import Customers from './components/Customers';
-import Payouts from './components/Payouts';
-import Subscription from './components/Subscription';
-import Settings from './components/Settings';
-import WhatsAppReminders from './components/WhatsAppReminders';
-import CustomerApp from './components/CustomerApp';
-import UserManagement from './components/UserManagement';
-import StaffPermissions from './components/StaffPermissions';
 import TarplLogo from './components/TarplLogo';
+import CommercialLockScreen from './components/CommercialLockScreen';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const CalculatorComponent = lazy(() => import('./components/Calculator'));
+const FDList = lazy(() => import('./components/FDList'));
+const Customers = lazy(() => import('./components/Customers'));
+const Payouts = lazy(() => import('./components/Payouts'));
+const Subscription = lazy(() => import('./components/Subscription'));
+const Settings = lazy(() => import('./components/Settings'));
+const WhatsAppReminders = lazy(() => import('./components/WhatsAppReminders'));
+const CustomerApp = lazy(() => import('./components/CustomerApp'));
+const UserManagement = lazy(() => import('./components/UserManagement'));
+const StaffPermissions = lazy(() => import('./components/StaffPermissions'));
 
 // Stage 3 New Dedicated Modules
-import FDSchemes from './components/FDSchemes';
-import TransactionsLedger from './components/TransactionsLedger';
-import MaturityCalendar from './components/MaturityCalendar';
-import Reports from './components/Reports';
-import BranchManagement from './components/BranchManagement';
-import EmployeeDashboard from './components/EmployeeDashboard';
-import ApprovalsQueue from './components/ApprovalsQueue';
-import FDCreatioDetailView from './components/FDCreatioDetailView';
+const FDSchemes = lazy(() => import('./components/FDSchemes'));
+const TransactionsLedger = lazy(() => import('./components/TransactionsLedger'));
+const MaturityCalendar = lazy(() => import('./components/MaturityCalendar'));
+const Reports = lazy(() => import('./components/Reports'));
+const BranchManagement = lazy(() => import('./components/BranchManagement'));
+const EmployeeDashboard = lazy(() => import('./components/EmployeeDashboard'));
+const ApprovalsQueue = lazy(() => import('./components/ApprovalsQueue'));
+const FDCreatioDetailView = lazy(() => import('./components/FDCreatioDetailView'));
 
 // Stage 4 Multi-Product Modules (RD, MIS, Savings, 360 Portfolio)
-import RDList from './components/RDList';
-import MISList from './components/MISList';
-import SavingsList from './components/SavingsList';
-import AgentRanks from './components/AgentRanks';
-import AgentsList from './components/AgentsList';
-import CollectionCenters from './components/CollectionCenters';
-import LoansAgainstDeposit from './components/LoansAgainstDeposit';
-import GoldLoanList from './components/GoldLoanList';
-import BorrowingsRegister from './components/BorrowingsRegister';
-import UnifiedCustomerProfileModal from './components/UnifiedCustomerProfileModal';
-import NewRDModal from './components/NewRDModal';
-import NewMISModal from './components/NewMISModal';
-import NewSavingsModal from './components/NewSavingsModal';
-import DayBook from './components/DayBook';
-import NewJournalEntryModal from './components/NewJournalEntryModal';
-import DailyCollection from './components/DailyCollection';
-import ScheduleSmsModal from './components/ScheduleSmsModal';
-import PaymentsToCollect from './components/PaymentsToCollect';
-import PaymentsToRelease from './components/PaymentsToRelease';
-import RolePermissionsEditor from './components/RolePermissionsEditor';
-import AuditTrailView from './components/AuditTrailView';
+const RDList = lazy(() => import('./components/RDList'));
+const MISList = lazy(() => import('./components/MISList'));
+const SavingsList = lazy(() => import('./components/SavingsList'));
+const AgentRanks = lazy(() => import('./components/AgentRanks'));
+const AgentsList = lazy(() => import('./components/AgentsList'));
+const CollectionCenters = lazy(() => import('./components/CollectionCenters'));
+const LoansAgainstDeposit = lazy(() => import('./components/LoansAgainstDeposit'));
+const GoldLoanList = lazy(() => import('./components/GoldLoanList'));
+const BorrowingsRegister = lazy(() => import('./components/BorrowingsRegister'));
+const UnifiedCustomerProfileModal = lazy(() => import('./components/UnifiedCustomerProfileModal'));
+const NewRDModal = lazy(() => import('./components/NewRDModal'));
+const NewMISModal = lazy(() => import('./components/NewMISModal'));
+const NewSavingsModal = lazy(() => import('./components/NewSavingsModal'));
+const DayBook = lazy(() => import('./components/DayBook'));
+const NewJournalEntryModal = lazy(() => import('./components/NewJournalEntryModal'));
+const DailyCollection = lazy(() => import('./components/DailyCollection'));
+const ScheduleSmsModal = lazy(() => import('./components/ScheduleSmsModal'));
+const PaymentsToCollect = lazy(() => import('./components/PaymentsToCollect'));
+const PaymentsToRelease = lazy(() => import('./components/PaymentsToRelease'));
+const RolePermissionsEditor = lazy(() => import('./components/RolePermissionsEditor'));
+const AuditTrailView = lazy(() => import('./components/AuditTrailView'));
 
-import NewFDModal from './components/NewFDModal';
-import FDDetailModal from './components/FDDetailModal';
-import Certificate from './components/Certificate';
-import PrematureCloseModal from './components/PrematureCloseModal';
-import RenewModal from './components/RenewModal';
-import CommercialLockScreen from './components/CommercialLockScreen';
+const NewFDModal = lazy(() => import('./components/NewFDModal'));
+const FDDetailModal = lazy(() => import('./components/FDDetailModal'));
+const Certificate = lazy(() => import('./components/Certificate'));
+const PrematureCloseModal = lazy(() => import('./components/PrematureCloseModal'));
+const RenewModal = lazy(() => import('./components/RenewModal'));
 
 import { apiRequest, getApiBase } from './utils';
 
@@ -773,7 +774,7 @@ export default function App() {
 
   if (viewMode === 'customer') {
     return (
-      <>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs font-semibold text-slate-500">Loading Customer App...</div>}>
         <CustomerApp 
           onSwitchToStaffCRM={() => setViewMode('staff')}
           onPrintCertificate={handlePrintCertificate}
@@ -783,7 +784,7 @@ export default function App() {
           isOpen={certModalOpen}
           onClose={() => setCertModalOpen(false)}
         />
-      </>
+      </Suspense>
     );
   }
 
@@ -1800,7 +1801,7 @@ export default function App() {
         {/* 3. DYNAMIC CONTENT AREA (FULL-WIDTH FLUID LAYOUT)         */}
         {/* ======================================================== */}
         <main className="flex-1 p-3 sm:p-5 lg:p-6 w-full pb-16">
-          
+          <Suspense fallback={<div className="p-10 text-center text-xs font-semibold text-slate-400">Loading module...</div>}>
           {/* Render Creatio Full Entity View if activeTab is an FD record */}
           {activeTab.startsWith('fd-') && (
             <FDCreatioDetailView 
@@ -2030,6 +2031,7 @@ export default function App() {
 
           {activeTab === 'day_book' && (
             <DayBook 
+              key={`daybook-${refreshKey}`}
               onOpenJournalEntry={() => setJournalEntryModalOpen(true)} 
             />
           )}
@@ -2053,6 +2055,7 @@ export default function App() {
           {activeTab === 'settings' && (
             <Settings />
           )}
+          </Suspense>
         </main>
 
         {/* ======================================================== */}
@@ -2097,6 +2100,7 @@ export default function App() {
       {/* ======================================================== */}
       {/* 5. MODALS & POPUPS                                       */}
       {/* ======================================================== */}
+      <Suspense fallback={null}>
       <NewFDModal
         isOpen={newFDModalOpen}
         onClose={() => setNewFDModalOpen(false)}
@@ -2254,13 +2258,14 @@ export default function App() {
       <NewJournalEntryModal
         isOpen={journalEntryModalOpen}
         onClose={() => setJournalEntryModalOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={() => setRefreshKey(prev => prev + 1)}
       />
 
       <ScheduleSmsModal
         isOpen={scheduleSmsModalOpen}
         onClose={() => setScheduleSmsModalOpen(false)}
       />
+      </Suspense>
 
       {/* ======================================================== */}
       {/* STICKY BOTTOM MOBILE NAVIGATION BAR                      */}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calculator as CalcIcon, 
-  Calendar, 
   TrendingUp, 
   Percent, 
   IndianRupee, 

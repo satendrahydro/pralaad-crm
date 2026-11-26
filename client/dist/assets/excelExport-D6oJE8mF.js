@@ -1,0 +1,1 @@
+import{n as e,t}from"./vendor-xlsx-CVEVf5xd.js";function n(n,r=`Report`,i=`Data`){if(!n||n.length===0){alert(`No data available to export.`);return}let a=t.json_to_sheet(n),o=t.book_new();t.book_append_sheet(o,a,i);let s=new Date().toISOString().split(`T`)[0];e(o,`${r}_${s}.xlsx`)}export{n as t};

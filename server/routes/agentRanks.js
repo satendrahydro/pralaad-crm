@@ -289,4 +289,59 @@ router.get('/all-agents', authenticateToken, (req, res) => {
   }
 });
 
+// POST /api/agents/create - Enroll new associate / advisor
+router.post('/create', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const {
+      full_name,
+      phone,
+      email = '',
+      branch_id = 1,
+      branch_name,
+      rank_id = 6,
+      rank_name,
+      commission_rate = 5.0
+    } = req.body;
+
+    if (!full_name || !full_name.trim() || !phone || !String(phone).trim()) {
+      return res.status(400).json({ success: false, message: 'Advisor name and phone number are required' });
+    }
+
+    const branchRow = db.prepare('SELECT id, branch_name FROM branches WHERE id = ?').get(branch_id);
+    const rankRow = db.prepare('SELECT id, name FROM agent_ranks WHERE id = ?').get(rank_id);
+    const seq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM agents').get()?.nextId) || 1;
+    const agentCode = `AGT-${String(seq).padStart(3, '0')}`;
+    const today = new Date().toISOString().split('T')[0];
+
+    const info = db.prepare(`
+      INSERT INTO agents (
+        agent_code, full_name, phone, email, branch_id, branch_name,
+        rank_id, rank_name, collection_charge_enabled, commission_rate,
+        total_business_collected, total_commission_paid, status, joining_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0, 0, 'ACTIVE', ?)
+    `).run(
+      agentCode,
+      full_name.trim(),
+      String(phone).trim(),
+      email ? String(email).trim() : null,
+      branchRow?.id || Number(branch_id) || 1,
+      branchRow?.branch_name || branch_name || 'MAIN BRANCH',
+      rankRow?.id || Number(rank_id) || 6,
+      rankRow?.name || rank_name || 'ADVISOR',
+      Number(commission_rate) || 5.0,
+      today
+    );
+
+    const created = db.prepare('SELECT * FROM agents WHERE id = ?').get(info.lastInsertRowid);
+    res.status(201).json({
+      success: true,
+      message: `Advisor '${full_name.trim()}' (${agentCode}) enrolled successfully`,
+      agent: created
+    });
+  } catch (err) {
+    console.error('Error creating agent:', err);
+    res.status(500).json({ success: false, message: 'Failed to create advisor', error: err.message });
+  }
+});
+
 module.exports = router;
