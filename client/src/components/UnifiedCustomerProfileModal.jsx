@@ -34,7 +34,8 @@ import {
   RefreshCw,
   Edit3
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
+import DateInput from './DateInput';
 
 export default function UnifiedCustomerProfileModal({ 
   customerId, 
@@ -71,8 +72,10 @@ export default function UnifiedCustomerProfileModal({
     open: false,
     rd: null,
     installment: null,
+    pendingInstallments: [],
     lateFee: 0,
     paymentMode: 'CASH',
+    collectionDate: new Date().toISOString().split('T')[0],
     transactionRef: '',
     loading: false
   });
@@ -214,16 +217,18 @@ export default function UnifiedCustomerProfileModal({
     try {
       const res = await apiRequest(`/rd/${rd.id}/installments`);
       if (res.success && res.installments) {
-        const pending = res.installments.find(i => i.status === 'PENDING');
-        if (!pending) {
+        const pendingList = res.installments.filter(i => i.status === 'PENDING');
+        if (pendingList.length === 0) {
           return alert('All installments for this Recurring Deposit have already been paid.');
         }
         setRdInstallModal({
           open: true,
           rd,
-          installment: pending,
+          installment: pendingList[0],
+          pendingInstallments: pendingList,
           lateFee: 0,
           paymentMode: 'CASH',
+          collectionDate: new Date().toISOString().split('T')[0],
           transactionRef: `COLL-RD-${Date.now().toString().slice(-6)}`,
           loading: false
         });
@@ -245,11 +250,23 @@ export default function UnifiedCustomerProfileModal({
         body: JSON.stringify({
           payment_mode: rdInstallModal.paymentMode,
           transaction_ref: rdInstallModal.transactionRef,
-          late_fee: parseFloat(rdInstallModal.lateFee || 0)
+          late_fee: parseFloat(rdInstallModal.lateFee || 0),
+          paid_date: rdInstallModal.collectionDate,
+          collection_date: rdInstallModal.collectionDate
         })
       });
       alert(res.message || 'RD installment collected successfully');
-      setRdInstallModal({ open: false, rd: null, installment: null, lateFee: 0, paymentMode: 'CASH', transactionRef: '', loading: false });
+      setRdInstallModal({
+        open: false,
+        rd: null,
+        installment: null,
+        pendingInstallments: [],
+        lateFee: 0,
+        paymentMode: 'CASH',
+        collectionDate: new Date().toISOString().split('T')[0],
+        transactionRef: '',
+        loading: false
+      });
       fetchPortfolio();
     } catch (e) {
       alert('Error collecting RD installment: ' + e.message);
@@ -515,15 +532,27 @@ export default function UnifiedCustomerProfileModal({
                           {formatINR(data.summary?.productBreakdown?.rd?.activeDeposits || 0)}
                         </div>
                       </div>
-                      <div className="mt-3 pt-2 border-t border-teal-200/70 flex items-center justify-between gap-1">
-                        <button
-                          type="button"
-                          onClick={() => onOpenRD && onOpenRD(data.customer)}
-                          className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-[10px] shadow-2xs transition cursor-pointer flex items-center gap-1 active:scale-95"
-                          title="Start New Recurring Deposit"
-                        >
-                          <PlusCircle className="w-3 h-3" /> + Start RD
-                        </button>
+                      <div className="mt-3 pt-2 border-t border-teal-200/70 flex items-center justify-between gap-1 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          {(data.portfolio?.rds || []).find(r => r.status === 'ACTIVE' && (r.installments_paid || 0) < (r.tenure_months || 0)) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRDInstallment(data.portfolio.rds.find(r => r.status === 'ACTIVE' && (r.installments_paid || 0) < (r.tenure_months || 0)))}
+                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[10px] shadow-2xs transition cursor-pointer flex items-center gap-1 active:scale-95"
+                              title="Collect RD Installment"
+                            >
+                              <CreditCard className="w-3 h-3" /> Pay क़िस्त
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onOpenRD && onOpenRD(data.customer)}
+                            className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-[10px] shadow-2xs transition cursor-pointer flex items-center gap-1 active:scale-95"
+                            title="Start New Recurring Deposit"
+                          >
+                            <PlusCircle className="w-3 h-3" /> + Start RD
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setActiveTab('RD')}
@@ -1328,6 +1357,26 @@ export default function UnifiedCustomerProfileModal({
               </div>
 
               <form onSubmit={handleCollectRDInstallmentSubmit} className="space-y-4 text-xs">
+                {rdInstallModal.pendingInstallments?.length > 1 && (
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Select Pending Installment (बकाया किस्त चुनें)</label>
+                    <select
+                      value={rdInstallModal.installment.id}
+                      onChange={(e) => {
+                        const found = rdInstallModal.pendingInstallments.find(i => String(i.id) === e.target.value);
+                        if (found) setRdInstallModal(prev => ({ ...prev, installment: found }));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white"
+                    >
+                      {rdInstallModal.pendingInstallments.map(i => (
+                        <option key={i.id} value={i.id}>
+                          #{i.installment_no} — Due {formatDate(i.due_date)} ({i.due_date < new Date().toISOString().split('T')[0] ? 'OVERDUE' : 'PENDING'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl space-y-1.5">
                   <div className="flex justify-between">
                     <span className="text-slate-600 font-medium">Scheduled Due Date:</span>
@@ -1339,6 +1388,28 @@ export default function UnifiedCustomerProfileModal({
                   </div>
                 </div>
 
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-700">Collection Date (जमा करने की तारीख) *</label>
+                    {rdInstallModal.installment.due_date && rdInstallModal.installment.due_date <= new Date().toISOString().split('T')[0] && rdInstallModal.collectionDate !== rdInstallModal.installment.due_date && (
+                      <button
+                        type="button"
+                        onClick={() => setRdInstallModal(prev => ({ ...prev, collectionDate: prev.installment.due_date }))}
+                        className="text-[10px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 cursor-pointer"
+                      >
+                        Use Due Date ({formatDate(rdInstallModal.installment.due_date)})
+                      </button>
+                    )}
+                  </div>
+                  <DateInput
+                    required
+                    max={new Date().toISOString().split('T')[0]}
+                    value={rdInstallModal.collectionDate}
+                    onChange={(e) => setRdInstallModal(prev => ({ ...prev, collectionDate: e.target.value }))}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-xs focus:bg-white"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Late Fee / Penalty (₹)</label>
@@ -1346,7 +1417,7 @@ export default function UnifiedCustomerProfileModal({
                       type="number"
                       min="0"
                       value={rdInstallModal.lateFee}
-                      onChange={(e) => setRdInstallModal(prev => ({ ...prev, lateFee: e.target.value }))}
+                      onChange={(e) => onNumericInputChange(e, (val) => setRdInstallModal(prev => ({ ...prev, lateFee: val })))}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:bg-white"
                     />
                   </div>

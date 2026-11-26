@@ -15,7 +15,6 @@ const analyticsRoutes = require('./routes/analytics');
 const subscriptionRoutes = require('./routes/subscription');
 const settingsRoutes = require('./routes/settings');
 const whatsappRoutes = require('./routes/whatsapp');
-const customerPortalRoutes = require('./routes/customerPortal');
 const approvalsRoutes = require('./routes/approvals');
 const rdRoutes = require('./routes/rd');
 const misRoutes = require('./routes/mis');
@@ -62,7 +61,6 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/customer-portal', customerPortalRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/permissions', permissionsRoutes);
@@ -194,13 +192,8 @@ app.get('/api/audit-logs', (req, res) => {
 
 // Serve Android APK cleanly from parent release folder without bundling it inside client/public or client/dist
 app.get('/Taranganjali_Banking.apk', (req, res) => {
-  const candidates = [
-    path.join(__dirname, '../../Taranganjali_Banking.apk'),
-    path.join(__dirname, '../../Pralaad_Wealth.apk'),
-    path.join(__dirname, '../../FD_Wealth.apk')
-  ];
-  const apkPath = candidates.find(p => fs.existsSync(p));
-  if (!apkPath) {
+  const apkPath = path.join(__dirname, '../../Taranganjali_Banking.apk');
+  if (!fs.existsSync(apkPath)) {
     return res.status(404).send('Android APK file not found on server.');
   }
   return res.download(apkPath, 'Taranganjali_Banking.apk');
@@ -259,6 +252,9 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ success: false, message: 'API route not found' });
   }
+  if (req.path.startsWith('/assets/')) {
+    return res.status(404).type('text/plain').send('Asset chunk not found');
+  }
   const indexPath = path.join(clientDistPath, 'index.html');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -284,7 +280,7 @@ const { startReminderScheduler } = require('./services/whatsappCron');
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`=========================================`);
-  console.log(`🚀 FD CRM Backend Server running on port ${PORT}`);
+  console.log(`🚀 Taranganjali Banking CRM Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`=========================================`);
 

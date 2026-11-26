@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, AlertCircle, UserPlus } from 'lucide-react';
-import { formatINR, apiRequest } from '../utils';
+import { formatINR, apiRequest, onNumericInputChange } from '../utils';
 import DateInput from './DateInput';
 
 export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
@@ -101,7 +101,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
           customer_id: parseInt(customerId),
           monthly_installment: P,
           tenure_months: n,
-          annual_rate: parseFloat(annualRate),
+          annual_rate: parseFloat(annualRate) || 0,
           start_date: startDate,
           remarks
         })
@@ -221,7 +221,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
                 step="100"
                 required
                 value={monthlyInstallment}
-                onChange={(e) => setMonthlyInstallment(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setMonthlyInstallment)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-bold"
               />
             </div>
@@ -263,7 +263,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
                     max="360"
                     required
                     value={tenureMonths}
-                    onChange={(e) => setTenureMonths(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                    onChange={(e) => onNumericInputChange(e, setTenureMonths)}
                     onBlur={() => {
                       if (!tenureMonths || Number(tenureMonths) < 1) setTenureMonths(1);
                     }}
@@ -286,7 +286,7 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
                 step="0.05"
                 required
                 value={annualRate}
-                onChange={(e) => setAnnualRate(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setAnnualRate)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
               />
             </div>
@@ -298,6 +298,11 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
               />
+              {startDate && startDate < new Date().toISOString().split('T')[0] && (
+                <p className="text-[10px] text-teal-700 font-semibold mt-1">
+                  Back-dated RD: बुकिंग के बाद RD लिस्ट में "Collect क़िस्त" या 360° प्रोफ़ाइल से पिछली क़िस्तें जमा कर सकते हैं।
+                </p>
+              )}
             </div>
           </div>
 

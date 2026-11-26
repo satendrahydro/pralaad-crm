@@ -1,60 +1,25 @@
-# Pralaad Fixed Deposit (FD) CRM & Management Portal
+# Taranganjali Realtech - Core Banking & Wealth CRM
 
-Ek complete, high-performance aur executive **Fixed Deposit Management System & Wealth CRM** jo NBFCs, financial advisors, aur deposit-taking firms ke internal operations ke liye design kiya gaya hai.
+Internal banking & wealth management CRM for Fixed Deposits (FD), Recurring Deposits (RD), Monthly Income Schemes (MIS), Savings Accounts, Loans, Double-Entry Day Book & Field Collector Android App.
 
 ---
 
 ## 🌟 मुख्य फीचर्स (Features Built)
 
-1. **यूनिवर्सल FD कैलकुलेटर (All 9 Options Included):**
-   - **Cumulative Schemes (ब्याज मैच्योरिटी पर जुड़ेगा):**
-     - Quarterly Compounding (Indian Standard Banking)
-     - Monthly Compounding
-     - Half-Yearly Compounding
-     - Yearly Compounding
-     - Simple Interest at Maturity
-   - **Non-Cumulative Schemes (रेगुलर ब्याज पेआउट):**
-     - Monthly Interest Payout (Pension Scheme)
-     - Quarterly Interest Payout
-     - Half-Yearly Interest Payout
-     - Annual Interest Payout
-   - Senior Citizen Benefit (+0.50% auto-calculated)
-   - Real-time Amortization & Ledger Table
-   - Direct "Book This FD Now" feature
+1. **यूनिवर्सल FD / RD / MIS कैलकुलेटर व स्कीम्स:**
+   - Cumulative एवं Non-Cumulative FD विकल्प, RD मासिक किस्त ट्रैकिंग, और 60-महीने MIS पेआउट शेड्यूल
+   - Senior Citizen Benefit (+0.50%) व कस्टम अवधि / ब्याज दर सपोर्ट
+   - Printable FD Certificate / Deposit Receipt
 
-2. **सुरक्षित लॉगिन व पासवर्ड (Authentication):**
-   - JWT-based authentication system
-   - Role-based permissions (Admin / Staff)
-   - Default Login:
-     - **Username:** `admin`
-     - **Password:** `admin123`
+2. **सुरक्षित लॉगिन व मेकर-चेकर कंट्रोल (Authentication):**
+   - JWT-based Super Admin (Checker) व Staff / Collector (Maker) लॉगिन
+   - Field Collector Android APK (`Taranganjali_Banking.apk`) केवल अधिकृत कर्मचारियों के लिए
 
-3. **मासिक सब्सक्रिप्शन और बिलिंग (Monthly Subscription & Billing):**
-   - Internal subscription license tracking
-   - Monthly plan (₹1,999/mo), 3 months bundle, aur 12 months annual plan
-   - Online payment simulation (UPI, Cards, Netbanking)
-   - Validity remaining alert
+3. **ग्राहक प्रबंधन व 360° पोर्टफोलियो (Client & KYC Management):**
+   - Full KYC, बैंक विवरण, नॉमिनी व एकीकृत 360° खाता व्यू
 
-4. **ग्राहक प्रबंधन (Client & KYC Management):**
-   - Full KYC: Name, Phone, Email, PAN Card, Aadhaar, Registered Address
-   - Senior citizen flag
-   - Bank Account Details (Bank name, Account Number, IFSC) for automated payouts
-   - Nominee Details (Name & Relation)
-
-5. **FD पोर्टफोलियो और ऑपरेशन्स (Lifecycle Operations):**
-   - **Maturity Alerts:** Next 7/30 din me mature hone wali FDs ka live alert
-   - **Premature Liquidation (समय से पहले तुड़वाना):** Penalty rate deduction (1%) ke sath automatic net payable amount calculation
-   - **FD Renewal (रीन्यूअल):** Principal-only ya Principal + Interest rollover
-   - **Printable FD Certificate / Deposit Receipt:** Official seal, header, terms & conditions ke sath direct printable PDF/Receipt
-
-6. **पेआउट रजिस्टर (Interest Payout Calendar):**
-   - Non-cumulative accounts ke upcoming interest payouts
-   - "Mark as Paid" action with Bank Transaction / NEFT / UTR reference number
-
-7. **भविष्य के मोबाइल ऐप व ऑनलाइन पेमेंट के लिए REST APIs:**
-   - Modular REST APIs (`/api/customers`, `/api/fds`, `/api/fds/calculate`, `/api/subscription`)
-   - Future Flutter / React Native Mobile App ke sath direct link hone ke liye 100% ready
-   - Razorpay / Cashfree / Stripe online payment webhook-ready architecture
+4. **डबल-एंट्री लेखांकन (Accounting, Cash Book & Day Book):**
+   - Day Book, Cash Book (102), Daily Field Collections, Payments to Collect & Trial Balance
 
 ---
 

@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { formatINR, apiRequest } from '../utils';
+import { formatINR, apiRequest, onNumericInputChange } from '../utils';
 
 export default function AgentRanks({ onOpenAgentsDirectory }) {
   const [ranks, setRanks] = useState([]);
@@ -96,11 +96,11 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
           method: 'PUT',
           body: JSON.stringify({
             name: formName,
-            display_position: formDisplayPos,
-            rank_position: formRankPos,
-            commission_percentage: formCommPct,
+            display_position: parseInt(formDisplayPos) || 1,
+            rank_position: parseInt(formRankPos) || 1,
+            commission_percentage: parseFloat(formCommPct) || 0,
             collection_charge_commission: formCollectionComm ? 1 : 0,
-            min_target: formMinTarget,
+            min_target: parseFloat(formMinTarget) || 0,
             description: formDesc
           })
         });
@@ -114,11 +114,11 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
           method: 'POST',
           body: JSON.stringify({
             name: formName,
-            display_position: formDisplayPos,
-            rank_position: formRankPos,
-            commission_percentage: formCommPct,
+            display_position: parseInt(formDisplayPos) || 1,
+            rank_position: parseInt(formRankPos) || 1,
+            commission_percentage: parseFloat(formCommPct) || 0,
             collection_charge_commission: formCollectionComm ? 1 : 0,
-            min_target: formMinTarget,
+            min_target: parseFloat(formMinTarget) || 0,
             description: formDesc
           })
         });
@@ -460,7 +460,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
                     min="1"
                     required
                     value={formDisplayPos}
-                    onChange={(e) => setFormDisplayPos(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setFormDisplayPos)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-mono"
                   />
                 </div>
@@ -472,7 +472,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
                     min="1"
                     required
                     value={formRankPos}
-                    onChange={(e) => setFormRankPos(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setFormRankPos)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-mono"
                   />
                 </div>
@@ -487,7 +487,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
                     min="0"
                     max="100"
                     value={formCommPct}
-                    onChange={(e) => setFormCommPct(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setFormCommPct)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-mono"
                   />
                 </div>
@@ -498,7 +498,7 @@ export default function AgentRanks({ onOpenAgentsDirectory }) {
                     type="number"
                     min="0"
                     value={formMinTarget}
-                    onChange={(e) => setFormMinTarget(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setFormMinTarget)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-mono"
                   />
                 </div>

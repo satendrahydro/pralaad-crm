@@ -1,8 +1,8 @@
 @echo off
-title Pralaad FD CRM & Wealth Portal
+title Taranganjali Realtech - Banking & Wealth CRM
 cd /d "%~dp0"
 echo =======================================================
-echo   🚀 PRALAAD FIXED DEPOSIT CRM & WEALTH MANAGEMENT
+echo   TARANGANJALI REALTECH - CORE BANKING & WEALTH CRM
 echo =======================================================
 echo.
 echo Server starting at http://localhost:5000 ...

@@ -20,7 +20,7 @@ import {
   FileSpreadsheet,
   Sparkles
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
 import { exportToExcel } from '../utils/excelExport';
 import PaginationBar from './PaginationBar';
 import DateInput from './DateInput';
@@ -120,6 +120,32 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
       if (res.success) setRdDetails(res);
     } catch (e) {
       alert('Error loading RD details: ' + e.message);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  // Opens collection modal directly for the first overdue / pending installment of an RD
+  const openCollectNext = async (rd) => {
+    setSelectedRD(rd);
+    try {
+      setDetailsLoading(true);
+      const res = await apiRequest(`/rd/${rd.id}`);
+      if (res.success) {
+        setRdDetails(res);
+        const nextInst = (res.installments || []).find(i => !['COLLECTED', 'PAID'].includes(i.status));
+        if (nextInst) {
+          setSelectedInstallment(nextInst);
+          setCollectLateFee(0);
+          setCollectDate(new Date().toISOString().split('T')[0]);
+          setCollectRef(`COLL-RD-${Date.now().toString().slice(-6)}`);
+          setCollectModalOpen(true);
+        } else {
+          alert('All installments for this Recurring Deposit have already been collected.');
+        }
+      }
+    } catch (e) {
+      alert('Error loading RD installments: ' + e.message);
     } finally {
       setDetailsLoading(false);
     }
@@ -315,12 +341,25 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => openDetails(rd)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded text-[11px] transition cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Details
-                        </button>
+                        <div className="inline-flex items-center gap-1.5 justify-center">
+                          {rd.status === 'ACTIVE' && (rd.installments_paid || 0) < (rd.tenure_months || 0) && (
+                            <button
+                              type="button"
+                              onClick={() => openCollectNext(rd)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded text-[11px] shadow-2xs transition cursor-pointer active:scale-95"
+                              title="Collect next pending RD installment"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" /> Collect क़िस्त
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openDetails(rd)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded text-[11px] transition cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Details
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -422,7 +461,7 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
                   <tbody className="divide-y divide-slate-100">
                     {rdDetails?.installments?.map(inst => {
                       const todayStr = new Date().toISOString().split('T')[0];
-                      const isCollected = inst.status === 'COLLECTED';
+                      const isCollected = inst.status === 'COLLECTED' || inst.status === 'PAID';
                       const isOverdue = !isCollected && inst.due_date && inst.due_date < todayStr;
                       const isFuture = !isCollected && inst.due_date && inst.due_date > todayStr;
                       const isDueToday = !isCollected && inst.due_date && inst.due_date === todayStr;
@@ -567,7 +606,7 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
                     min="0"
                     step="0.01"
                     value={collectLateFee}
-                    onChange={(e) => setCollectLateFee(e.target.value)}
+                    onChange={(e) => onNumericInputChange(e, setCollectLateFee)}
                     placeholder="0.00"
                     className="w-full text-xs p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold focus:outline-none focus:border-slate-800"
                   />
@@ -576,9 +615,20 @@ export default function RDList({ onOpenNewRD, isEmployee = false, onViewCustomer
 
               {/* Deposit / Collection Date */}
               <div>
-                <label className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
-                  Collection Date (जमा करने की तारीख) *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase">
+                    Collection Date (जमा करने की तारीख) *
+                  </label>
+                  {selectedInstallment.due_date && selectedInstallment.due_date <= new Date().toISOString().split('T')[0] && collectDate !== selectedInstallment.due_date && (
+                    <button
+                      type="button"
+                      onClick={() => setCollectDate(selectedInstallment.due_date)}
+                      className="text-[10px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 cursor-pointer"
+                    >
+                      Use Due Date ({formatDate(selectedInstallment.due_date)})
+                    </button>
+                  )}
+                </div>
                 <DateInput
                   required
                   max={new Date().toISOString().split('T')[0]}

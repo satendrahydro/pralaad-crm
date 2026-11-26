@@ -172,11 +172,11 @@ export default function Subscription() {
       price: '₹48,000',
       period: '/ Year',
       monthly_eq: '₹4,000 / month',
-      description: 'मल्टी-ब्रांच, डेडिकेटेड क्लाउड सर्वर और मोबाइल ऐप रेडी',
+      description: 'मल्टी-ब्रांच, डेडिकेटेड क्लाउड सर्वर और फील्ड कलेक्टर APK सिंक',
       popular: false,
       features: [
         'Dedicated Cloud VPS & Custom Domain (crm.domain.com)',
-        'Mobile App (Android/iOS) REST APIs Sync',
+        'Field Collector Android App (APK) Live Sync',
         'Online Payment Gateway Webhook Integration',
         'Multi-Branch Management & Hierarchy',
         'Hourly Encrypted Cloud Backups',
@@ -224,7 +224,7 @@ export default function Subscription() {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
-            Mobile App & Online Payment APIs
+            Collector App & Payment APIs
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -496,9 +496,9 @@ export default function Subscription() {
               <Code className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Mobile Application & Online Payment Connectors</h2>
+              <h2 className="text-xl font-bold text-slate-900">Collector Application & Online Payment Connectors</h2>
               <p className="text-xs text-slate-500">
-                भविष्य में बनने वाले मोबाइल ऐप और ऑनलाइन पेमेंट गेटवे को सीधे इस CRM से जोड़ने के लिए REST APIs
+                फील्ड कलेक्टर एंड्रॉइड ऐप (APK) और ऑनलाइन पेमेंट गेटवे को सीधे इस CRM से जोड़ने के लिए REST APIs
               </p>
             </div>
           </div>
@@ -507,26 +507,26 @@ export default function Subscription() {
             <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
               <div className="flex items-center gap-2 font-bold text-slate-800 text-sm">
                 <Smartphone className="w-4 h-4 text-indigo-600" />
-                Client Self-Service Mobile App (Android/iOS)
+                Field Collector Android App (Taranganjali APK)
               </div>
               <p className="text-slate-600">
-                जब आप क्लाइंट के ग्राहकों के लिए मोबाइल ऐप बनाएंगे, तो वो इसी डेटाबेस से लाइव कनेक्ट रहेगी:
+                कंपनी के अधिकृत कर्मचारी व फील्ड कलेक्टर इसी डेटाबेस से लाइव कनेक्ट होकर कलेक्शन कर सकते हैं:
               </p>
               <div className="space-y-1.5 font-mono text-[11px]">
                 <div className="p-2 bg-white rounded border border-slate-200 flex justify-between">
                   <span className="text-emerald-700 font-bold">POST</span>
                   <span className="text-slate-700">/api/auth/login</span>
-                  <span className="text-slate-400">Mobile Login</span>
+                  <span className="text-slate-400">Staff Login</span>
                 </div>
                 <div className="p-2 bg-white rounded border border-slate-200 flex justify-between">
                   <span className="text-blue-700 font-bold">GET</span>
-                  <span className="text-slate-700">/api/fds?customer_id=...</span>
-                  <span className="text-slate-400">Live FD Portfolio</span>
+                  <span className="text-slate-700">/api/accounting/payments-to-collect</span>
+                  <span className="text-slate-400">Collection Sheet</span>
                 </div>
                 <div className="p-2 bg-white rounded border border-slate-200 flex justify-between">
                   <span className="text-emerald-700 font-bold">POST</span>
-                  <span className="text-slate-700">/api/fds/calculate</span>
-                  <span className="text-slate-400">FD Simulator</span>
+                  <span className="text-slate-700">/api/accounting/collect-payment</span>
+                  <span className="text-slate-400">Receipt Sync</span>
                 </div>
               </div>
             </div>
@@ -537,7 +537,7 @@ export default function Subscription() {
                 Online Payment Gateway (Razorpay / Cashfree UPI)
               </div>
               <p className="text-slate-600">
-                ग्राहक ऐप से UPI या नेटबैंकिंग द्वारा सीधे पेमेंट करके नई FD बुक कर सकेंगे और रसीद तुरंत उनके फोन पर आ जाएगी।
+                UPI या नेटबैंकिंग पेमेंट गेटवे वेबहुक द्वारा सीधे ब्रांच लेजर और डिपॉजिट रसीद अपडेट की जा सकती है।
               </p>
               <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1 text-[11px] text-slate-600">
                 <p className="font-bold text-slate-800">✅ Webhook Ready Architecture</p>
@@ -649,7 +649,7 @@ export default function Subscription() {
                 >
                   <option value="starter">Silver Starter Tier (₹12,000 / Year)</option>
                   <option value="professional">Gold Pro Tier + Full AMC (₹24,000 / Year)</option>
-                  <option value="enterprise">Platinum Enterprise + Mobile App (₹48,000 / Year)</option>
+                  <option value="enterprise">Platinum Enterprise + Collector APK (₹48,000 / Year)</option>
                 </select>
               </div>
 

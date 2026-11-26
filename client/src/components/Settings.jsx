@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   Pencil
 } from 'lucide-react';
-import { apiRequest } from '../utils';
+import { apiRequest, onNumericInputChange, sanitizeNumberInput } from '../utils';
 import EditUserModal from './EditUserModal';
 
 export default function Settings() {
@@ -44,7 +44,7 @@ export default function Settings() {
   const [slabSuccess, setSlabSuccess] = useState('');
 
   const handleUpdateSlab = (id, field, value) => {
-    setSlabs(prev => prev.map(s => s.id === id ? { ...s, [field]: parseFloat(value) || 0 } : s));
+    setSlabs(prev => prev.map(s => s.id === id ? { ...s, [field]: sanitizeNumberInput(value) } : s));
   };
 
   const handleSaveSlabs = (e) => {
@@ -381,7 +381,7 @@ export default function Settings() {
                   type="number"
                   step="0.05"
                   value={settings.senior_bonus_rate}
-                  onChange={(e) => setSettings({ ...settings, senior_bonus_rate: e.target.value })}
+                  onChange={(e) => onNumericInputChange(e, (v) => setSettings({ ...settings, senior_bonus_rate: v }))}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                 />
               </div>
@@ -392,7 +392,7 @@ export default function Settings() {
                   type="number"
                   step="0.05"
                   value={settings.default_penalty_rate}
-                  onChange={(e) => setSettings({ ...settings, default_penalty_rate: e.target.value })}
+                  onChange={(e) => onNumericInputChange(e, (v) => setSettings({ ...settings, default_penalty_rate: v }))}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                 />
               </div>
@@ -468,7 +468,7 @@ export default function Settings() {
                         step="0.05"
                         id={`slab-gen-rate-${slab.id}`}
                         value={slab.generalRate}
-                        onChange={(e) => handleUpdateSlab(slab.id, 'generalRate', e.target.value)}
+                        onChange={(e) => onNumericInputChange(e, (val) => handleUpdateSlab(slab.id, 'generalRate', val))}
                         className="w-28 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </td>
@@ -478,7 +478,7 @@ export default function Settings() {
                         step="0.05"
                         id={`slab-sr-rate-${slab.id}`}
                         value={slab.seniorRate}
-                        onChange={(e) => handleUpdateSlab(slab.id, 'seniorRate', e.target.value)}
+                        onChange={(e) => onNumericInputChange(e, (val) => handleUpdateSlab(slab.id, 'seniorRate', val))}
                         className="w-28 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                       />
                     </td>
@@ -662,7 +662,7 @@ export default function Settings() {
             <ul className="list-disc pl-5 text-[11px] space-y-1 text-slate-500">
               <li><b>Staff Role (Maker):</b> Can create clients, KYC, and submit FD, RD, MIS, and Savings deposit requests. Cannot approve or disburse funds.</li>
               <li><b>Super Admin Role (Checker):</b> Possesses exclusive authority to approve requests, configure rate schemes, manage subscriptions, and oversee audit logs.</li>
-              <li><b>External Customers:</b> Separate portal / Android app credentials. Purely view-only; zero mutation capabilities.</li>
+              <li><b>Field Collectors (Android APK):</b> Internal staff using the Taranganjali Banking Collector app under branch Maker-Checker authorization.</li>
             </ul>
           </div>
         </div>

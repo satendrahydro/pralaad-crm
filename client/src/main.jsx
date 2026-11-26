@@ -2,6 +2,16 @@ import React, { StrictMode, Component } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import RootApp from '@root-app'
+import { isChunkLoadError } from './utils'
+
+// Automatically recover when Vite preload fails due to updated bundle hashes after a rebuild
+window.addEventListener('vite:preloadError', () => {
+  const lastReload = Number(sessionStorage.getItem('tarpl_chunk_reload_at') || 0);
+  if (Date.now() - lastReload > 10000) {
+    sessionStorage.setItem('tarpl_chunk_reload_at', String(Date.now()));
+    window.location.reload();
+  }
+});
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -15,6 +25,13 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('CRM UI Error:', error, errorInfo);
+    if (isChunkLoadError(error)) {
+      const lastReload = Number(sessionStorage.getItem('tarpl_chunk_reload_at') || 0);
+      if (Date.now() - lastReload > 10000) {
+        sessionStorage.setItem('tarpl_chunk_reload_at', String(Date.now()));
+        window.location.reload();
+      }
+    }
   }
 
   render() {
@@ -29,15 +46,23 @@ class ErrorBoundary extends Component {
             <p className="text-xs text-slate-400 font-mono bg-slate-900 p-3 rounded-xl text-left overflow-auto max-h-32">
               {this.state.error?.message || 'Unknown render error'}
             </p>
-            <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.reload();
-              }}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl text-xs transition cursor-pointer"
-            >
-              Reset Cache & Reload
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Reload Page
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 font-semibold rounded-xl text-xs transition cursor-pointer"
+              >
+                Reset Cache &amp; Reload
+              </button>
+            </div>
           </div>
         </div>
       );

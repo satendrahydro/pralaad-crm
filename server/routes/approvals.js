@@ -115,14 +115,6 @@ router.post('/', authenticateToken, (req, res) => {
             message: "Access denied. Super Admin has disabled the 'Maturity / Closure Request' function for your staff account."
           });
         }
-        if (request_type === 'CUSTOMER_APP_ACCESS' && perms.app_access_request === false) {
-          return res.status(403).json({
-            success: false,
-            code: 'PERMISSION_DENIED',
-            permission: 'app_access_request',
-            message: "Access denied. Super Admin has disabled the 'Customer App Access Request' function for your staff account."
-          });
-        }
       }
     }
 
@@ -179,30 +171,6 @@ router.post('/', authenticateToken, (req, res) => {
           message: `Duplicate submission blocked: Request ${existingPending.request_number} for this customer is already pending approval.`
         });
       }
-    }
-
-    if (request_type === 'CUSTOMER_APP_ACCESS') {
-      if (!effectiveCustId) {
-        return res.status(400).json({ success: false, message: 'Customer ID is required for App Access request.' });
-      }
-      const custExists = db.prepare('SELECT id, full_name, app_access_status FROM customers WHERE id = ?').get(effectiveCustId);
-      if (!custExists) {
-        return res.status(404).json({ success: false, message: 'Specified customer does not exist.' });
-      }
-
-      if (custExists.app_access_status === 'ACTIVE') {
-        return res.status(400).json({ success: false, message: `Customer ${custExists.full_name} already has active App Access.` });
-      }
-      const existingPending = db.prepare(`
-        SELECT id, request_number FROM approval_requests
-        WHERE customer_id = ? AND request_type = 'CUSTOMER_APP_ACCESS' AND status = 'PENDING_APPROVAL'
-      `).get(effectiveCustId);
-      if (existingPending) {
-        return res.status(400).json({ success: false, message: `An App Access request (${existingPending.request_number}) is already pending for this customer.` });
-      }
-
-      // Mark customer status as PENDING
-      db.prepare("UPDATE customers SET app_access_status = 'PENDING' WHERE id = ?").run(effectiveCustId);
     }
 
     const reqNumber = `REQ-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
@@ -599,47 +567,11 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
 
         db.prepare(`
           UPDATE customers 
-          SET status = 'ACTIVE', app_access_enabled = 1
+          SET status = 'ACTIVE'
           WHERE id = ?
         `).run(customerId);
 
         executionResult = { customerId, kycStatus: 'VERIFIED' };
-      }
-
-      // 3.6.1 CUSTOMER_APP_ACCESS APPROVAL (Maker-Checker Custody)
-      else if (request.request_type === 'CUSTOMER_APP_ACCESS') {
-        const customerId = payload.customerId || payload.customer_id;
-        const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
-        if (!customer) throw new Error('Customer does not exist');
-
-        const cleanLoginId = (payload.login_id && payload.login_id.trim()) 
-          ? payload.login_id.trim() 
-          : (customer.login_id || customer.customer_code);
-
-        const crypto = require('crypto');
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 4; i++) {
-          code += chars.charAt(crypto.randomInt(0, chars.length));
-        }
-        const plainTempPassword = payload.temp_password || `Client@${code}`;
-        const bcrypt = require('bcryptjs');
-        const salt = bcrypt.genSaltSync(10);
-        const password_hash = bcrypt.hashSync(plainTempPassword, salt);
-
-        db.prepare(`
-          UPDATE customers 
-          SET login_id = ?,
-              password_hash = ?,
-              login_password = ?,
-              app_access_enabled = 1,
-              app_access_status = 'ACTIVE',
-              must_change_password = 1,
-              status = 'ACTIVE'
-          WHERE id = ?
-        `).run(cleanLoginId, password_hash, plainTempPassword, customerId);
-
-        executionResult = { customerId, login_id: cleanLoginId, temp_password: plainTempPassword, app_access_status: 'ACTIVE' };
       }
 
       // 3.7 NEW RECURRING DEPOSIT (RD) APPROVAL
@@ -1057,9 +989,6 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
             nominee_name = COALESCE(?, nominee_name),
             nominee_relation = COALESCE(?, nominee_relation),
             is_senior_citizen = COALESCE(?, is_senior_citizen),
-            login_id = COALESCE(?, login_id),
-            login_password = COALESCE(?, login_password),
-            app_access_enabled = COALESCE(?, app_access_enabled),
             status = COALESCE(?, status)
           WHERE id = ?
         `);
@@ -1071,9 +1000,6 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           updates.ifsc_code ? updates.ifsc_code.toUpperCase() : null,
           updates.nominee_name, updates.nominee_relation,
           updates.is_senior_citizen !== undefined ? (updates.is_senior_citizen ? 1 : 0) : null,
-          updates.login_id ? updates.login_id.trim() : null,
-          updates.login_password ? updates.login_password.trim() : null,
-          updates.app_access_enabled !== undefined ? (updates.app_access_enabled ? 1 : 0) : null,
           updates.status || null,
           customerId
         );
@@ -1158,13 +1084,6 @@ router.post('/:id/reject', authenticateToken, requireAdmin, (req, res) => {
           actioned_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(req.user.id, reason, reason, reqId);
-
-    // Reset customer app access status if rejecting an app access request
-    if (request.request_type === 'CUSTOMER_APP_ACCESS' && request.customer_id) {
-      try {
-        db.prepare("UPDATE customers SET app_access_status = 'NOT_CREATED' WHERE id = ?").run(request.customer_id);
-      } catch(e){}
-    }
 
     // Audit Log for Rejection
     try {

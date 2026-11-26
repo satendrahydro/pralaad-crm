@@ -20,6 +20,7 @@ export default function DailyCollection() {
   const [activeItem, setActiveItem] = useState(null);
   const [collectAmount, setCollectAmount] = useState('');
   const [collectMode, setCollectMode] = useState('CASH');
+  const [collectDate, setCollectDate] = useState(new Date().toISOString().split('T')[0]);
   const [collectSuccess, setCollectSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [centers, setCenters] = useState([]);
@@ -77,6 +78,7 @@ export default function DailyCollection() {
     setActiveItem(item);
     setCollectAmount(item.target_amount.toString());
     setCollectMode('CASH');
+    setCollectDate(new Date().toISOString().split('T')[0]);
     setCollectSuccess('');
     setCollectModalOpen(true);
   };
@@ -93,7 +95,8 @@ export default function DailyCollection() {
           account_no: activeItem.account_no,
           customer_name: activeItem.customer_name,
           amount: amt,
-          payment_mode: collectMode
+          payment_mode: collectMode,
+          collection_date: collectDate
         })
       });
       if (res && res.success) {
@@ -347,6 +350,27 @@ export default function DailyCollection() {
                 value={collectAmount}
                 onChange={(e) => setCollectAmount(e.target.value)}
                 className="w-full text-base font-black p-2.5 rounded-xl border border-slate-300 font-mono"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 uppercase">Collection Date</label>
+                {activeItem.meeting_time && activeItem.meeting_time <= new Date().toISOString().split('T')[0] && collectDate !== activeItem.meeting_time && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectDate(activeItem.meeting_time)}
+                    className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 cursor-pointer"
+                  >
+                    Use Due Date ({activeItem.meeting_time})
+                  </button>
+                )}
+              </div>
+              <DateInput
+                max={new Date().toISOString().split('T')[0]}
+                value={collectDate}
+                onChange={(e) => setCollectDate(e.target.value)}
+                className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-300 bg-white font-mono"
               />
             </div>
 

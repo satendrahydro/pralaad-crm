@@ -328,22 +328,8 @@ router.get('/day-book', authenticateToken, (req, res) => {
       `).all(startDate, endDate);
     } catch (e) { fdClosures = []; }
 
-    // 2. New Recurring Deposits (RD) in Date Range
+    // 2. RD Installments collected in Date Range (only actually collected installments; opening RD with 0 paid has 0 cash inflow)
     let rds = [];
-    try {
-      rds = db.prepare(`
-        SELECT rd.id, rd.rd_number, rd.monthly_installment, rd.annual_rate, rd.tenure_months,
-               rd.start_date, rd.maturity_date, rd.status, rd.created_at,
-               c.full_name as customer_name, c.customer_code, c.phone as customer_phone
-        FROM recurring_deposits rd
-        JOIN customers c ON rd.customer_id = c.id
-        WHERE date(COALESCE(NULLIF(rd.start_date, ''), date(rd.created_at))) BETWEEN ? AND ?
-          ${branchWhereRd}
-        ORDER BY rd.created_at DESC
-      `).all(startDate, endDate);
-    } catch (e) { rds = []; }
-
-    // 2b. RD Installments collected in Date Range
     let rdInstallments = [];
     try {
       rdInstallments = db.prepare(`
@@ -1215,7 +1201,7 @@ router.get('/payments-to-collect', authenticateToken, (req, res) => {
           customer_name: r.customer_name,
           member_code: r.member_code,
           phone: r.phone,
-          account_type: 'RD (Recurring)',
+          account_type: `RD Inst #${r.installment_no}`,
           account_no: r.rd_number,
           due_amount: r.installment_amount,
           due_date: r.due_date,
@@ -1275,12 +1261,16 @@ router.get('/payments-to-collect', authenticateToken, (req, res) => {
 // 4. POST /api/accounting/collect-payment - Persists collection to RD/Loan + Day Book Cash Entry
 router.post('/collect-payment', authenticateToken, (req, res) => {
   try {
-    const { item_id, account_no, amount, payment_mode = 'CASH', customer_name } = req.body;
+    const { item_id, account_no, amount, payment_mode = 'CASH', customer_name, collection_date, paid_date } = req.body;
     const numAmt = parseFloat(amount);
     if (!numAmt || numAmt <= 0) {
       return res.status(400).json({ success: false, message: 'Valid collection amount is required.' });
     }
     const today = new Date().toISOString().split('T')[0];
+    const effectiveDate = paid_date || collection_date || today;
+    if (effectiveDate > today) {
+      return res.status(400).json({ success: false, message: 'Collection date cannot be in the future.' });
+    }
     const receipt_no = `REC-${Date.now().toString().slice(-6)}`;
     const idStr = String(item_id || '');
 
@@ -1290,9 +1280,9 @@ router.post('/collect-payment', authenticateToken, (req, res) => {
       if (inst && inst.status === 'PENDING') {
         db.prepare(`
           UPDATE rd_installments
-          SET status = 'PAID', paid_date = ?, total_collected = ?, payment_mode = ?, transaction_ref = ?, collector_user_id = ?
+          SET status = 'COLLECTED', paid_date = ?, total_collected = ?, payment_mode = ?, transaction_ref = ?, collector_user_id = ?
           WHERE id = ?
-        `).run(today, numAmt, payment_mode, receipt_no, req.user?.id || 1, instId);
+        `).run(effectiveDate, numAmt, payment_mode, receipt_no, req.user?.id || 1, instId);
         db.prepare(`
           UPDATE recurring_deposits
           SET installments_paid = installments_paid + 1, amount_deposited = amount_deposited + ?
@@ -1718,37 +1708,6 @@ router.get('/ledger-statement/:code', authenticateToken, (req, res) => {
         }
 
         if (['102', '103', 'LED-008'].includes(targetLedger.code)) {
-          if (targetLedger.code !== '103') {
-            const newRds = db.prepare(`
-              SELECT rd.id, rd.rd_number, rd.monthly_installment, rd.start_date, rd.created_at,
-                     c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name
-              FROM recurring_deposits rd
-              JOIN customers c ON rd.customer_id = c.id
-              WHERE date(COALESCE(NULLIF(rd.start_date, ''), date(rd.created_at))) BETWEEN ? AND ? ${bWhereRd}
-            `).all(startDate, endDate);
-            newRds.forEach(r => {
-              const amt = r.monthly_installment || 0;
-              if (amt > 0) {
-                const rdDate = r.start_date || (r.created_at ? r.created_at.split(' ')[0] : endDate);
-                rawItems.push({
-                  id: `sys-rd-open-${r.id}`,
-                  source_type: 'RD_OPEN',
-                  branch: r.branch_name,
-                  sort_date: rdDate,
-                  date: rdDate.split('-').reverse().join('/'),
-                  voucher_no: r.rd_number,
-                  description: `RD a/c ${r.rd_number} Opening Installment - ${r.full_name} (${r.customer_code})`,
-                  particulars: `${r.full_name} (${r.rd_number})`,
-                  narration: 'New RD Opening Deposit',
-                  payment_mode: 'CASH',
-                  is_system: 'Yes',
-                  isInflow: true,
-                  amount: amt
-                });
-              }
-            });
-          }
-
           const rdInst = db.prepare(`
             SELECT rdi.id, rdi.installment_no, rdi.total_collected, rdi.installment_amount, rdi.paid_date, rdi.payment_mode, rdi.transaction_ref,
                    rd.rd_number, c.full_name, c.customer_code, COALESCE(c.branch, 'MAIN BRANCH') as branch_name

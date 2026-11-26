@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Table as TableIcon
 } from 'lucide-react';
-import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest, onNumericInputChange } from '../utils';
 import DateInput from './DateInput';
 
 export default function Calculator({ onBookFromCalc }) {
@@ -32,7 +32,7 @@ export default function Calculator({ onBookFromCalc }) {
 
   const runCalculation = async () => {
     setLoading(true);
-    const totalMonths = (parseInt(tenureYears) * 12) + parseInt(tenureMonths || 0);
+    const totalMonths = ((parseInt(tenureYears) || 0) * 12) + (parseInt(tenureMonths) || 0);
 
     try {
       const res = await apiRequest('/fds/calculate', {
@@ -62,11 +62,12 @@ export default function Calculator({ onBookFromCalc }) {
     return () => clearTimeout(timer);
   }, [principal, annualRate, tenureYears, tenureMonths, compoundingFrequency, startDate, isSeniorCitizen, seniorBonus]);
 
-  const effectiveRate = parseFloat(annualRate) + (isSeniorCitizen ? parseFloat(seniorBonus) : 0);
-  const totalMonths = (parseInt(tenureYears) * 12) + parseInt(tenureMonths || 0);
+  const effectiveRate = (parseFloat(annualRate) || 0) + (isSeniorCitizen ? (parseFloat(seniorBonus) || 0) : 0);
+  const totalMonths = ((parseInt(tenureYears) || 0) * 12) + (parseInt(tenureMonths) || 0);
   const totalYears = totalMonths / 12;
-  const effectiveYield = (calcResult && principal > 0 && totalYears > 0) 
-    ? ((calcResult.totalInterest / principal) / totalYears * 100).toFixed(2) 
+  const principalNum = parseFloat(principal) || 0;
+  const effectiveYield = (calcResult && principalNum > 0 && totalYears > 0) 
+    ? ((calcResult.totalInterest / principalNum) / totalYears * 100).toFixed(2) 
     : 0;
 
   return (
@@ -128,7 +129,7 @@ export default function Calculator({ onBookFromCalc }) {
                 min="1000"
                 step="5000"
                 value={principal}
-                onChange={(e) => setPrincipal(Math.max(0, Number(e.target.value)))}
+                onChange={(e) => onNumericInputChange(e, setPrincipal)}
                 className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-lg transition"
               />
             </div>
@@ -141,7 +142,7 @@ export default function Calculator({ onBookFromCalc }) {
                 min="10000"
                 max="5000000"
                 step="10000"
-                value={principal}
+                value={parseFloat(principal) || 10000}
                 onChange={(e) => setPrincipal(parseFloat(e.target.value))}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
@@ -160,7 +161,7 @@ export default function Calculator({ onBookFromCalc }) {
                   type="button"
                   onClick={() => setPrincipal(amt)}
                   className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition cursor-pointer ${
-                    principal === amt
+                    Number(principal) === amt
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -186,10 +187,10 @@ export default function Calculator({ onBookFromCalc }) {
               <input
                 type="number"
                 step="0.05"
-                min="1"
+                min="0.1"
                 max="30"
                 value={annualRate}
-                onChange={(e) => setAnnualRate(parseFloat(e.target.value) || 0)}
+                onChange={(e) => onNumericInputChange(e, setAnnualRate)}
                 className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-base transition"
               />
             </div>
@@ -202,7 +203,7 @@ export default function Calculator({ onBookFromCalc }) {
                 min="4"
                 max="15"
                 step="0.05"
-                value={annualRate}
+                value={parseFloat(annualRate) || 4}
                 onChange={(e) => setAnnualRate(parseFloat(e.target.value))}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
               />
@@ -282,7 +283,7 @@ export default function Calculator({ onBookFromCalc }) {
                 min="0"
                 max="25"
                 value={tenureYears}
-                onChange={(e) => setTenureYears(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => onNumericInputChange(e, setTenureYears)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm"
               />
             </div>
@@ -295,7 +296,7 @@ export default function Calculator({ onBookFromCalc }) {
                 min="0"
                 max="11"
                 value={tenureMonths}
-                onChange={(e) => setTenureMonths(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => onNumericInputChange(e, setTenureMonths)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm"
               />
             </div>
@@ -309,7 +310,7 @@ export default function Calculator({ onBookFromCalc }) {
               min="1"
               max="120"
               step="1"
-              value={totalMonths}
+              value={Math.max(1, totalMonths)}
               onChange={(e) => {
                 const m = parseInt(e.target.value) || 1;
                 setTenureYears(Math.floor(m / 12));

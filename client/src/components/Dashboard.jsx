@@ -943,10 +943,25 @@ export default function Dashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis.cards.map((card, idx) => {
             const IconComponent = card.icon;
+            const titleLower = (card.title || '').toLowerCase();
+            const targetTab = card.targetTab || (
+              titleLower.includes('license') ? 'subscription' :
+              titleLower.includes('customer') || titleLower.includes('saver') ? 'customers' :
+              titleLower.includes('maturit') && !titleLower.includes('liability') ? 'maturity' :
+              titleLower.includes('payout') ? 'payouts' :
+              titleLower.includes('collection') ? 'daily_collection' :
+              titleLower.includes('aum') ? 'transactions' :
+              (kpis.deskTab || 'fds')
+            );
             return (
               <div 
                 key={idx} 
-                className={`bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs ${card.hoverBorder} hover:shadow-sm transition group flex flex-col justify-between`}
+                onClick={() => onNavigate && onNavigate(targetTab)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate && onNavigate(targetTab); } }}
+                title={`Click to open ${card.title}`}
+                className={`bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs ${card.hoverBorder} hover:shadow-sm transition group flex flex-col justify-between cursor-pointer active:scale-[0.99]`}
               >
                 <div>
                   <div className="flex items-center justify-between">

@@ -1,3 +1,5 @@
+import { lazy } from 'react';
+
 export const getDefaultServerUrl = () => {
   // If running inside Native Android App (Capacitor WebView)
   if (window.Capacitor || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
@@ -98,3 +100,56 @@ export const COMPOUNDING_OPTIONS = [
   { value: 'payout_half_yearly', label: 'Half-Yearly Interest Payout (Non-Cumulative)', cumulative: false },
   { value: 'payout_annual', label: 'Annual Interest Payout (Non-Cumulative)', cumulative: false }
 ];
+
+/**
+ * Strips redundant leading zeroes before digits (e.g. "012" -> "12") while keeping "" on backspace, "0", and "0.5".
+ */
+export function sanitizeNumberInput(val) {
+  if (val === '' || val === null || val === undefined) return '';
+  return String(val).replace(/^0+(?=\d)/, '');
+}
+
+/**
+ * Controlled numeric input handler that prevents leading-zero lock ("0" snapping back on backspace or turning into "012").
+ */
+export function onNumericInputChange(e, setter) {
+  const clean = sanitizeNumberInput(e.target.value);
+  if (clean !== e.target.value) {
+    e.target.value = clean;
+  }
+  setter(clean);
+}
+
+export function isChunkLoadError(err) {
+  const msg = String(err?.message || err || '');
+  return (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('ChunkLoadError') ||
+    msg.includes('Loading chunk')
+  );
+}
+
+/**
+ * Wraps React.lazy so a stale hashed JS chunk after a rebuild triggers a clean single reload
+ * instead of showing "Something went wrong".
+ */
+export function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      const mod = await componentImport();
+      try { sessionStorage.removeItem('tarpl_chunk_reload_at'); } catch {}
+      return mod;
+    } catch (err) {
+      if (isChunkLoadError(err)) {
+        const lastReload = Number(sessionStorage.getItem('tarpl_chunk_reload_at') || 0);
+        if (Date.now() - lastReload > 10000) {
+          sessionStorage.setItem('tarpl_chunk_reload_at', String(Date.now()));
+          window.location.reload();
+          return new Promise(() => {});
+        }
+      }
+      throw err;
+    }
+  });
+}

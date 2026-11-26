@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldCheck, UserPlus } from 'lucide-react';
-import { formatINR, apiRequest } from '../utils';
+import { formatINR, apiRequest, onNumericInputChange } from '../utils';
 import DateInput from './DateInput';
 
 export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustomerId = null, isEmployee = false }) {
@@ -257,7 +257,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                 step="5000"
                 required
                 value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setDepositAmount)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-bold"
               />
             </div>
@@ -298,7 +298,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                     max="360"
                     required
                     value={tenureMonths}
-                    onChange={(e) => setTenureMonths(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                    onChange={(e) => onNumericInputChange(e, setTenureMonths)}
                     onBlur={() => {
                       if (!tenureMonths || Number(tenureMonths) < 1) setTenureMonths(1);
                     }}
@@ -321,7 +321,7 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
                 step="0.05"
                 required
                 value={annualRate}
-                onChange={(e) => setAnnualRate(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setAnnualRate)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
               />
             </div>

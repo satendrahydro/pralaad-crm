@@ -19,7 +19,7 @@ import {
   Home,
   Building2
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
 import PaginationBar from './PaginationBar';
 import DateInput from './DateInput';
 
@@ -143,9 +143,12 @@ export default function LoansAgainstDeposit({
   };
 
   // Live EMI calculation
-  const monthlyRate = (interestRate / 12) / 100;
-  const estimatedEMI = monthlyRate > 0 && tenureMonths > 0 
-    ? Math.round((loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / (Math.pow(1 + monthlyRate, tenureMonths) - 1))
+  const numericRate = parseFloat(interestRate) || 0;
+  const numericLoanAmount = parseFloat(loanAmount) || 0;
+  const numericTenure = parseInt(tenureMonths) || 0;
+  const monthlyRate = (numericRate / 12) / 100;
+  const estimatedEMI = monthlyRate > 0 && numericTenure > 0 && numericLoanAmount > 0
+    ? Math.round((numericLoanAmount * monthlyRate * Math.pow(1 + monthlyRate, numericTenure)) / (Math.pow(1 + monthlyRate, numericTenure) - 1))
     : 0;
 
   const handleQuickAddCustomer = async (e) => {
@@ -210,11 +213,11 @@ export default function LoansAgainstDeposit({
       return alert('कृपया संपार्श्विक (Collateral) फिक्स डिपॉजिट चुनें।');
     }
 
-    if (loanAmount <= 0) {
+    if ((parseFloat(loanAmount) || 0) <= 0) {
       return alert('कृपया मान्य ऋण राशि दर्ज करें।');
     }
 
-    if (maxAllowedLimit > 0 && loanAmount > maxAllowedLimit) {
+    if (maxAllowedLimit > 0 && (parseFloat(loanAmount) || 0) > maxAllowedLimit) {
       return alert(`ऋण राशि अधिकतम सीमा ₹${maxAllowedLimit.toLocaleString('en-IN')} से अधिक नहीं हो सकती।`);
     }
 
@@ -225,7 +228,7 @@ export default function LoansAgainstDeposit({
         : selectedFD.fd_number;
 
       const collateralVal = isMortgageOrBusiness
-        ? Number(propertyValuation)
+        ? (parseFloat(propertyValuation) || 0)
         : Number(selectedFD.deposit_amount);
 
       const res = await apiRequest('/loans/against-deposit', {
@@ -235,9 +238,9 @@ export default function LoansAgainstDeposit({
           collateral_type: loanType,
           collateral_fd_number: collateralTitle,
           fd_deposit_amount: collateralVal,
-          sanctioned_amount: Number(loanAmount),
-          interest_rate: Number(interestRate),
-          tenure_months: Number(tenureMonths),
+          sanctioned_amount: parseFloat(loanAmount) || 0,
+          interest_rate: parseFloat(interestRate) || 0,
+          tenure_months: parseInt(tenureMonths) || 12,
           disbursal_date: disbursalDate
         })
       });
@@ -750,9 +753,10 @@ export default function LoansAgainstDeposit({
                         step="10000"
                         value={propertyValuation}
                         onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setPropertyValuation(val);
-                          setLoanAmount(Math.round(val * 0.70));
+                          onNumericInputChange(e, (val) => {
+                            setPropertyValuation(val);
+                            setLoanAmount(Math.round((parseFloat(val) || 0) * 0.70));
+                          });
                         }}
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none"
                       />
@@ -811,9 +815,10 @@ export default function LoansAgainstDeposit({
                         step="10000"
                         value={propertyValuation}
                         onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setPropertyValuation(val);
-                          setLoanAmount(Math.round(val * 0.60));
+                          onNumericInputChange(e, (val) => {
+                            setPropertyValuation(val);
+                            setLoanAmount(Math.round((parseFloat(val) || 0) * 0.60));
+                          });
                         }}
                         className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none"
                       />
@@ -872,7 +877,7 @@ export default function LoansAgainstDeposit({
                     min="10000"
                     max={maxAllowedLimit > 0 ? maxAllowedLimit : undefined}
                     value={loanAmount}
-                    onChange={(e) => setLoanAmount(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setLoanAmount)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none font-bold text-slate-900"
                   />
                 </div>
@@ -883,7 +888,7 @@ export default function LoansAgainstDeposit({
                     type="number"
                     step="0.5"
                     value={interestRate}
-                    onChange={(e) => setInterestRate(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setInterestRate)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none font-bold text-blue-700"
                   />
                 </div>
@@ -898,7 +903,7 @@ export default function LoansAgainstDeposit({
                     min="6"
                     max="180"
                     value={tenureMonths}
-                    onChange={(e) => setTenureMonths(Number(e.target.value))}
+                    onChange={(e) => onNumericInputChange(e, setTenureMonths)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none font-semibold"
                   />
                 </div>

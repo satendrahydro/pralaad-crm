@@ -146,8 +146,8 @@ export default function StaffPermissions() {
   // Restore defaults
   const handleRestoreDefaults = async () => {
     if (!window.confirm(applyToAll 
-      ? 'Are you sure you want to restore default permissions (All 17 Functions ON) for ALL Staff members?' 
-      : 'Restore default permissions (All 17 Functions ON) for this Staff member?')) {
+      ? `Are you sure you want to restore default permissions (All ${totalControls} Functions ON) for ALL Staff members?` 
+      : `Restore default permissions (All ${totalControls} Functions ON) for this Staff member?`)) {
       return;
     }
 
@@ -164,7 +164,7 @@ export default function StaffPermissions() {
       } else {
         const res = await apiRequest(`/permissions/staff/${selectedStaffId}/restore-defaults`, { method: 'POST' });
         if (res.success) {
-          setFeedback({ type: 'success', message: 'Default permissions restored successfully (All 17 Functions ON).' });
+          setFeedback({ type: 'success', message: `Default permissions restored successfully (All ${totalControls} Functions ON).` });
           setPermissions(res.permissions);
           setOriginalPermissions(res.permissions);
           setStaffList(prev => prev.map(s => s.id === Number(selectedStaffId) ? { ...s, permissions: res.permissions, has_custom_permissions: false } : s));
@@ -222,7 +222,9 @@ export default function StaffPermissions() {
 
   const selectedStaff = staffList.find(s => String(s.id) === String(selectedStaffId));
   const hasUnsavedChanges = JSON.stringify(permissions) !== JSON.stringify(originalPermissions);
-  const disabledCount = Object.values(permissions).filter(v => v === false).length;
+  const catalogKeys = Object.keys(catalog).length > 0 ? Object.keys(catalog) : categories.flatMap(g => g.keys);
+  const totalControls = catalogKeys.length;
+  const disabledCount = catalogKeys.filter(k => permissions[k] === false).length;
 
   if (loading) {
     return (
@@ -335,7 +337,7 @@ export default function StaffPermissions() {
                 onClick={handleRestoreDefaults}
                 disabled={saving}
                 className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl transition-all flex items-center gap-1.5"
-                title="Restore default state (All 17 functions ON)"
+                title={`Restore default state (All ${totalControls} functions ON)`}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Restore Defaults
@@ -372,7 +374,7 @@ export default function StaffPermissions() {
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase">Enabled Functions</p>
                 <p className="text-base font-bold text-emerald-600 mt-0.5">
-                  {17 - disabledCount} / 17 Active
+                  {totalControls - disabledCount} / {totalControls} Active
                 </p>
               </div>
               <Unlock className="w-8 h-8 text-emerald-500/80" />

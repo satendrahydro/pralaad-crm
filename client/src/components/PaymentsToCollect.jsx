@@ -15,6 +15,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { apiRequest } from '../utils';
+import DateInput from './DateInput';
 
 export default function PaymentsToCollect() {
   const [data, setData] = useState([]);
@@ -27,6 +28,7 @@ export default function PaymentsToCollect() {
   const [activeItem, setActiveItem] = useState(null);
   const [collectAmount, setCollectAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('CASH');
+  const [collectDate, setCollectDate] = useState(new Date().toISOString().split('T')[0]);
   const [collectSuccess, setCollectSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,6 +54,7 @@ export default function PaymentsToCollect() {
     setActiveItem(item);
     setCollectAmount(item.due_amount.toString());
     setPaymentMode('CASH');
+    setCollectDate(new Date().toISOString().split('T')[0]);
     setCollectSuccess('');
   };
 
@@ -66,7 +69,8 @@ export default function PaymentsToCollect() {
           account_no: activeItem.account_no,
           customer_name: activeItem.customer_name,
           amount: parseFloat(collectAmount),
-          payment_mode: paymentMode
+          payment_mode: paymentMode,
+          collection_date: collectDate
         })
       });
 
@@ -317,6 +321,27 @@ export default function PaymentsToCollect() {
                 value={collectAmount}
                 onChange={(e) => setCollectAmount(e.target.value)}
                 className="w-full text-base font-black p-2.5 rounded-xl border border-slate-300 font-mono"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 uppercase">Collection Date</label>
+                {activeItem.due_date && activeItem.due_date <= new Date().toISOString().split('T')[0] && collectDate !== activeItem.due_date && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectDate(activeItem.due_date)}
+                    className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200 cursor-pointer"
+                  >
+                    Use Due Date ({activeItem.due_date})
+                  </button>
+                )}
+              </div>
+              <DateInput
+                max={new Date().toISOString().split('T')[0]}
+                value={collectDate}
+                onChange={(e) => setCollectDate(e.target.value)}
+                className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-300 font-mono"
               />
             </div>
 

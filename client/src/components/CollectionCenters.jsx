@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Briefcase
 } from 'lucide-react';
-import { formatINR, apiRequest, getApiBase } from '../utils';
+import { formatINR, apiRequest, getApiBase, onNumericInputChange } from '../utils';
 
 export default function CollectionCenters() {
   const [centers, setCenters] = useState([]);
@@ -342,7 +342,7 @@ export default function CollectionCenters() {
                   type="number"
                   min="1"
                   value={formMembers}
-                  onChange={(e) => setFormMembers(Number(e.target.value))}
+                  onChange={(e) => onNumericInputChange(e, setFormMembers)}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none font-mono"
                 />
               </div>

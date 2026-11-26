@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { requirePermission, getUserPermissions } = require('../middleware/permissions');
@@ -101,10 +100,7 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
       ifsc_code,
       nominee_name,
       nominee_relation,
-      is_senior_citizen,
-      login_id,
-      login_password,
-      app_access_enabled
+      is_senior_citizen
     } = req.body;
 
     if (!full_name || !phone) {
@@ -131,16 +127,13 @@ router.post('/', authenticateToken, requirePermission('cust_registration'), (req
 
     const stmt = db.prepare(`
       INSERT INTO customers (
-        customer_code, login_id, login_password, app_access_enabled, status, full_name, father_name, branch, kyc_status, phone, email, pan_card, aadhaar_no,
+        customer_code, app_access_enabled, status, full_name, father_name, branch, kyc_status, phone, email, pan_card, aadhaar_no,
         address, bank_name, account_no, ifsc_code, nominee_name, nominee_relation, is_senior_citizen
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
       customer_code,
-      login_id ? login_id.trim() : customer_code,
-      login_password ? login_password.trim() : 'client123',
-      app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : 1,
       'ACTIVE',
       full_name.trim(),
       father_name ? father_name.trim() : null,
@@ -178,8 +171,7 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
     const allowedFields = [
       'full_name', 'father_name', 'branch', 'phone', 'email', 'pan_card',
       'aadhaar_no', 'address', 'bank_name', 'account_no', 'ifsc_code',
-      'nominee_name', 'nominee_relation', 'is_senior_citizen', 'login_id',
-      'login_password', 'app_access_enabled', 'status'
+      'nominee_name', 'nominee_relation', 'is_senior_citizen', 'status'
     ];
 
     const changes = {};
@@ -188,7 +180,7 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
         let newVal = req.body[f];
         if (typeof newVal === 'string') newVal = newVal.trim();
         if (f === 'pan_card' || f === 'ifsc_code') newVal = newVal.toUpperCase();
-        if (f === 'is_senior_citizen' || f === 'app_access_enabled') newVal = newVal ? 1 : 0;
+        if (f === 'is_senior_citizen') newVal = newVal ? 1 : 0;
 
         let oldVal = currentCust[f];
         if (typeof oldVal === 'string') oldVal = oldVal.trim();
@@ -259,9 +251,6 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
     nominee_name,
     nominee_relation,
     is_senior_citizen,
-    login_id,
-    login_password,
-    app_access_enabled,
     status
   } = req.body;
 
@@ -281,15 +270,9 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
       nominee_name = COALESCE(?, nominee_name),
       nominee_relation = COALESCE(?, nominee_relation),
       is_senior_citizen = COALESCE(?, is_senior_citizen),
-      login_id = COALESCE(?, login_id),
-      login_password = COALESCE(?, login_password),
-      password_hash = COALESCE(?, password_hash),
-      app_access_enabled = COALESCE(?, app_access_enabled),
       status = COALESCE(?, status)
     WHERE id = ?
   `);
-
-  const hashVal = login_password ? bcrypt.hashSync(login_password.trim(), 10) : null;
 
   stmt.run(
     full_name, father_name, branch, phone, email,
@@ -298,10 +281,6 @@ router.put('/:id', authenticateToken, requirePermission('cust_edit'), (req, res)
     ifsc_code ? ifsc_code.toUpperCase() : null,
     nominee_name, nominee_relation,
     is_senior_citizen !== undefined ? (is_senior_citizen ? 1 : 0) : null,
-    login_id ? login_id.trim() : null,
-    login_password ? login_password.trim() : null,
-    hashVal,
-    app_access_enabled !== undefined ? (app_access_enabled ? 1 : 0) : null,
     status || null,
     req.params.id
   );
@@ -362,25 +341,6 @@ router.post('/:id/documents', authenticateToken, requirePermission('cust_doc_upl
     message: `Document '${document_name}' uploaded successfully for ${cust.full_name}`,
     documentId: Date.now(),
     document_type
-  });
-});
-
-// PATCH /api/customers/:id/toggle-access - 1-Click Toggle App Access from CRM
-router.patch('/:id/toggle-access', authenticateToken, (req, res) => {
-  const cust = db.prepare('SELECT id, app_access_enabled, full_name FROM customers WHERE id = ?').get(req.params.id);
-  if (!cust) return res.status(404).json({ success: false, message: 'Customer not found' });
-
-  const newStatus = cust.app_access_enabled === 1 ? 0 : 1;
-  db.prepare('UPDATE customers SET app_access_enabled = ?, status = ? WHERE id = ?').run(
-    newStatus, 
-    newStatus === 1 ? 'ACTIVE' : 'BLOCKED', 
-    req.params.id
-  );
-
-  res.json({ 
-    success: true, 
-    message: newStatus === 1 ? `Mobile app access enabled for ${cust.full_name}` : `Mobile app access BLOCKED for ${cust.full_name}`, 
-    app_access_enabled: newStatus 
   });
 });
 
@@ -479,7 +439,7 @@ router.get('/:id/portfolio', authenticateToken, (req, res) => {
   }
 });
 
-// DELETE /api/customers/:id - Remove Customer from CRM & Instantly Block App Access
+// DELETE /api/customers/:id - Permanently Remove Customer & Linked Accounts from CRM
 router.delete('/:id', authenticateToken, (req, res) => {
   try {
     const { force } = req.query;
@@ -498,35 +458,25 @@ router.delete('/:id', authenticateToken, (req, res) => {
     }
 
     const deleteTx = db.transaction((customerId) => {
-      try {
-        db.prepare('DELETE FROM transaction_entries WHERE transaction_id IN (SELECT id FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?))').run(customerId, customerId);
-        db.prepare('DELETE FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
-      } catch (e) {}
-      try {
-        db.prepare('DELETE FROM approval_requests WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
-      } catch (e) {}
-      try { db.prepare('DELETE FROM whatsapp_logs WHERE customer_id = ?').run(customerId); } catch (e) {}
+      db.prepare('DELETE FROM transaction_entries WHERE transaction_id IN (SELECT id FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?))').run(customerId, customerId);
+      db.prepare('DELETE FROM transactions WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
+      db.prepare('DELETE FROM approval_requests WHERE customer_id = ? OR fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId, customerId);
+      db.prepare('DELETE FROM whatsapp_logs WHERE customer_id = ?').run(customerId);
       db.prepare('DELETE FROM fd_schedules WHERE fd_id IN (SELECT id FROM fixed_deposits WHERE customer_id = ?)').run(customerId);
       db.prepare('DELETE FROM fixed_deposits WHERE customer_id = ?').run(customerId);
-      try {
-        db.prepare('DELETE FROM rd_installments WHERE rd_id IN (SELECT id FROM recurring_deposits WHERE customer_id = ?)').run(customerId);
-        db.prepare('DELETE FROM recurring_deposits WHERE customer_id = ?').run(customerId);
-      } catch (e) {}
-      try {
-        db.prepare('DELETE FROM mis_payout_schedules WHERE mis_id IN (SELECT id FROM mis_accounts WHERE customer_id = ?)').run(customerId);
-        db.prepare('DELETE FROM mis_accounts WHERE customer_id = ?').run(customerId);
-      } catch (e) {}
-      try {
-        db.prepare('DELETE FROM savings_transactions WHERE account_id IN (SELECT id FROM savings_accounts WHERE customer_id = ?)').run(customerId);
-        db.prepare('DELETE FROM savings_accounts WHERE customer_id = ?').run(customerId);
-      } catch (e) {}
-      try { db.prepare('DELETE FROM loans_against_deposit WHERE customer_id = ?').run(customerId); } catch (e) {}
-      try { db.prepare('DELETE FROM gold_loans WHERE customer_id = ?').run(customerId); } catch (e) {}
+      db.prepare('DELETE FROM rd_installments WHERE rd_id IN (SELECT id FROM recurring_deposits WHERE customer_id = ?)').run(customerId);
+      db.prepare('DELETE FROM recurring_deposits WHERE customer_id = ?').run(customerId);
+      db.prepare('DELETE FROM mis_payout_schedules WHERE mis_id IN (SELECT id FROM mis_accounts WHERE customer_id = ?)').run(customerId);
+      db.prepare('DELETE FROM mis_accounts WHERE customer_id = ?').run(customerId);
+      db.prepare('DELETE FROM savings_transactions WHERE account_id IN (SELECT id FROM savings_accounts WHERE customer_id = ?)').run(customerId);
+      db.prepare('DELETE FROM savings_accounts WHERE customer_id = ?').run(customerId);
+      db.prepare('DELETE FROM loans_against_deposit WHERE customer_id = ?').run(customerId);
+      db.prepare('DELETE FROM gold_loans WHERE customer_id = ?').run(customerId);
       db.prepare('DELETE FROM customers WHERE id = ?').run(customerId);
     });
 
     deleteTx(req.params.id);
-    res.json({ success: true, message: `Customer ${cust.full_name} permanently deleted from CRM and Mobile App access revoked.` });
+    res.json({ success: true, message: `Customer ${cust.full_name} (${cust.customer_code}) and all linked CRM records permanently deleted.` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

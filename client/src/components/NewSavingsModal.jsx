@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Wallet, ShieldCheck, UserPlus } from 'lucide-react';
-import { formatINR, apiRequest } from '../utils';
+import { formatINR, apiRequest, onNumericInputChange } from '../utils';
 
 export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee = false, initialCustomerId = null }) {
   const [customers, setCustomers] = useState([]);
@@ -213,7 +213,7 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
                 step="500"
                 required
                 value={openingBalance}
-                onChange={(e) => setOpeningBalance(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setOpeningBalance)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-bold"
               />
             </div>
@@ -225,7 +225,7 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
                 step="100"
                 required
                 value={minimumBalance}
-                onChange={(e) => setMinimumBalance(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setMinimumBalance)}
                 className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800"
               />
             </div>
@@ -238,7 +238,7 @@ export default function NewSavingsModal({ isOpen, onClose, onSuccess, isEmployee
               step="0.1"
               required
               value={annualRate}
-              onChange={(e) => setAnnualRate(e.target.value)}
+              onChange={(e) => onNumericInputChange(e, setAnnualRate)}
               className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-slate-800 font-bold text-emerald-700"
             />
             <p className="text-[10px] text-slate-400 mt-1">Calculated via daily product balance method & credited periodically</p>

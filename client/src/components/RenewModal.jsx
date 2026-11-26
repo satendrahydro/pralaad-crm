@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, RotateCw, CheckCircle, Calculator } from 'lucide-react';
-import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest, onNumericInputChange } from '../utils';
 
 export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
   const [renewType, setRenewType] = useState('PRINCIPAL_PLUS_INTEREST');
@@ -29,8 +29,8 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
             request_data: {
               fdId: fd.id,
               renewType,
-              newRate: parseFloat(newRate),
-              newTenureMonths: parseInt(newTenure),
+              newRate: parseFloat(newRate) || 0,
+              newTenureMonths: parseInt(newTenure) || 12,
               compoundingFrequency: compoundingFreq
             },
             remarks: `Staff Renewal Proposal: ${fd.fd_number} for ${newTenure}M @ ${newRate}%`
@@ -45,8 +45,8 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
         method: 'POST',
         body: JSON.stringify({
           renew_type: renewType,
-          new_rate: parseFloat(newRate),
-          new_tenure_months: parseInt(newTenure),
+          new_rate: parseFloat(newRate) || 0,
+          new_tenure_months: parseInt(newTenure) || 12,
           compounding_frequency: compoundingFreq
         })
       });
@@ -129,7 +129,7 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
                 type="number"
                 step="0.05"
                 value={newRate}
-                onChange={(e) => setNewRate(e.target.value)}
+                onChange={(e) => onNumericInputChange(e, setNewRate)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold"
               />
             </div>
@@ -171,7 +171,10 @@ export default function RenewModal({ fd, isOpen, onClose, onSuccess }) {
                     min="1"
                     max="360"
                     value={newTenure}
-                    onChange={(e) => setNewTenure(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => onNumericInputChange(e, setNewTenure)}
+                    onBlur={() => {
+                      if (!newTenure || Number(newTenure) < 1) setNewTenure(1);
+                    }}
                     placeholder="Enter custom months"
                     className="w-full px-3 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-bold text-slate-900"
                   />

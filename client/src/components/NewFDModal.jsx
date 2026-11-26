@@ -10,7 +10,7 @@ import {
   Percent,
   Calculator as CalcIcon
 } from 'lucide-react';
-import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest } from '../utils';
+import { formatINR, formatDate, COMPOUNDING_OPTIONS, apiRequest, onNumericInputChange } from '../utils';
 import DateInput from './DateInput';
 
 export default function NewFDModal({ 
@@ -153,17 +153,17 @@ export default function NewFDModal({
           body: JSON.stringify({
             request_type: 'NEW_FD',
             customer_id: selectedCustomerId,
-            proposed_amount: principal,
+            proposed_amount: parseFloat(principal) || 0,
             request_data: {
               customerId: selectedCustomerId,
-              principal,
-              annualRate,
-              tenureMonths,
+              principal: parseFloat(principal) || 0,
+              annualRate: parseFloat(annualRate) || 0,
+              tenureMonths: parseInt(tenureMonths) || 12,
               compoundingFrequency,
               startDate,
               remarks
             },
-            remarks: `Staff Maker Entry: Proposed FD Booking for ₹${principal}`
+            remarks: `Staff Maker Entry: Proposed FD Booking for ₹${parseFloat(principal) || 0}`
           })
         });
 
@@ -177,9 +177,9 @@ export default function NewFDModal({
         method: 'POST',
         body: JSON.stringify({
           customer_id: selectedCustomerId,
-          principal_amount: principal,
-          annual_rate: annualRate,
-          tenure_months: tenureMonths,
+          principal_amount: parseFloat(principal) || 0,
+          annual_rate: parseFloat(annualRate) || 0,
+          tenure_months: parseInt(tenureMonths) || 12,
           compounding_frequency: compoundingFrequency,
           start_date: startDate,
           remarks
@@ -374,7 +374,7 @@ export default function NewFDModal({
                 min="1000"
                 step="1000"
                 value={principal}
-                onChange={(e) => setPrincipal(Number(e.target.value))}
+                onChange={(e) => onNumericInputChange(e, setPrincipal)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -387,10 +387,10 @@ export default function NewFDModal({
                 type="number"
                 required
                 step="0.05"
-                min="1"
+                min="0.1"
                 max="30"
                 value={annualRate}
-                onChange={(e) => setAnnualRate(parseFloat(e.target.value) || 0)}
+                onChange={(e) => onNumericInputChange(e, setAnnualRate)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -435,7 +435,7 @@ export default function NewFDModal({
                     min="0"
                     max="360"
                     value={tenureMonths}
-                    onChange={(e) => setTenureMonths(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                    onChange={(e) => onNumericInputChange(e, setTenureMonths)}
                     onBlur={() => {
                       if (!tenureMonths || Number(tenureMonths) < 1) setTenureMonths(1);
                     }}

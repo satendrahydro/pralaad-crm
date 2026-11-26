@@ -207,7 +207,7 @@ router.post('/:id/collect-installment', authenticateToken, (req, res) => {
 
     const inst = db.prepare('SELECT * FROM rd_installments WHERE id = ? AND rd_id = ?').get(installment_id, id);
     if (!inst) return res.status(404).json({ success: false, message: 'Installment not found' });
-    if (inst.status === 'COLLECTED') {
+    if (inst.status === 'COLLECTED' || inst.status === 'PAID') {
       return res.status(400).json({ success: false, message: 'Installment already collected' });
     }
 
@@ -233,7 +233,8 @@ router.post('/:id/collect-installment', authenticateToken, (req, res) => {
           lateFee: parseFloat(late_fee || 0),
           totalAmount: totalAmount,
           paymentMode: payment_mode,
-          transactionRef: reference_number || `COLL-RD-${Date.now()}`
+          transactionRef: reference_number || `COLL-RD-${Date.now()}`,
+          paid_date: req.body.paid_date || req.body.collection_date || new Date().toISOString().split('T')[0]
         }),
         `RD Installment #${inst.installment_no} collection submitted`
       );
@@ -286,7 +287,7 @@ router.post('/:id/installments/:instId/collect', authenticateToken, (req, res) =
 
     const inst = db.prepare('SELECT * FROM rd_installments WHERE id = ? AND rd_id = ?').get(instId, id);
     if (!inst) return res.status(404).json({ success: false, message: 'Installment not found' });
-    if (inst.status === 'COLLECTED') {
+    if (inst.status === 'COLLECTED' || inst.status === 'PAID') {
       return res.status(400).json({ success: false, message: 'Installment already collected' });
     }
 
@@ -312,7 +313,8 @@ router.post('/:id/installments/:instId/collect', authenticateToken, (req, res) =
           lateFee: parseFloat(late_fee || 0),
           totalAmount: amount,
           paymentMode: payment_mode,
-          transactionRef: transaction_ref || `COLL-RD-${Date.now()}`
+          transactionRef: transaction_ref || `COLL-RD-${Date.now()}`,
+          paid_date: req.body.paid_date || req.body.collection_date || new Date().toISOString().split('T')[0]
         }),
         `RD Installment #${inst.installment_no} collection submitted`
       );

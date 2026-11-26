@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { 
   TrendingUp, 
   LayoutDashboard, 
@@ -59,58 +59,58 @@ import Login from './components/Login';
 import TarplLogo from './components/TarplLogo';
 import CommercialLockScreen from './components/CommercialLockScreen';
 
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const CalculatorComponent = lazy(() => import('./components/Calculator'));
-const FDList = lazy(() => import('./components/FDList'));
-const Customers = lazy(() => import('./components/Customers'));
-const Payouts = lazy(() => import('./components/Payouts'));
-const Subscription = lazy(() => import('./components/Subscription'));
-const Settings = lazy(() => import('./components/Settings'));
-const WhatsAppReminders = lazy(() => import('./components/WhatsAppReminders'));
+import { apiRequest, getApiBase, lazyWithRetry } from './utils';
+
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
+const CalculatorComponent = lazyWithRetry(() => import('./components/Calculator'));
+const FDList = lazyWithRetry(() => import('./components/FDList'));
+const Customers = lazyWithRetry(() => import('./components/Customers'));
+const Payouts = lazyWithRetry(() => import('./components/Payouts'));
+const Subscription = lazyWithRetry(() => import('./components/Subscription'));
+const Settings = lazyWithRetry(() => import('./components/Settings'));
+const WhatsAppReminders = lazyWithRetry(() => import('./components/WhatsAppReminders'));
 import DeveloperContactModal from './components/DeveloperContactModal';
-const UserManagement = lazy(() => import('./components/UserManagement'));
-const StaffPermissions = lazy(() => import('./components/StaffPermissions'));
+const UserManagement = lazyWithRetry(() => import('./components/UserManagement'));
+const StaffPermissions = lazyWithRetry(() => import('./components/StaffPermissions'));
 
 // Stage 3 New Dedicated Modules
-const FDSchemes = lazy(() => import('./components/FDSchemes'));
-const TransactionsLedger = lazy(() => import('./components/TransactionsLedger'));
-const MaturityCalendar = lazy(() => import('./components/MaturityCalendar'));
-const Reports = lazy(() => import('./components/Reports'));
-const BranchManagement = lazy(() => import('./components/BranchManagement'));
-const EmployeeDashboard = lazy(() => import('./components/EmployeeDashboard'));
-const ApprovalsQueue = lazy(() => import('./components/ApprovalsQueue'));
-const FDCreatioDetailView = lazy(() => import('./components/FDCreatioDetailView'));
+const FDSchemes = lazyWithRetry(() => import('./components/FDSchemes'));
+const TransactionsLedger = lazyWithRetry(() => import('./components/TransactionsLedger'));
+const MaturityCalendar = lazyWithRetry(() => import('./components/MaturityCalendar'));
+const Reports = lazyWithRetry(() => import('./components/Reports'));
+const BranchManagement = lazyWithRetry(() => import('./components/BranchManagement'));
+const EmployeeDashboard = lazyWithRetry(() => import('./components/EmployeeDashboard'));
+const ApprovalsQueue = lazyWithRetry(() => import('./components/ApprovalsQueue'));
+const FDCreatioDetailView = lazyWithRetry(() => import('./components/FDCreatioDetailView'));
 
 // Stage 4 Multi-Product Modules (RD, MIS, Savings, 360 Portfolio)
-const RDList = lazy(() => import('./components/RDList'));
-const MISList = lazy(() => import('./components/MISList'));
-const SavingsList = lazy(() => import('./components/SavingsList'));
-const AgentRanks = lazy(() => import('./components/AgentRanks'));
-const AgentsList = lazy(() => import('./components/AgentsList'));
-const CollectionCenters = lazy(() => import('./components/CollectionCenters'));
-const LoansAgainstDeposit = lazy(() => import('./components/LoansAgainstDeposit'));
-const GoldLoanList = lazy(() => import('./components/GoldLoanList'));
-const BorrowingsRegister = lazy(() => import('./components/BorrowingsRegister'));
-const UnifiedCustomerProfileModal = lazy(() => import('./components/UnifiedCustomerProfileModal'));
-const NewRDModal = lazy(() => import('./components/NewRDModal'));
-const NewMISModal = lazy(() => import('./components/NewMISModal'));
-const NewSavingsModal = lazy(() => import('./components/NewSavingsModal'));
-const DayBook = lazy(() => import('./components/DayBook'));
-const NewJournalEntryModal = lazy(() => import('./components/NewJournalEntryModal'));
-const DailyCollection = lazy(() => import('./components/DailyCollection'));
-const ScheduleSmsModal = lazy(() => import('./components/ScheduleSmsModal'));
-const PaymentsToCollect = lazy(() => import('./components/PaymentsToCollect'));
-const PaymentsToRelease = lazy(() => import('./components/PaymentsToRelease'));
-const RolePermissionsEditor = lazy(() => import('./components/RolePermissionsEditor'));
-const AuditTrailView = lazy(() => import('./components/AuditTrailView'));
+const RDList = lazyWithRetry(() => import('./components/RDList'));
+const MISList = lazyWithRetry(() => import('./components/MISList'));
+const SavingsList = lazyWithRetry(() => import('./components/SavingsList'));
+const AgentRanks = lazyWithRetry(() => import('./components/AgentRanks'));
+const AgentsList = lazyWithRetry(() => import('./components/AgentsList'));
+const CollectionCenters = lazyWithRetry(() => import('./components/CollectionCenters'));
+const LoansAgainstDeposit = lazyWithRetry(() => import('./components/LoansAgainstDeposit'));
+const GoldLoanList = lazyWithRetry(() => import('./components/GoldLoanList'));
+const BorrowingsRegister = lazyWithRetry(() => import('./components/BorrowingsRegister'));
+const UnifiedCustomerProfileModal = lazyWithRetry(() => import('./components/UnifiedCustomerProfileModal'));
+const NewRDModal = lazyWithRetry(() => import('./components/NewRDModal'));
+const NewMISModal = lazyWithRetry(() => import('./components/NewMISModal'));
+const NewSavingsModal = lazyWithRetry(() => import('./components/NewSavingsModal'));
+const DayBook = lazyWithRetry(() => import('./components/DayBook'));
+const NewJournalEntryModal = lazyWithRetry(() => import('./components/NewJournalEntryModal'));
+const DailyCollection = lazyWithRetry(() => import('./components/DailyCollection'));
+const ScheduleSmsModal = lazyWithRetry(() => import('./components/ScheduleSmsModal'));
+const PaymentsToCollect = lazyWithRetry(() => import('./components/PaymentsToCollect'));
+const PaymentsToRelease = lazyWithRetry(() => import('./components/PaymentsToRelease'));
+const RolePermissionsEditor = lazyWithRetry(() => import('./components/RolePermissionsEditor'));
+const AuditTrailView = lazyWithRetry(() => import('./components/AuditTrailView'));
 
-const NewFDModal = lazy(() => import('./components/NewFDModal'));
-const FDDetailModal = lazy(() => import('./components/FDDetailModal'));
-const Certificate = lazy(() => import('./components/Certificate'));
-const PrematureCloseModal = lazy(() => import('./components/PrematureCloseModal'));
-const RenewModal = lazy(() => import('./components/RenewModal'));
-
-import { apiRequest, getApiBase } from './utils';
+const NewFDModal = lazyWithRetry(() => import('./components/NewFDModal'));
+const FDDetailModal = lazyWithRetry(() => import('./components/FDDetailModal'));
+const Certificate = lazyWithRetry(() => import('./components/Certificate'));
+const PrematureCloseModal = lazyWithRetry(() => import('./components/PrematureCloseModal'));
+const RenewModal = lazyWithRetry(() => import('./components/RenewModal'));
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('pralaad_fd_token'));
@@ -1499,7 +1499,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right: Branch Selector, FY Selector, Notifications, Customer App, Profile */}
+          {/* Right: Branch Selector, FY Selector, Notifications, Profile */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-2">
 
             {/* 1. Branch Selector */}

@@ -15,7 +15,7 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
 
 export default function WhatsAppReminders({ onViewFD }) {
   const [reminders, setReminders] = useState([]);
@@ -404,7 +404,12 @@ export default function WhatsAppReminders({ onViewFD }) {
                 min="1"
                 max="30"
                 value={settingsData.whatsapp_reminder_days}
-                onChange={(e) => setSettingsData({ ...settingsData, whatsapp_reminder_days: parseInt(e.target.value) || 3 })}
+                onChange={(e) => onNumericInputChange(e, (val) => setSettingsData({ ...settingsData, whatsapp_reminder_days: val }))}
+                onBlur={() => {
+                  if (!settingsData.whatsapp_reminder_days || Number(settingsData.whatsapp_reminder_days) < 1) {
+                    setSettingsData({ ...settingsData, whatsapp_reminder_days: 3 });
+                  }
+                }}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800"
               />
               <p className="text-[11px] text-slate-400 mt-1">Default 3 din set hai</p>

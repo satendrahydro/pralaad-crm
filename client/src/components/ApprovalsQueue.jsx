@@ -214,13 +214,13 @@ export default function ApprovalsQueue({ onApproved }) {
                         {r.request_type === 'CUSTOMER_EDIT' ? (
                           <span className="text-blue-700 font-bold">{r.request_data?.makerName || r.maker_name || 'Staff Maker'}</span>
                         ) : r.request_type === 'PROFILE_CORRECTION' ? (
-                          <span className="text-emerald-700 font-bold">Client Mobile App</span>
+                          <span className="text-emerald-700 font-bold">{r.maker_name || 'Member Desk'}</span>
                         ) : (
                           r.maker_name || r.maker_username || 'Staff Maker'
                         )}
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {r.request_type === 'CUSTOMER_EDIT' ? (r.request_data?.source === 'MOBILE_APP' ? 'Customer Self-Service' : 'Branch Staff Maker') : r.request_type === 'PROFILE_CORRECTION' ? 'Customer Self-Service' : 'Branch Staff'}
+                        {r.request_type === 'CUSTOMER_EDIT' || r.request_type === 'PROFILE_CORRECTION' ? 'Branch Staff Maker' : 'Branch Staff'}
                       </div>
                     </td>
                     <td className="p-4">

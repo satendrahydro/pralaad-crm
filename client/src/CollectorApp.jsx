@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Wallet,
   ArrowDownLeft,
@@ -18,21 +18,21 @@ import Login from './components/Login';
 import TarplLogo from './components/TarplLogo';
 import CommercialLockScreen from './components/CommercialLockScreen';
 import DeveloperContactModal from './components/DeveloperContactModal';
-import { getApiBase } from './utils';
+import { getApiBase, lazyWithRetry } from './utils';
 
-const DailyCollection = lazy(() => import('./components/DailyCollection'));
-const PaymentsToCollect = lazy(() => import('./components/PaymentsToCollect'));
-const CollectionCenters = lazy(() => import('./components/CollectionCenters'));
-const Customers = lazy(() => import('./components/Customers'));
-const LoansAgainstDeposit = lazy(() => import('./components/LoansAgainstDeposit'));
-const GoldLoanList = lazy(() => import('./components/GoldLoanList'));
-const CalculatorComponent = lazy(() => import('./components/Calculator'));
+const DailyCollection = lazyWithRetry(() => import('./components/DailyCollection'));
+const PaymentsToCollect = lazyWithRetry(() => import('./components/PaymentsToCollect'));
+const CollectionCenters = lazyWithRetry(() => import('./components/CollectionCenters'));
+const Customers = lazyWithRetry(() => import('./components/Customers'));
+const LoansAgainstDeposit = lazyWithRetry(() => import('./components/LoansAgainstDeposit'));
+const GoldLoanList = lazyWithRetry(() => import('./components/GoldLoanList'));
+const CalculatorComponent = lazyWithRetry(() => import('./components/Calculator'));
 
-const UnifiedCustomerProfileModal = lazy(() => import('./components/UnifiedCustomerProfileModal'));
-const NewFDModal = lazy(() => import('./components/NewFDModal'));
-const NewRDModal = lazy(() => import('./components/NewRDModal'));
-const NewSavingsModal = lazy(() => import('./components/NewSavingsModal'));
-const Certificate = lazy(() => import('./components/Certificate'));
+const UnifiedCustomerProfileModal = lazyWithRetry(() => import('./components/UnifiedCustomerProfileModal'));
+const NewFDModal = lazyWithRetry(() => import('./components/NewFDModal'));
+const NewRDModal = lazyWithRetry(() => import('./components/NewRDModal'));
+const NewSavingsModal = lazyWithRetry(() => import('./components/NewSavingsModal'));
+const Certificate = lazyWithRetry(() => import('./components/Certificate'));
 
 const COLLECTOR_TABS = [
   { id: 'daily_collection', label: 'Daily Sheet', short: 'Collect', icon: Wallet },

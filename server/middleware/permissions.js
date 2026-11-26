@@ -1,6 +1,6 @@
 const db = require('../db');
 
-// The 17 Granular Function Controls across 3 Categories
+// The 16 Granular Function Controls across 3 Categories
 const PERMISSIONS_CATALOG = {
   // 1. CUSTOMER MANAGEMENT
   cust_registration: {
@@ -79,12 +79,6 @@ const PERMISSIONS_CATALOG = {
   },
 
   // 3. OPERATIONS
-  app_access_request: {
-    key: 'app_access_request',
-    label: 'Customer App Access Request',
-    category: 'OPERATIONS',
-    description: 'Allows staff to request mobile app access activation for depositors'
-  },
   reports_view: {
     key: 'reports_view',
     label: 'Reports Viewing',
@@ -111,7 +105,7 @@ const PERMISSIONS_CATALOG = {
   }
 };
 
-// Default permissions for staff (all 17 functions enabled by default)
+// Default permissions for staff (all 16 functions enabled by default)
 const DEFAULT_STAFF_PERMISSIONS = {
   cust_registration: true,
   cust_edit: true,
@@ -125,7 +119,6 @@ const DEFAULT_STAFF_PERMISSIONS = {
   savings_deposit: true,
   savings_withdrawal: true,
   fd_closure_request: true,
-  app_access_request: true,
   reports_view: true,
   csv_export: true,
   receipt_print: true,

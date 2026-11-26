@@ -40,7 +40,7 @@ const TIERS = {
     monthly_equivalent: 4000,
     features: [
       'Dedicated Cloud VPS Server & Custom Domain',
-      'Rest APIs for Mobile App (Android / iOS)',
+      'Field Collector Android App (APK) Live Sync',
       'Online Payment Gateway Webhooks (Razorpay / Cashfree)',
       'Multi-Branch Management & Hierarchy',
       'Hourly Off-Site Encrypted Backups',

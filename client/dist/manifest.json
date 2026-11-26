@@ -1,17 +1,17 @@
 {
-  "name": "Pralaad Wealth - Fixed Deposit Portal",
-  "short_name": "Pralaad FD",
+  "name": "Taranganjali Realtech - Banking & Wealth CRM",
+  "short_name": "Taranganjali CRM",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#4338ca",
+  "background_color": "#062319",
+  "theme_color": "#062319",
   "orientation": "portrait",
-  "description": "Fixed Deposit and Wealth Portfolio App for Depositors",
+  "description": "Internal Banking, Deposit & Collection Management CRM",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/tarpl_logo.png",
       "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

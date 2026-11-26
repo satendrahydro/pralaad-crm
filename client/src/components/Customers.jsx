@@ -35,7 +35,7 @@ import {
   Check,
   Sparkles
 } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
 
 export default function Customers({ 
   onSelectCustomerForFD, 
@@ -160,7 +160,7 @@ export default function Customers({
   // Delete Customer
   const handleDeleteCustomer = async (cust) => {
     const confirmDelete = window.confirm(
-      `⚠️ WARNING: क्या आप सच में ग्राहक "${cust.full_name}" (${cust.customer_code}) को CRM से डिलीट करना चाहते हैं?\n\nडिलीट करने पर इस ग्राहक का मोबाइल ऐप एक्सेस तुरंत बंद हो जाएगा!`
+      `⚠️ WARNING: क्या आप सच में ग्राहक "${cust.full_name}" (${cust.customer_code}) को CRM से डिलीट करना चाहते हैं?\n\nडिलीट करने पर इस ग्राहक के सभी जुड़े खाते (FD, RD, MIS, Savings, Loan) और ट्रांजैक्शन रिकॉर्ड स्थायी रूप से हट जाएंगे!`
     );
     if (!confirmDelete) return;
 
@@ -812,9 +812,9 @@ export default function Customers({
                 <Edit3 className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Edit Member & App Access</h2>
+                <h2 className="text-xl font-bold text-slate-900">Edit Member & KYC Profile</h2>
                 <p className="text-xs text-slate-500">
-                  Update customer KYC, change branch, or modify mobile app credentials
+                  Update customer KYC details, contact information, branch, and nominee mandate
                 </p>
               </div>
             </div>
@@ -1162,7 +1162,7 @@ export default function Customers({
                         <input
                           type="number"
                           value={savingsDeposit}
-                          onChange={(e) => setSavingsDeposit(e.target.value)}
+                          onChange={(e) => onNumericInputChange(e, setSavingsDeposit)}
                           min="500"
                           step="100"
                           className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-emerald-500"
@@ -1214,7 +1214,7 @@ export default function Customers({
                           <input
                             type="number"
                             value={fdPrincipal}
-                            onChange={(e) => setFdPrincipal(e.target.value)}
+                            onChange={(e) => onNumericInputChange(e, setFdPrincipal)}
                             min="1000"
                             step="1000"
                             className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-500"
@@ -1229,7 +1229,7 @@ export default function Customers({
                             <input
                               type="number"
                               value={fdTenureMonths}
-                              onChange={(e) => setFdTenureMonths(e.target.value)}
+                              onChange={(e) => onNumericInputChange(e, setFdTenureMonths)}
                               min="1"
                               max="120"
                               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs"
@@ -1244,7 +1244,7 @@ export default function Customers({
                               type="number"
                               step="0.1"
                               value={fdInterestRate}
-                              onChange={(e) => setFdInterestRate(e.target.value)}
+                              onChange={(e) => onNumericInputChange(e, setFdInterestRate)}
                               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-indigo-700"
                               placeholder="9.5"
                             />

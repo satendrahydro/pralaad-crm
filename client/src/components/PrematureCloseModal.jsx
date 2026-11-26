@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle, CheckCircle, Calculator } from 'lucide-react';
-import { formatINR, formatDate, apiRequest } from '../utils';
+import { formatINR, formatDate, apiRequest, onNumericInputChange } from '../utils';
 import DateInput from './DateInput';
 
 export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) {
@@ -18,7 +18,7 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
           setLoading(true);
           const res = await apiRequest(`/fds/${fd.id}/premature-preview`, {
             method: 'POST',
-            body: JSON.stringify({ withdrawalDate, penaltyRate })
+            body: JSON.stringify({ withdrawalDate, penaltyRate: parseFloat(penaltyRate) || 0 })
           });
           setPreview(res.preview);
         } catch (err) {
@@ -48,7 +48,7 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
             request_data: {
               fdId: fd.id,
               closeDate: withdrawalDate,
-              penaltyRate,
+              penaltyRate: parseFloat(penaltyRate) || 0,
               remarks
             },
             remarks: `Staff Proposal: Premature Closure of ${fd.fd_number} (Net Payout: ₹${preview?.netPayable || 0})`
@@ -65,7 +65,7 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
 
       await apiRequest(`/fds/${fd.id}/premature-close`, {
         method: 'POST',
-        body: JSON.stringify({ withdrawalDate, penaltyRate, remarks })
+        body: JSON.stringify({ withdrawalDate, penaltyRate: parseFloat(penaltyRate) || 0, remarks })
       });
       alert('FD Liquidated successfully.');
       onSuccess();
@@ -128,7 +128,7 @@ export default function PrematureCloseModal({ fd, isOpen, onClose, onSuccess }) 
                 min="0"
                 max="5"
                 value={penaltyRate}
-                onChange={(e) => setPenaltyRate(parseFloat(e.target.value) || 0)}
+                onChange={(e) => onNumericInputChange(e, setPenaltyRate)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
               />
             </div>

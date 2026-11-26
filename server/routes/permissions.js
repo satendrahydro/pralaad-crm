@@ -29,7 +29,7 @@ db.exec(`
 // 1. PUBLIC / AUTHENTICATED STAFF ROUTES
 // -------------------------------------------------------------------------
 
-// GET /api/permissions/catalog - Get metadata catalog of all 17 controls
+// GET /api/permissions/catalog - Get metadata catalog of all controls
 router.get('/catalog', authenticateToken, (req, res) => {
   res.json({
     success: true,
@@ -389,7 +389,7 @@ router.post('/staff/:id/restore-defaults', (req, res) => {
 
     res.json({
       success: true,
-      message: `Default permissions restored for ${staff.full_name}. All 17 functions enabled.`,
+      message: `Default permissions restored for ${staff.full_name}. All ${Object.keys(DEFAULT_STAFF_PERMISSIONS).length} functions enabled.`,
       staffId: staff.id,
       permissions: DEFAULT_STAFF_PERMISSIONS
     });
