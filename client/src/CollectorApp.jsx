@@ -12,14 +12,13 @@ import {
   X,
   Globe,
   RefreshCw,
-  Plus,
-  Server
+  Plus
 } from 'lucide-react';
 import Login from './components/Login';
 import TarplLogo from './components/TarplLogo';
 import CommercialLockScreen from './components/CommercialLockScreen';
 import DeveloperContactModal from './components/DeveloperContactModal';
-import { getApiBase, getDefaultServerUrl } from './utils';
+import { getApiBase } from './utils';
 
 const DailyCollection = lazy(() => import('./components/DailyCollection'));
 const PaymentsToCollect = lazy(() => import('./components/PaymentsToCollect'));
@@ -57,8 +56,6 @@ export default function CollectorApp() {
   const [activeTab, setActiveTab] = useState('daily_collection');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [developerContactOpen, setDeveloperContactOpen] = useState(false);
-  const [serverModalOpen, setServerModalOpen] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(() => localStorage.getItem('pralaad_server_url') || getDefaultServerUrl());
 
   const [isCommercialLocked, setIsCommercialLocked] = useState(false);
   const [commercialLockReason, setCommercialLockReason] = useState('');
@@ -153,7 +150,7 @@ export default function CollectorApp() {
             type="button"
             onClick={() => setDrawerOpen(true)}
             className="p-2 rounded-lg bg-[#0a3d2b] text-emerald-200 hover:text-white cursor-pointer"
-            title="Collector Menu"
+            title="Employee Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -161,7 +158,7 @@ export default function CollectorApp() {
           <div className="min-w-0">
             <h1 className="text-sm font-extrabold tracking-tight truncate leading-none">{currentTitle}</h1>
             <p className="text-[10px] text-[#D4AF37] font-semibold mt-0.5 truncate">
-              {user?.full_name || user?.username || 'Field Collector'} • Field APK
+              {user?.full_name || user?.username || 'Company Employee'} • Company Employee
             </p>
           </div>
         </div>
@@ -186,7 +183,7 @@ export default function CollectorApp() {
         </div>
       </header>
 
-      {/* Slide-out Collector Navigation Drawer */}
+      {/* Slide-out Navigation Drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 flex" onClick={() => setDrawerOpen(false)}>
           <div
@@ -196,9 +193,9 @@ export default function CollectorApp() {
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-[#1a5d43] mb-3">
                 <div>
-                  <div className="font-black text-sm text-[#D4AF37]">Taranganjali Collector</div>
+                  <div className="font-black text-sm text-[#D4AF37]">Taranganjali Employee</div>
                   <div className="text-[11px] text-emerald-300">
-                    {user?.full_name || 'Field Agent'} (@{user?.username || 'staff'})
+                    {user?.full_name || 'Company Employee'} (@{user?.username || 'employee'})
                   </div>
                 </div>
                 <button type="button" onClick={() => setDrawerOpen(false)} className="p-1 text-emerald-200 hover:text-white cursor-pointer">
@@ -233,16 +230,6 @@ export default function CollectorApp() {
             </div>
 
             <div className="space-y-2 pt-3 border-t border-[#1a5d43] text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setDrawerOpen(false);
-                  setServerModalOpen(true);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0a3d2b] text-emerald-200 hover:text-white font-semibold cursor-pointer"
-              >
-                <Server className="w-3.5 h-3.5" /> Server URL Settings
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -386,44 +373,7 @@ export default function CollectorApp() {
         onClose={() => setDeveloperContactOpen(false)}
       />
 
-      {serverModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4 z-[240]">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 space-y-3 shadow-2xl text-xs">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="font-bold text-slate-900">CRM Server URL</h3>
-              <button type="button" onClick={() => setServerModalOpen(false)} className="text-slate-400 cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <input
-              type="url"
-              value={serverUrlInput}
-              onChange={(e) => setServerUrlInput(e.target.value)}
-              placeholder="https://your-server-url"
-              className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs"
-            />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setServerModalOpen(false)} className="px-3 py-1.5 text-slate-600 font-semibold cursor-pointer">
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const cleaned = (serverUrlInput || '').trim().replace(/\/$/, '');
-                  if (cleaned) localStorage.setItem('pralaad_server_url', cleaned);
-                  else localStorage.removeItem('pralaad_server_url');
-                  window.location.reload();
-                }}
-                className="px-4 py-1.5 bg-[#082e20] text-white font-bold rounded-xl cursor-pointer"
-              >
-                Save &amp; Reload
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Collector Sticky Bottom Navigation */}
+      {/* Employee Sticky Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-[#062319] border-t border-[#1a5d43] flex items-center justify-around py-1 px-1 text-slate-300 shadow-2xl">
         {[
           COLLECTOR_TABS[0],

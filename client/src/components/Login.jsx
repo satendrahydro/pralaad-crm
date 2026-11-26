@@ -28,24 +28,20 @@ import { apiRequest } from '../utils';
 import TarplLogo from './TarplLogo';
 import tarplLogoJpg from '../assets/LOGO_OF_TARPL.jpg';
 import bgAdminJpg from '../assets/bg-admin.jpg';
-import { getDefaultServerUrl } from '../utils';
 import DeveloperContactModal from './DeveloperContactModal';
 
 export default function Login({ onLoginSuccess }) {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [showServerConfig, setShowServerConfig] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(() => localStorage.getItem('pralaad_server_url') || getDefaultServerUrl());
-  const [serverSavedMsg, setServerSavedMsg] = useState('');
   const isNativeApp = Boolean(
     window.Capacitor ||
     window.location.protocol === 'capacitor:' ||
     window.location.protocol === 'file:' ||
     import.meta.env.VITE_APP_MODE === 'collector'
   );
+  const [username, setUsername] = useState(isNativeApp ? '' : 'admin');
+  const [password, setPassword] = useState(isNativeApp ? '' : 'admin123');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showContactModal, setShowContactModal] = useState(false);
 
   // Security Whitepaper / Modal State
   const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -307,31 +303,37 @@ export default function Login({ onLoginSuccess }) {
           You need to sign in or sign up before continuing.
         </p>
 
-        {/* Quick Role Switcher for seamless access */}
-        <div className="grid grid-cols-2 gap-1.5 mb-3 p-1 bg-slate-100 rounded text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => handleQuickFill('superadmin', 'admin123')}
-            className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
-              username === 'superadmin' || username === 'admin'
-                ? 'bg-[#00a65a] text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-900 bg-white/70'
-            }`}
-          >
-            Super Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('staff', 'staff123')}
-            className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
-              username === 'staff' || username === 'staff1'
-                ? 'bg-[#00a65a] text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-900 bg-white/70'
-            }`}
-          >
-            Staff Maker
-          </button>
-        </div>
+        {/* Employee-only badge in Collector APK; Role Switcher on Web CRM */}
+        {isNativeApp ? (
+          <div className="mb-3.5 py-1.5 px-3 bg-emerald-50 border border-emerald-200 rounded text-xs font-bold text-emerald-900 uppercase tracking-wide">
+            Company Employee Login
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 mb-3 p-1 bg-slate-100 rounded text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => handleQuickFill('superadmin', 'admin123')}
+              className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
+                username === 'superadmin' || username === 'admin'
+                  ? 'bg-[#00a65a] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 bg-white/70'
+              }`}
+            >
+              Super Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('staff', 'staff123')}
+              className={`py-1.5 rounded transition cursor-pointer text-center text-[11px] ${
+                username === 'staff' || username === 'staff1'
+                  ? 'bg-[#00a65a] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 bg-white/70'
+              }`}
+            >
+              Staff Maker
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded text-left flex items-center gap-2">
@@ -349,7 +351,7 @@ export default function Login({ onLoginSuccess }) {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value.replace(/ +/g, ''))}
-              placeholder="Enter User Name"
+              placeholder={isNativeApp ? 'Employee ID / Username' : 'Enter User Name'}
               className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a65a] focus:ring-1 focus:ring-[#00a65a] transition font-medium"
             />
             <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -362,7 +364,7 @@ export default function Login({ onLoginSuccess }) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value.replace(/ +/g, ''))}
-              placeholder="Enter Your Password"
+              placeholder={isNativeApp ? 'Enter Password' : 'Enter Your Password'}
               className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#00a65a] focus:ring-1 focus:ring-[#00a65a] transition font-medium"
             />
             <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -382,9 +384,11 @@ export default function Login({ onLoginSuccess }) {
             >
               Forgot Password?
             </button>
-            <span className="font-mono text-[10px] text-slate-400">
-              {username === 'admin' || username === 'superadmin' ? 'Checker' : 'Maker'}
-            </span>
+            {!isNativeApp && (
+              <span className="font-mono text-[10px] text-slate-400">
+                {username === 'admin' || username === 'superadmin' ? 'Checker' : 'Maker'}
+              </span>
+            )}
           </div>
 
           {/* Green "LOG IN" Button */}
@@ -401,7 +405,7 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        {/* Footer: Powered by Crafted Reach, Server URL (APK) & Security Badges */}
+        {/* Footer: Powered by Crafted Reach & Security Badges */}
         <div className="mt-5 pt-3.5 border-t border-slate-100 text-center">
           <div className="text-xs text-slate-600 flex items-center justify-center gap-1.5 flex-wrap">
             <span><strong>Powered by <b className="text-[#062319] font-extrabold tracking-wide">Crafted Reach ®</b></strong>. All rights reserved.</span>
@@ -414,50 +418,6 @@ export default function Login({ onLoginSuccess }) {
               Contact Us
             </button>
           </div>
-
-          {isNativeApp && (
-            <div className="mt-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setServerSavedMsg('');
-                  setShowServerConfig(v => !v);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-[10px] font-bold cursor-pointer"
-              >
-                <Smartphone className="w-3 h-3 text-indigo-600" />
-                <span>Collector Server URL Setup</span>
-              </button>
-              {showServerConfig && (
-                <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-left space-y-1.5">
-                  <label className="block text-[10px] font-bold text-slate-600">CRM Server URL (e.g. https://... or http://192.168.x.x:5000)</label>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="url"
-                      value={serverUrlInput}
-                      onChange={(e) => setServerUrlInput(e.target.value)}
-                      placeholder="https://your-server-url"
-                      className="flex-1 px-2.5 py-1 bg-white border border-slate-300 rounded text-[11px] font-mono text-slate-800"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cleaned = (serverUrlInput || '').trim().replace(/\/$/, '');
-                        if (cleaned) localStorage.setItem('pralaad_server_url', cleaned);
-                        else localStorage.removeItem('pralaad_server_url');
-                        setServerSavedMsg('Saved! Reloading...');
-                        setTimeout(() => window.location.reload(), 400);
-                      }}
-                      className="px-2.5 py-1 bg-[#082e20] text-white text-[10px] font-bold rounded cursor-pointer"
-                    >
-                      Save
-                    </button>
-                  </div>
-                  {serverSavedMsg && <p className="text-[10px] font-bold text-emerald-700">{serverSavedMsg}</p>}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Security Badges: 256-Bit SSL + 6-Layer Banking Encryption */}
           <div className="mt-3 flex flex-col items-center gap-2">

@@ -1,15 +1,14 @@
 export const getDefaultServerUrl = () => {
-  const saved = localStorage.getItem('pralaad_server_url');
-  if (saved) {
-    return saved.replace(/\/$/, '');
-  }
-
   // If running inside Native Android App (Capacitor WebView)
   if (window.Capacitor || window.location.protocol === 'capacitor:' || window.location.protocol === 'file:') {
-    return 'http://192.168.0.150:5000';
+    const baked = import.meta.env?.VITE_API_SERVER_URL;
+    if (baked) {
+      return baked.replace(/\/$/, '');
+    }
+    return 'http://10.79.2.201:5000';
   }
 
-  // In regular web browser (localhost or onrender.com) use relative /api
+  // In regular web browser (localhost or hosted domain) use relative /api
   return '';
 };
 
