@@ -68,39 +68,34 @@ function seedComplete5ClientData(db) {
         id, customer_code, full_name, father_name, phone, email,
         pan_card, aadhaar_no, address, bank_name, account_no, ifsc_code,
         nominee_name, nominee_relation, is_senior_citizen, kyc_status, branch, group_name, status,
-        created_at, login_id, login_password, app_access_enabled
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const clients = [
       [
         1, 'M00001', 'PRAHLAD SINGH HIRANWAL', 'Geeta Hiranwal', '9897463367', 'prahlad@taranganjali.com',
         'AAAPH1234F', '789012345678', 'Vedik Vihar, Bijnor, UP', 'State Bank of India', '301122334455', 'SBIN0001234',
-        'Geeta Hiranwal', 'Wife', 0, 'Verified', 'MAIN BRANCH', 'DIRECTOR', 'ACTIVE', '2019-06-12 10:00:00',
-        'M00001', 'M00001@123', 1
+        'Geeta Hiranwal', 'Wife', 0, 'Verified', 'MAIN BRANCH', 'DIRECTOR', 'ACTIVE', '2019-06-12 10:00:00'
       ],
       [
         2, 'M00012', 'NARPAT SINGH', 'Late Bhagwat Singh', '9837012345', 'narpat@taranganjali.com',
         'BODPS9674G', '657058077884', 'Village Bakharpur Gadhi, Bijnor, UP', 'Punjab National Bank', '0123000100234567', 'PUNB0012300',
-        'Yashoda Devi', 'Wife', 1, 'Verified', 'MAIN BRANCH', 'SENIOR INVESTOR', 'ACTIVE', '2019-07-11 10:00:00',
-        'M00012', 'M00012@123', 1
+        'Yashoda Devi', 'Wife', 1, 'Verified', 'MAIN BRANCH', 'SENIOR INVESTOR', 'ACTIVE', '2019-07-11 10:00:00'
       ],
       [
         3, 'M00008', 'YADRAM SINGH PAL', 'Harbans Singh', '9756026399', 'yadram@taranganjali.com',
         'FZKPK2569C', '773186384201', 'Mayapur Project Colony, Haridwar / Bijnor', 'HDFC Bank', '50100223344556', 'HDFC0000456',
-        'Karan Singh', 'Son', 1, 'Verified', 'TARPL SAVING', 'COMMETY 0F 15/01/2018', 'ACTIVE', '2019-06-15 10:00:00',
-        'M00008', 'M00008@123', 1
+        'Karan Singh', 'Son', 1, 'Verified', 'TARPL SAVING', 'COMMETY 0F 15/01/2018', 'ACTIVE', '2019-06-15 10:00:00'
       ],
       [
         4, 'M00769', 'ANITA DEVI', 'Pradeep Kumar', '9412345678', 'anita@taranganjali.com',
         'DGUPD3715E', '426563507454', 'Shekhupura Mandawar Road, Bijnor, UP', 'Bank of Baroda', '12340100056789', 'BARB0BIJNOR',
-        'Pradeep Kumar', 'Husband', 0, 'Verified', 'SHEKHUPURA BRANCH', 'WOMEN EMPOWERMENT', 'ACTIVE', '2021-03-20 10:00:00',
-        'M00769', 'M00769@123', 1
+        'Pradeep Kumar', 'Husband', 0, 'Verified', 'SHEKHUPURA BRANCH', 'WOMEN EMPOWERMENT', 'ACTIVE', '2021-03-20 10:00:00'
       ],
       [
         5, 'M00065', 'MUKESH KUMAR SUWAHEDI', 'Ram Swaroop', '9837712345', 'mukesh@taranganjali.com',
         'DEOPP0036Q', '659476047753', 'Village Suwahedi, Bijnor, UP', 'Canara Bank', '2045101009876', 'CNRB0002045',
-        'Sunita Devi', 'Wife', 0, 'Verified', 'TARPL0002', 'GENERAL', 'ACTIVE', '2022-01-10 10:00:00',
-        'M00065', 'M00065@123', 1
+        'Sunita Devi', 'Wife', 0, 'Verified', 'TARPL0002', 'GENERAL', 'ACTIVE', '2022-01-10 10:00:00'
       ]
     ];
     for (const c of clients) insertCustomer.run(...c);

@@ -6,30 +6,34 @@ const bcrypt = require('bcryptjs');
 const dbPath = process.env.DB_FILE || path.join(__dirname, 'fd_crm.sqlite');
 
 function getDatabaseConnection() {
+  const applyPragmas = (conn) => {
+    conn.pragma('journal_mode = WAL');
+    conn.pragma('synchronous = NORMAL');
+    conn.pragma('temp_store = MEMORY');
+    conn.pragma('cache_size = -64000');
+    conn.pragma('busy_timeout = 5000');
+    conn.pragma('foreign_keys = ON');
+    return conn;
+  };
+
   try {
-    const d = new Database(dbPath);
-    d.pragma('journal_mode = WAL');
-    d.pragma('synchronous = NORMAL');
-    d.pragma('temp_store = MEMORY');
-    d.pragma('cache_size = -64000');
-    d.pragma('foreign_keys = ON');
+    const d = applyPragmas(new Database(dbPath));
+    d.prepare('SELECT name FROM sqlite_master LIMIT 1').get();
     return d;
   } catch (err) {
-    console.error('SQLite initialization error / corrupt DB detected:', err.message);
-    try {
-      if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
-      if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
-      if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
-    } catch (e) {
-      console.error('Failed to unlink corrupt DB files:', e.message);
+    console.error('SQLite initialization error:', err.message);
+    if (/SQLITE_CORRUPT|SQLITE_NOTADB|file is not a database|malformed/i.test(String(err.message))) {
+      try {
+        const stamp = Date.now();
+        if (fs.existsSync(dbPath)) fs.renameSync(dbPath, `${dbPath}.corrupt.${stamp}`);
+        if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
+        if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
+      } catch (e) {
+        console.error('Failed to quarantine corrupt DB files:', e.message);
+      }
+      return applyPragmas(new Database(dbPath));
     }
-    const d = new Database(dbPath);
-    d.pragma('journal_mode = WAL');
-    d.pragma('synchronous = NORMAL');
-    d.pragma('temp_store = MEMORY');
-    d.pragma('cache_size = -64000');
-    d.pragma('foreign_keys = ON');
-    return d;
+    throw err;
   }
 }
 
@@ -53,9 +57,6 @@ function initDB() {
     CREATE TABLE IF NOT EXISTS customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_code TEXT UNIQUE NOT NULL,
-      login_id TEXT,
-      login_password TEXT DEFAULT 'client123',
-      app_access_enabled INTEGER DEFAULT 1,
       status TEXT DEFAULT 'ACTIVE',
       full_name TEXT NOT NULL,
       father_name TEXT,
@@ -74,7 +75,6 @@ function initDB() {
       branch TEXT DEFAULT 'MAIN BRANCH',
       group_name TEXT,
       branch_id INTEGER,
-      pin TEXT DEFAULT '1234',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -85,19 +85,7 @@ function initDB() {
   try { db.exec("ALTER TABLE customers ADD COLUMN branch TEXT DEFAULT 'MAIN BRANCH';"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN group_name TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN branch_id INTEGER;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN login_id TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN login_password TEXT DEFAULT 'client123';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
   try { db.exec("ALTER TABLE customers ADD COLUMN status TEXT DEFAULT 'ACTIVE';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN pin TEXT DEFAULT '1234';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN password_hash TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN last_login_at TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN must_change_password INTEGER DEFAULT 0;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN app_access_status TEXT DEFAULT 'NOT_CREATED';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN access_type TEXT DEFAULT 'PERMANENT';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN first_login_at TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN expires_at TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN temp_access_hours INTEGER DEFAULT 48;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN phone TEXT;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1;"); } catch(e){}
   try { db.exec("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0;"); } catch(e){}
@@ -368,6 +356,9 @@ function initDB() {
       request_data TEXT,
       status TEXT DEFAULT 'PENDING_APPROVAL',
       checker_id INTEGER,
+      decision_remarks TEXT,
+      decision_date DATETIME,
+      decided_at DATETIME,
       decision_notes TEXT,
       actioned_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -375,11 +366,15 @@ function initDB() {
 
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      voucher_number TEXT UNIQUE NOT NULL,
-      voucher_date DATE NOT NULL,
-      voucher_type TEXT NOT NULL,
-      total_amount REAL NOT NULL,
-      narration TEXT,
+      transaction_number TEXT UNIQUE NOT NULL,
+      transaction_type TEXT NOT NULL,
+      fd_id INTEGER,
+      customer_id INTEGER,
+      amount REAL NOT NULL,
+      transaction_date DATE NOT NULL,
+      payment_mode TEXT,
+      reference_number TEXT,
+      remarks TEXT,
       created_by INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -387,10 +382,36 @@ function initDB() {
     CREATE TABLE IF NOT EXISTS transaction_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       transaction_id INTEGER NOT NULL,
-      account_type TEXT NOT NULL,
+      account_name TEXT NOT NULL,
       entry_type TEXT NOT NULL,
       amount REAL NOT NULL,
-      narration TEXT
+      notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS password_reset_otps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      identifier TEXT NOT NULL,
+      account_type TEXT NOT NULL DEFAULT 'STAFF',
+      otp_code TEXT NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      is_verified INTEGER DEFAULT 0,
+      reset_token TEXT,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS staff_permission_audits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL,
+      admin_username TEXT NOT NULL,
+      staff_id INTEGER NOT NULL,
+      staff_username TEXT NOT NULL,
+      permission_key TEXT NOT NULL,
+      permission_label TEXT NOT NULL,
+      old_value INTEGER NOT NULL,
+      new_value INTEGER NOT NULL,
+      action_type TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- 13b. Daily Office & Petty Cash Expenses (Tea, Coffee, Stationery, Conveyance, etc.)
@@ -639,22 +660,13 @@ function initDB() {
     defaultSettings.forEach(([k, v]) => insertSetting.run(k, v));
   }
 
-  // Realistic demo customers seeding disabled - production Taranganjali data is active
-  const custCount = db.prepare('SELECT count(*) as count FROM customers').get();
-  // No dummy records are seeded to preserve real production data integrity
-  // Migrations for customer app access & status
-  try { db.exec("ALTER TABLE customers ADD COLUMN app_access_enabled INTEGER DEFAULT 1;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN status TEXT DEFAULT 'ACTIVE';"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN login_id TEXT;"); } catch(e){}
-  try { db.exec("ALTER TABLE customers ADD COLUMN login_password TEXT DEFAULT 'client123';"); } catch(e){}
-  
-  // Ensure default login_id and login_password for existing records
+  // Ensure default status for existing customer records without legacy app-access credentials
   try {
-    db.exec("UPDATE customers SET login_id = customer_code WHERE login_id IS NULL OR login_id = '';");
-    db.exec("UPDATE customers SET login_password = 'client123' WHERE login_password IS NULL OR login_password = '';");
-    db.exec("UPDATE customers SET app_access_enabled = 1 WHERE app_access_enabled IS NULL;");
     db.exec("UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL;");
   } catch(e){}
+  try { db.exec("ALTER TABLE approval_requests ADD COLUMN decision_remarks TEXT;"); } catch(e){}
+  try { db.exec("ALTER TABLE approval_requests ADD COLUMN decision_date DATETIME;"); } catch(e){}
+  try { db.exec("ALTER TABLE approval_requests ADD COLUMN decided_at DATETIME;"); } catch(e){}
 
   // Ensure rich 5-client functional demo data & Agent Network if tables are empty (unless switched to blank client handover mode)
   try {

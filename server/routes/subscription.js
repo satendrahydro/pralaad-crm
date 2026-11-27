@@ -55,75 +55,81 @@ router.use(authenticateToken, requireAdmin);
 
 // GET /api/subscription - Get current plan & status
 router.get('/', (req, res) => {
-  const sub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
-  
-  const now = new Date();
-  const validUntil = sub ? new Date(sub.valid_until) : new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
-  const diffDays = Math.ceil((validUntil - now) / (1000 * 60 * 60 * 24));
+  try {
+    const sub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
+    
+    const now = new Date();
+    const validUntil = sub ? new Date(sub.valid_until) : new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+    const diffDays = Math.ceil((validUntil - now) / (1000 * 60 * 60 * 24));
 
-  res.json({
-    success: true,
-    subscription: {
-      ...(sub || {
-        plan_name: 'FD Gold Pro Tier (Annual Maintenance Included)',
-        monthly_price: 2000,
-        status: 'ACTIVE',
-        valid_until: validUntil.toISOString().split('T')[0],
-        billing_cycle: 'ANNUAL'
-      }),
-      annual_price: (sub && sub.monthly_price === 2000) ? 24000 : 24000,
-      days_left: Math.max(0, diffDays),
-      is_expired: diffDays <= 0,
-      is_expiring_soon: diffDays <= 30 && diffDays > 0,
-      tiers: TIERS
-    }
-  });
+    res.json({
+      success: true,
+      subscription: {
+        ...(sub || {
+          plan_name: 'FD Gold Pro Tier (Annual Maintenance Included)',
+          monthly_price: 2000,
+          status: 'ACTIVE',
+          valid_until: validUntil.toISOString().split('T')[0],
+          billing_cycle: 'ANNUAL'
+        }),
+        annual_price: 24000,
+        days_left: Math.max(0, diffDays),
+        is_expired: diffDays <= 0,
+        is_expiring_soon: diffDays <= 30 && diffDays > 0,
+        tiers: TIERS
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // POST /api/subscription/renew - Renew plan
 router.post('/renew', authenticateToken, (req, res) => {
-  const {
-    tier = 'professional',
-    billing_period = 'annual', // 'annual' | 'half_yearly'
-    payment_method = 'Corporate Bank Transfer / UPI',
-    transaction_id = 'TXN-AMC-' + Date.now()
-  } = req.body;
+  try {
+    const {
+      tier = 'professional',
+      billing_period = 'annual',
+      payment_method = 'Corporate Bank Transfer / UPI',
+      transaction_id = 'TXN-AMC-' + Date.now()
+    } = req.body || {};
 
-  const selectedTier = TIERS[tier] || TIERS.professional;
-  const currentSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
-  
-  const baseDate = (currentSub && new Date(currentSub.valid_until) > new Date()) 
-    ? new Date(currentSub.valid_until) 
-    : new Date();
+    const selectedTier = TIERS[tier] || TIERS.professional;
+    const currentSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
+    
+    const baseDate = (currentSub && new Date(currentSub.valid_until) > new Date()) 
+      ? new Date(currentSub.valid_until) 
+      : new Date();
 
-  const monthsToAdd = (billing_period === 'half_yearly') ? 6 : 12;
-  baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
-  const newValidUntil = baseDate.toISOString().split('T')[0];
+    const monthsToAdd = (billing_period === 'half_yearly') ? 6 : 12;
+    baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
+    const newValidUntil = baseDate.toISOString().split('T')[0];
 
-  const planPrice = (billing_period === 'half_yearly') ? (selectedTier.annual_price / 2) : selectedTier.annual_price;
+    db.prepare(`
+      INSERT INTO subscription (
+        plan_name, monthly_price, status, valid_until, billing_cycle,
+        last_payment_date, last_payment_ref, notes
+      ) VALUES (?, ?, 'ACTIVE', ?, ?, ?, ?, ?)
+    `).run(
+      selectedTier.name,
+      selectedTier.monthly_equivalent,
+      newValidUntil,
+      String(billing_period).toUpperCase(),
+      new Date().toISOString().split('T')[0],
+      transaction_id,
+      `Renewed for ${monthsToAdd} month(s) - ${selectedTier.name} via ${payment_method}`
+    );
 
-  db.prepare(`
-    INSERT INTO subscription (
-      plan_name, monthly_price, status, valid_until, billing_cycle,
-      last_payment_date, last_payment_ref, notes
-    ) VALUES (?, ?, 'ACTIVE', ?, ?, ?, ?, ?)
-  `).run(
-    selectedTier.name,
-    selectedTier.monthly_equivalent,
-    newValidUntil,
-    billing_period.toUpperCase(),
-    new Date().toISOString().split('T')[0],
-    transaction_id,
-    `Renewed for ${monthsToAdd} month(s) - ${selectedTier.name} via ${payment_method}`
-  );
+    const updatedSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
 
-  const updatedSub = db.prepare('SELECT * FROM subscription ORDER BY id DESC LIMIT 1').get();
-
-  res.json({
-    success: true,
-    message: `Subscription successfully renewed until ${newValidUntil}!`,
-    subscription: updatedSub
-  });
+    res.json({
+      success: true,
+      message: `Subscription successfully renewed until ${newValidUntil}!`,
+      subscription: updatedSub
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // GET /api/subscription/history - View renewal and payment transaction records

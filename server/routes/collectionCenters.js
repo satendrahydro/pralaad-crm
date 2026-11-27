@@ -65,8 +65,8 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ success: false, message: 'Center name is required' });
     }
 
-    const count = db.prepare('SELECT count(*) as count FROM collection_centers').get().count;
-    const center_code = `CEN${String(count + 1).padStart(3, '0')}`;
+    const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM collection_centers').get()?.nextId) || 1;
+    const center_code = `CEN${String(nextSeq).padStart(3, '0')}`;
 
     const branch = db.prepare('SELECT branch_name FROM branches WHERE id = ?').get(branch_id);
     const advisor = advisor_id ? db.prepare('SELECT full_name FROM agents WHERE id = ?').get(advisor_id) : null;

@@ -227,7 +227,14 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
       });
     }
 
-    const payload = JSON.parse(request.request_data);
+    let payload = {};
+    try {
+      payload = typeof request.request_data === 'string'
+        ? JSON.parse(request.request_data || '{}')
+        : (request.request_data || {});
+    } catch (parseErr) {
+      return res.status(400).json({ success: false, message: 'Invalid or corrupted approval request payload.' });
+    }
     let executionResult = null;
 
     // Use transaction to ensure complete atomicity
@@ -661,7 +668,7 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           const txInsert = db.prepare(`
             INSERT INTO transactions (transaction_number, transaction_type, fd_id, customer_id, amount, transaction_date, payment_mode, reference_number, remarks, created_by)
             VALUES (?, 'RD_COLLECTION', NULL, (SELECT customer_id FROM recurring_deposits WHERE id = ?), ?, ?, ?, ?, 'RD Installment Collected', ?)
-          `).run(txNumber, rdId, totalAmount, today, paymentMode, transactionRef, req.user.id);
+          `).run(txNumber, rdId, totalAmount, effectivePaidDate, paymentMode, transactionRef, req.user.id);
 
           const insertEntry = db.prepare(`
             INSERT INTO transaction_entries (transaction_id, account_name, entry_type, amount, notes)
@@ -948,18 +955,6 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
 
         db.prepare(`UPDATE customers SET ${field} = ? WHERE id = ?`).run(newValue, customerId);
 
-        // Keep users table in sync if phone or full_name changed
-        if (field === 'phone') {
-          try {
-            db.prepare(`UPDATE users SET phone = ? WHERE customer_id = ?`).run(newValue, customerId);
-          } catch(e) {}
-        }
-        if (field === 'full_name') {
-          try {
-            db.prepare(`UPDATE users SET full_name = ? WHERE customer_id = ?`).run(newValue, customerId);
-          } catch(e) {}
-        }
-
         executionResult = {
           customerId,
           field,
@@ -1003,13 +998,6 @@ router.post('/:id/approve', authenticateToken, requireAdmin, (req, res) => {
           updates.status || null,
           customerId
         );
-
-        if (updates.phone) {
-          try { db.prepare(`UPDATE users SET phone = ? WHERE customer_id = ?`).run(updates.phone, customerId); } catch(e){}
-        }
-        if (updates.full_name) {
-          try { db.prepare(`UPDATE users SET full_name = ? WHERE customer_id = ?`).run(updates.full_name, customerId); } catch(e){}
-        }
 
         executionResult = {
           customerId,

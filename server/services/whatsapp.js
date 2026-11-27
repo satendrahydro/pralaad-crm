@@ -7,7 +7,7 @@ function formatCurrency(val) {
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return Number.isNaN(d.getTime()) ? String(dateStr) : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function cleanPhoneNumber(phone) {
@@ -212,7 +212,11 @@ async function sendViaAPI(toPhone, message) {
         body: message
       })
     });
-    return await res.json();
+    const text = await res.text();
+    let payload = {};
+    try { payload = text ? JSON.parse(text) : {}; } catch (e) { payload = { raw: text }; }
+    if (!res.ok) throw new Error(payload.error || payload.message || `UltraMsg HTTP ${res.status}`);
+    return payload;
   }
 
   // Meta Cloud API
@@ -231,7 +235,11 @@ async function sendViaAPI(toPhone, message) {
         text: { body: message }
       })
     });
-    return await res.json();
+    const text = await res.text();
+    let payload = {};
+    try { payload = text ? JSON.parse(text) : {}; } catch (e) { payload = { raw: text }; }
+    if (!res.ok) throw new Error(payload.error?.message || payload.message || `Meta API HTTP ${res.status}`);
+    return payload;
   }
 
   // Default return manual ready

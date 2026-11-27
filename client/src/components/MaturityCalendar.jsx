@@ -61,7 +61,8 @@ export default function MaturityCalendar({ onViewFD, onRenewFD, onPrintCertifica
     : monthFds;
 
   const handleSettleMaturity = async (fd) => {
-    const user = JSON.parse(localStorage.getItem('pralaad_fd_user') || '{}');
+    let user = {};
+    try { user = JSON.parse(localStorage.getItem('pralaad_fd_user') || '{}') || {}; } catch (e) {}
     const isEmp = user.role === 'employee';
 
     if (isEmp) {

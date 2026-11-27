@@ -148,8 +148,8 @@ export default function LoansAgainstDeposit({
   const numericTenure = parseInt(tenureMonths) || 0;
   const monthlyRate = (numericRate / 12) / 100;
   const estimatedEMI = monthlyRate > 0 && numericTenure > 0 && numericLoanAmount > 0
-    ? Math.round((numericLoanAmount * monthlyRate * Math.pow(1 + monthlyRate, numericTenure)) / (Math.pow(1 + monthlyRate, numericTenure) - 1))
-    : 0;
+    ? Math.round((((numericLoanAmount * monthlyRate * Math.pow(1 + monthlyRate, numericTenure)) / (Math.pow(1 + monthlyRate, numericTenure) - 1)) + Number.EPSILON) * 100) / 100
+    : (numericTenure > 0 && numericLoanAmount > 0 ? Math.round(((numericLoanAmount / numericTenure) + Number.EPSILON) * 100) / 100 : 0);
 
   const handleQuickAddCustomer = async (e) => {
     if (e) e.preventDefault();

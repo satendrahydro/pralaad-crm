@@ -89,7 +89,7 @@ export default function Calculator({ onBookFromCalc }) {
           <button
             onClick={() => onBookFromCalc({
               principal,
-              annualRate: effectiveRate,
+              annualRate: parseFloat(annualRate) || 0,
               tenureMonths: totalMonths,
               compoundingFrequency,
               startDate,

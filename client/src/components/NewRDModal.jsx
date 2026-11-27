@@ -75,16 +75,20 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
 
   if (!isOpen) return null;
 
-  const P = parseFloat(monthlyInstallment) || 0;
-  const n = parseInt(tenureMonths) || 12;
-  const r = (parseFloat(annualRate) || 0) / 100;
-  let maturityEst = 0;
+  const selectedCustomer = customers.find(c => String(c.id) === String(customerId));
+  const isSenior = Boolean(selectedCustomer?.is_senior_citizen);
+  const effectiveRateNum = Math.round((((parseFloat(annualRate) || 0) + (isSenior ? 0.5 : 0)) + Number.EPSILON) * 10000) / 10000;
+  const P = Math.round(((parseFloat(monthlyInstallment) || 0) + Number.EPSILON) * 100) / 100;
+  const n = Math.max(1, parseInt(tenureMonths, 10) || 12);
+  const r = effectiveRateNum / 100;
+  let rawMaturityEst = 0;
   for (let i = 1; i <= n; i++) {
     const q = (n - i + 1) / 3;
-    maturityEst += P * Math.pow(1 + (r / 4), q);
+    rawMaturityEst += P * Math.pow(1 + (r / 4), q);
   }
-  const totalPrincipalEst = P * n;
-  const totalInterestEst = Math.max(0, maturityEst - totalPrincipalEst);
+  const totalPrincipalEst = Math.round(((P * n) + Number.EPSILON) * 100) / 100;
+  const maturityEst = Math.round((rawMaturityEst + Number.EPSILON) * 100) / 100;
+  const totalInterestEst = Math.max(0, Math.round(((maturityEst - totalPrincipalEst) + Number.EPSILON) * 100) / 100);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -307,7 +311,12 @@ export default function NewRDModal({ isOpen, onClose, onSuccess, initialCustomer
           </div>
 
           {/* Projection Card */}
-          <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl space-y-1 text-xs">
+          <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl space-y-1 text-xs crm-interactive-box hover:border-teal-400">
+            {isSenior && (
+              <div className="text-[10px] font-bold text-amber-800 bg-amber-100/80 border border-amber-300 px-2 py-0.5 rounded-full inline-block mb-1">
+                ★ Senior Citizen +0.50% Bonus Applied ({effectiveRateNum}% p.a.)
+              </div>
+            )}
             <div className="flex justify-between text-teal-900">
               <span>Total Principal to Deposit:</span>
               <span className="font-bold">{formatINR(totalPrincipalEst)}</span>

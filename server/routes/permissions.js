@@ -8,23 +8,6 @@ const {
   getUserPermissions 
 } = require('../middleware/permissions');
 
-// Initialize dedicated audit table if not exists
-db.exec(`
-  CREATE TABLE IF NOT EXISTS staff_permission_audits (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    admin_id INTEGER NOT NULL,
-    admin_username TEXT NOT NULL,
-    staff_id INTEGER NOT NULL,
-    staff_username TEXT NOT NULL,
-    permission_key TEXT NOT NULL,
-    permission_label TEXT NOT NULL,
-    old_value INTEGER NOT NULL,
-    new_value INTEGER NOT NULL,
-    action_type TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
-
 // -------------------------------------------------------------------------
 // 1. PUBLIC / AUTHENTICATED STAFF ROUTES
 // -------------------------------------------------------------------------

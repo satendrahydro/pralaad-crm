@@ -26,6 +26,7 @@ const collectionCentersRoutes = require('./routes/collectionCenters');
 const loansRoutes = require('./routes/loans');
 const accountingRoutes = require('./routes/accounting');
 const { router: licenseRoutes, getLockState } = require('./routes/license');
+const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -81,7 +82,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Global Live Search Endpoint across all Members & Multi-Product Accounts
-app.get('/api/global-search', (req, res) => {
+app.get('/api/global-search', authenticateToken, (req, res) => {
   try {
     const db = require('./db');
     const { q = '' } = req.query;
@@ -170,7 +171,7 @@ app.get('/api/branches', (req, res) => {
 });
 
 // Live Audit Trail endpoint (Anti-Fraud & Staff / Agent Action Tracking)
-app.get('/api/audit-logs', (req, res) => {
+app.get('/api/audit-logs', authenticateToken, (req, res) => {
   try {
     const db = require('./db');
     const { search, limit = 100 } = req.query;
@@ -225,23 +226,13 @@ app.use('/assets', (req, res, next) => {
   return res.send(gz);
 });
 
-// Disable caching for HTML entry point so updates are seen instantly
-app.use((req, res, next) => {
-  if (req.path === '/' || req.path.endsWith('.html')) {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
-  }
-  next();
-});
-
 app.use(express.static(clientDistPath, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
     } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
@@ -278,7 +269,7 @@ app.use((err, req, res, next) => {
 
 const { startReminderScheduler } = require('./services/whatsappCron');
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`=========================================`);
   console.log(`🚀 Taranganjali Banking CRM Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
@@ -287,3 +278,26 @@ app.listen(PORT, '0.0.0.0', () => {
   // Start background auto WhatsApp reminder worker
   startReminderScheduler();
 });
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Promise Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+function gracefulShutdown(signal) {
+  console.log(`${signal} received: closing server and checkpointing database...`);
+  server.close(() => {
+    try {
+      const db = require('./db');
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      db.close();
+    } catch (e) {}
+    process.exit(0);
+  });
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

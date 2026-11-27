@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { calculateMIS, calculateMISPrematureClosure } = require('../calculator');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { calculateMIS } = require('../calculator');
+const { authenticateToken } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/mis - List Monthly Income Scheme accounts
@@ -157,34 +157,40 @@ router.post('/', authenticateToken, requirePermission('mis_creation'), (req, res
       });
     }
 
-    // Direct Admin Execution
-    const countRow = db.prepare("SELECT count(*) as count FROM mis_accounts").get();
-    const misNumber = `MIS-${new Date().getFullYear()}-${String(countRow.count + 1).padStart(3, '0')}`;
+    // Direct Admin Execution (atomic transaction)
+    const createMisTx = db.transaction(() => {
+      const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM mis_accounts').get()?.nextId) || 1;
+      const misNumber = `MIS-${new Date().getFullYear()}-${String(nextSeq).padStart(3, '0')}`;
 
-    const insMis = db.prepare(`
-      INSERT INTO mis_accounts (
-        mis_number, customer_id, branch_id, deposit_amount, annual_rate,
-        tenure_months, monthly_payout, total_payout_amount, start_date,
-        maturity_date, payout_account_no, payout_bank_ifsc, status, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
-    `).run(
-      misNumber, customer_id, customer.branch_id || null, parseFloat(deposit_amount),
-      calc.annualRate, parseInt(tenure_months), calc.monthlyPayout, calc.totalPayoutAmount,
-      calc.startDate, calc.maturityDate, payout_account_no || customer.account_no,
-      payout_bank_ifsc || customer.ifsc_code, remarks || 'MIS Booked'
-    );
+      const insMis = db.prepare(`
+        INSERT INTO mis_accounts (
+          mis_number, customer_id, branch_id, deposit_amount, annual_rate,
+          tenure_months, monthly_payout, total_payout_amount, start_date,
+          maturity_date, payout_account_no, payout_bank_ifsc, status, remarks
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+      `).run(
+        misNumber, customer_id, customer.branch_id || null, parseFloat(deposit_amount),
+        calc.annualRate, parseInt(tenure_months), calc.monthlyPayout, calc.totalPayoutAmount,
+        calc.startDate, calc.maturityDate, payout_account_no || customer.account_no,
+        payout_bank_ifsc || customer.ifsc_code, remarks || 'MIS Booked'
+      );
 
-    const misId = insMis.lastInsertRowid;
-    const schedInsert = db.prepare(`
-      INSERT INTO mis_payout_schedules (
-        mis_id, month_no, payout_date, payout_amount, tds_deducted,
-        net_payable, status
-      ) VALUES (?, ?, ?, ?, 0, ?, 'PENDING')
-    `);
+      const misId = insMis.lastInsertRowid;
+      const schedInsert = db.prepare(`
+        INSERT INTO mis_payout_schedules (
+          mis_id, month_no, payout_date, payout_amount, tds_deducted,
+          net_payable, status
+        ) VALUES (?, ?, ?, ?, 0, ?, 'PENDING')
+      `);
 
-    calc.schedule.forEach(s => {
-      schedInsert.run(misId, s.monthNo, s.payoutDate, s.payoutAmount, s.netPayable);
+      calc.schedule.forEach(s => {
+        schedInsert.run(misId, s.monthNo, s.payoutDate, s.payoutAmount, s.netPayable);
+      });
+
+      return { misId, misNumber };
     });
+
+    const { misId, misNumber } = createMisTx();
 
     res.status(201).json({
       success: true,

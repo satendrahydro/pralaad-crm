@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/savings - List Savings Accounts
@@ -134,34 +134,40 @@ router.post('/', authenticateToken, requirePermission('savings_creation'), (req,
       });
     }
 
-    // Direct Admin Execution
-    const countRow = db.prepare("SELECT count(*) as count FROM savings_accounts").get();
-    const accountNumber = `SB-${new Date().getFullYear()}-${String(1001 + countRow.count)}`;
-    const today = new Date().toISOString().split('T')[0];
+    // Direct Admin Execution (atomic transaction)
+    const createSbTx = db.transaction(() => {
+      const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM savings_accounts').get()?.nextId) || 1;
+      const accountNumber = `SB-${new Date().getFullYear()}-${String(1000 + nextSeq)}`;
+      const today = new Date().toISOString().split('T')[0];
 
-    const insAccount = db.prepare(`
-      INSERT INTO savings_accounts (
-        account_number, customer_id, branch_id, current_balance,
-        minimum_balance, annual_interest_rate, status, opened_date,
-        nominee_name, nominee_relation
-      ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?)
-    `).run(
-      accountNumber, customer_id, customer.branch_id || null, parseFloat(opening_balance),
-      parseFloat(minimum_balance), parseFloat(annual_interest_rate), today,
-      nominee_name || customer.nominee_name, nominee_relation || customer.nominee_relation
-    );
+      const insAccount = db.prepare(`
+        INSERT INTO savings_accounts (
+          account_number, customer_id, branch_id, current_balance,
+          minimum_balance, annual_interest_rate, status, opened_date,
+          nominee_name, nominee_relation
+        ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?)
+      `).run(
+        accountNumber, customer_id, customer.branch_id || null, openBal,
+        minBal, parseFloat(annual_interest_rate) || 4.0, today,
+        nominee_name || customer.nominee_name, nominee_relation || customer.nominee_relation
+      );
 
-    const accountId = insAccount.lastInsertRowid;
+      const accountId = insAccount.lastInsertRowid;
 
-    if (parseFloat(opening_balance) > 0) {
-      const txnNumber = `TXN-SB-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${Date.now().toString().slice(-4)}`;
-      db.prepare(`
-        INSERT INTO savings_transactions (
-          account_id, transaction_number, transaction_type, amount,
-          balance_after, payment_mode, reference_number, narration, performed_by_user_id
-        ) VALUES (?, ?, 'DEPOSIT', ?, ?, 'CASH', 'INIT-DEP', 'Initial Account Opening Deposit', ?)
-      `).run(accountId, txnNumber, parseFloat(opening_balance), parseFloat(opening_balance), req.user.id);
-    }
+      if (openBal > 0) {
+        const txnNumber = `TXN-SB-${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${Date.now().toString().slice(-4)}-${accountId}`;
+        db.prepare(`
+          INSERT INTO savings_transactions (
+            account_id, transaction_number, transaction_type, amount,
+            balance_after, payment_mode, reference_number, narration, performed_by_user_id
+          ) VALUES (?, ?, 'DEPOSIT', ?, ?, 'CASH', 'INIT-DEP', 'Initial Account Opening Deposit', ?)
+        `).run(accountId, txnNumber, openBal, openBal, req.user.id);
+      }
+
+      return { accountId, accountNumber };
+    });
+
+    const { accountId, accountNumber } = createSbTx();
 
     res.status(201).json({
       success: true,
@@ -223,18 +229,22 @@ router.post('/:id/deposit', authenticateToken, requirePermission('savings_deposi
       });
     }
 
-    // Direct Admin Execution
-    const newBalance = account.current_balance + depAmount;
-    const txnNumber = `TXN-DEP-${Date.now()}`;
+    // Direct Admin Execution (atomic)
+    const newBalance = db.transaction(() => {
+      const nextBal = account.current_balance + depAmount;
+      const txnNumber = `TXN-DEP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    db.prepare('UPDATE savings_accounts SET current_balance = ? WHERE id = ?').run(newBalance, id);
+      db.prepare('UPDATE savings_accounts SET current_balance = ? WHERE id = ?').run(nextBal, id);
 
-    db.prepare(`
-      INSERT INTO savings_transactions (
-        account_id, transaction_number, transaction_type, amount,
-        balance_after, payment_mode, reference_number, narration, performed_by_user_id
-      ) VALUES (?, ?, 'DEPOSIT', ?, ?, ?, ?, ?, ?)
-    `).run(id, txnNumber, depAmount, newBalance, payment_mode, reference_number || 'DEP-CASH', narration || 'Deposit', req.user.id);
+      db.prepare(`
+        INSERT INTO savings_transactions (
+          account_id, transaction_number, transaction_type, amount,
+          balance_after, payment_mode, reference_number, narration, performed_by_user_id
+        ) VALUES (?, ?, 'DEPOSIT', ?, ?, ?, ?, ?, ?)
+      `).run(id, txnNumber, depAmount, nextBal, payment_mode, reference_number || 'DEP-CASH', narration || 'Deposit', req.user.id);
+
+      return nextBal;
+    })();
 
     res.json({
       success: true,
@@ -303,18 +313,22 @@ router.post('/:id/withdraw', authenticateToken, requirePermission('savings_withd
       });
     }
 
-    // Direct Admin Execution
-    const newBalance = account.current_balance - withAmount;
-    const txnNumber = `TXN-WDR-${Date.now()}`;
+    // Direct Admin Execution (atomic)
+    const newBalance = db.transaction(() => {
+      const nextBal = account.current_balance - withAmount;
+      const txnNumber = `TXN-WDR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    db.prepare('UPDATE savings_accounts SET current_balance = ? WHERE id = ?').run(newBalance, id);
+      db.prepare('UPDATE savings_accounts SET current_balance = ? WHERE id = ?').run(nextBal, id);
 
-    db.prepare(`
-      INSERT INTO savings_transactions (
-        account_id, transaction_number, transaction_type, amount,
-        balance_after, payment_mode, reference_number, narration, performed_by_user_id
-      ) VALUES (?, ?, 'WITHDRAWAL', ?, ?, ?, ?, ?, ?)
-    `).run(id, txnNumber, withAmount, newBalance, payment_mode, reference_number || 'WDR-CASH', narration || 'Withdrawal', req.user.id);
+      db.prepare(`
+        INSERT INTO savings_transactions (
+          account_id, transaction_number, transaction_type, amount,
+          balance_after, payment_mode, reference_number, narration, performed_by_user_id
+        ) VALUES (?, ?, 'WITHDRAWAL', ?, ?, ?, ?, ?, ?)
+      `).run(id, txnNumber, withAmount, nextBal, payment_mode, reference_number || 'WDR-CASH', narration || 'Withdrawal', req.user.id);
+
+      return nextBal;
+    })();
 
     res.json({
       success: true,
@@ -338,25 +352,26 @@ router.post('/:id/close', authenticateToken, (req, res) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    
-    // If balance remains, record a closing withdrawal transaction
-    if (account.current_balance > 0) {
-      const txnNumber = `TXN-CLS-${Date.now()}`;
-      db.prepare(`
-        INSERT INTO savings_transactions (
-          account_id, transaction_number, transaction_type, amount,
-          balance_after, payment_mode, reference_number, narration, performed_by_user_id
-        ) VALUES (?, ?, 'WITHDRAWAL', ?, 0, 'CASH', 'ACCOUNT-CLOSURE', 'Final closure settlement', ?)
-      `).run(id, txnNumber, account.current_balance, req.user.id);
-    }
 
-    db.prepare(`
-      UPDATE savings_accounts
-      SET status = 'CLOSED',
-          current_balance = 0,
-          closed_date = ?
-      WHERE id = ?
-    `).run(today, id);
+    db.transaction(() => {
+      if (account.current_balance > 0) {
+        const txnNumber = `TXN-CLS-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        db.prepare(`
+          INSERT INTO savings_transactions (
+            account_id, transaction_number, transaction_type, amount,
+            balance_after, payment_mode, reference_number, narration, performed_by_user_id
+          ) VALUES (?, ?, 'WITHDRAWAL', ?, 0, 'CASH', 'ACCOUNT-CLOSURE', 'Final closure settlement', ?)
+        `).run(id, txnNumber, account.current_balance, req.user.id);
+      }
+
+      db.prepare(`
+        UPDATE savings_accounts
+        SET status = 'CLOSED',
+            current_balance = 0,
+            closed_date = ?
+        WHERE id = ?
+      `).run(today, id);
+    })();
 
     res.json({ success: true, message: 'Savings account closed and settled successfully' });
   } catch (err) {

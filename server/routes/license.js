@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const bcrypt = require('bcryptjs');
 
 const DEFAULT_MASTER_KEY = process.env.DEV_MASTER_KEY || 'SATENDRA_DEV_MASTER_2026';
 

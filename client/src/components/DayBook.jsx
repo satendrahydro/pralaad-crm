@@ -668,7 +668,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                       <td className={`py-1.5 px-1.5 text-right font-mono text-[10px] font-black whitespace-nowrap ${amountCls}`}>₹{group.total.toLocaleString('en-IN')}</td>
                     </tr>
                     {group.items.map((item, iIdx) => (
-                      <tr key={iIdx} className="hover:bg-slate-50 transition">
+                      <tr key={iIdx} className="fintech-table-row">
                         <td className="py-1.5 px-1.5 font-mono text-[10px] text-slate-500 whitespace-nowrap pl-2.5">{item.account_no}</td>
                         <td className="py-1.5 px-1.5 font-medium text-slate-800 truncate max-w-[125px]">{item.name_narration}</td>
                         <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 whitespace-nowrap">{item.cash > 0 ? `₹${item.cash.toLocaleString('en-IN')}` : '-'}</td>
@@ -824,7 +824,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
       {/* ======================================================== */}
       {/* 1. PRAHLAD 1:1 TOP HEADER & NAVIGATION STRIP             */}
       {/* ======================================================== */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200 space-y-4">
+      <div className="bg-white rounded-xl p-4 shadow-xs border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-200 space-y-4">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-normal text-slate-800 tracking-tight">Day Book</h1>
@@ -1054,10 +1054,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           {/* Top 3 KPI Flow Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Input Inflow Card */}
-            <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/20 border border-emerald-300 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+            <div className="crm-interactive-box group bg-gradient-to-br from-emerald-50 via-white to-emerald-50/20 border border-emerald-300 hover:border-emerald-400 rounded-2xl p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between pb-2 border-b border-emerald-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-xs group-hover:scale-110 transition-transform duration-200">
                     <ArrowDownLeft className="w-4 h-4" />
                   </div>
                   <div>
@@ -1091,10 +1091,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* Output Outflow Card */}
-            <div className="bg-gradient-to-br from-rose-50 via-white to-rose-50/20 border border-rose-300 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+            <div className="crm-interactive-box group bg-gradient-to-br from-rose-50 via-white to-rose-50/20 border border-rose-300 hover:border-rose-400 rounded-2xl p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between pb-2 border-b border-rose-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center text-white shadow-xs">
+                  <div className="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center text-white shadow-xs group-hover:scale-110 transition-transform duration-200">
                     <ArrowUpRight className="w-4 h-4" />
                   </div>
                   <div>
@@ -1128,11 +1128,11 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* Net Cashflow Movement Card */}
-            <div className="bg-gradient-to-br from-indigo-50 via-white to-indigo-50/20 border border-indigo-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+            <div className="crm-interactive-box group bg-gradient-to-br from-indigo-50 via-white to-indigo-50/20 border border-indigo-200 hover:border-indigo-400 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs group-hover:scale-110 transition-transform duration-200">
                       <Scale className="w-4 h-4" />
                     </div>
                     <div>
@@ -1154,7 +1154,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     );
                   })()}
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Current Vault Balance: <strong className="font-mono text-slate-800">₹{(data?.ledgers?.find(l => l.code === 'LED-003')?.closing_balance || 0).toLocaleString('en-IN')}</strong>
+                    Current Vault Balance: <strong className="font-mono text-slate-800">₹{(data?.ledgers?.find(l => l.code === 'LED-003')?.closing_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                   </p>
                 </div>
               </div>
@@ -1195,7 +1195,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           </div>
 
           {/* Detailed Daily Vouchers Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors duration-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1239,7 +1239,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     filteredDailyVouchers.map((v) => {
                       const isInflow = v.type === 'RECEIPT' || v.entry_type === 'INFLOW' || v.voucher_no?.startsWith('IN-');
                       return (
-                        <tr key={v.id} className={`hover:bg-slate-50 transition ${isInflow ? 'bg-emerald-50/15' : 'bg-rose-50/15'}`}>
+                        <tr key={v.id} className={`fintech-table-row ${isInflow ? 'bg-emerald-50/15' : 'bg-rose-50/15'}`}>
                           <td className="py-3 px-4 font-mono font-bold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
                             {isInflow ? (
                               <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -1315,7 +1315,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           </div>
 
           {/* 3-Column Live Banking Ledgers (Optionally viewable in Daily Use) */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 hover:border-slate-300 transition-colors duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">11 Live Banking Balance Ledgers</h3>
@@ -1327,12 +1327,12 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <div
                   key={ledger.id}
                   onClick={() => handleOpenLedgerStatement(ledger)}
-                  className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-indigo-50/60 hover:border-indigo-300 transition cursor-pointer text-center group"
+                  className="crm-interactive-box p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-indigo-50/80 hover:border-indigo-400 cursor-pointer text-center group"
                 >
-                  <span className="font-mono font-bold text-xs text-slate-900 block group-hover:text-indigo-700">
-                    ₹{ledger.closing_balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  <span className="font-mono font-bold text-xs text-slate-900 block group-hover:text-indigo-700 transition-colors">
+                    ₹{(ledger.closing_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight block mt-0.5 truncate">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight block mt-0.5 truncate group-hover:text-slate-700">
                     {ledger.name}
                   </span>
                 </div>
@@ -1353,22 +1353,29 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
             {/* COLUMN 1: OPENING (<DD/MM/YYYY>) - Amber/Orange Top Border (#f39c12) */}
-            <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#f39c12] border-x border-b border-slate-200 overflow-hidden">
-              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+            <div className="bg-white rounded-xl shadow-xs border-t-[3px] border-t-[#f39c12] border-x border-b border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center bg-amber-50/25">
                 <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   OPENING ({formattedStart})
                 </h3>
               </div>
-              <div className="py-4 px-4 space-y-5 text-center">
+              <div className="py-3 px-3 space-y-2.5 text-center">
                 {activeDayBookLedgers.map((ledger) => (
-                  <div key={ledger.id || ledger.code} className="group">
-                    <div className="text-[22px] font-normal text-slate-900 leading-tight font-sans tabular-nums">
+                  <div
+                    key={ledger.id || ledger.code}
+                    onClick={() => handleOpenLedgerStatement(ledger)}
+                    className="crm-ledger-item group px-3 py-2 rounded-xl border border-transparent hover:border-[#3c8dbc]/35 hover:bg-amber-50/50 cursor-pointer"
+                  >
+                    <div className="text-[22px] font-normal text-slate-900 group-hover:text-[#b45309] leading-tight font-sans tabular-nums transition-colors">
                       {formatAccountingNum(ledger.opening_balance)}
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleOpenLedgerStatement(ledger)}
-                      className="text-[12px] font-medium text-[#3c8dbc] hover:text-[#23527c] hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenLedgerStatement(ledger);
+                      }}
+                      className="text-[12px] font-medium text-[#3c8dbc] group-hover:text-[#23527c] group-hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
                       title="Open Ledger Statement (Eye View)"
                     >
                       <span>{ledger.name}</span>
@@ -1380,22 +1387,29 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* COLUMN 2: CURRENT/ CLOSING (<DD/MM/YYYY>) - Red Top Border (#dd4b39) */}
-            <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#dd4b39] border-x border-b border-slate-200 overflow-hidden">
-              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+            <div className="bg-white rounded-xl shadow-xs border-t-[3px] border-t-[#dd4b39] border-x border-b border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center bg-rose-50/25">
                 <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   CURRENT/ CLOSING ({formattedEnd})
                 </h3>
               </div>
-              <div className="py-4 px-4 space-y-5 text-center">
+              <div className="py-3 px-3 space-y-2.5 text-center">
                 {activeDayBookLedgers.map((ledger) => (
-                  <div key={ledger.id || ledger.code} className="group">
-                    <div className="text-[22px] font-normal text-slate-900 leading-tight font-sans tabular-nums">
+                  <div
+                    key={ledger.id || ledger.code}
+                    onClick={() => handleOpenLedgerStatement(ledger)}
+                    className="crm-ledger-item group px-3 py-2 rounded-xl border border-transparent hover:border-[#dd4b39]/35 hover:bg-rose-50/45 cursor-pointer"
+                  >
+                    <div className="text-[22px] font-normal text-slate-900 group-hover:text-[#b91c1c] leading-tight font-sans tabular-nums transition-colors">
                       {formatAccountingNum(ledger.closing_balance)}
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleOpenLedgerStatement(ledger)}
-                      className="text-[12px] font-medium text-[#3c8dbc] hover:text-[#23527c] hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenLedgerStatement(ledger);
+                      }}
+                      className="text-[12px] font-medium text-[#3c8dbc] group-hover:text-[#23527c] group-hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
                       title="Open Ledger Statement (Eye View)"
                     >
                       <span>{ledger.name}</span>
@@ -1407,24 +1421,31 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* COLUMN 3: DAY TRANSACTIONS - Green Top Border (#00a65a) */}
-            <div className="bg-white rounded shadow-xs border-t-[3px] border-t-[#00a65a] border-x border-b border-slate-200 overflow-hidden">
-              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center">
+            <div className="bg-white rounded-xl shadow-xs border-t-[3px] border-t-[#00a65a] border-x border-b border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+              <div className="min-h-[48px] px-3 flex items-center justify-center border-b border-slate-100 text-center bg-emerald-50/25">
                 <h3 className="text-[13px] xl:text-[14px] font-medium text-slate-700 tracking-wide whitespace-nowrap">
                   DAY TRANSACTIONS
                 </h3>
               </div>
-              <div className="py-4 px-4 space-y-5 text-center">
+              <div className="py-3 px-3 space-y-2.5 text-center">
                 {activeDayBookLedgers.map((ledger) => {
                   const netMovement = Number(((ledger.receipts || 0) - (ledger.payments || 0)).toFixed(2));
                   return (
-                    <div key={ledger.id || ledger.code} className="group">
-                      <div className="text-[22px] font-normal text-slate-900 leading-tight font-sans tabular-nums">
+                    <div
+                      key={ledger.id || ledger.code}
+                      onClick={() => handleOpenLedgerStatement(ledger)}
+                      className="crm-ledger-item group px-3 py-2 rounded-xl border border-transparent hover:border-[#00a65a]/35 hover:bg-emerald-50/50 cursor-pointer"
+                    >
+                      <div className="text-[22px] font-normal text-slate-900 group-hover:text-[#047857] leading-tight font-sans tabular-nums transition-colors">
                         {formatAccountingNum(netMovement)}
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleOpenLedgerStatement(ledger)}
-                        className="text-[12px] font-medium text-[#3c8dbc] hover:text-[#23527c] hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenLedgerStatement(ledger);
+                        }}
+                        className="text-[12px] font-medium text-[#3c8dbc] group-hover:text-[#23527c] group-hover:underline uppercase mt-0.5 inline-flex items-center gap-1 cursor-pointer"
                         title="Open Ledger Statement (Eye View)"
                       >
                         <span>{ledger.name}</span>
@@ -1454,7 +1475,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           {/* FORMAT 2 ON-SCREEN LIVE VIEW: TWO-SIDED रोज किर्द तपशील */}
           {/* ======================================================== */}
           {viewFormat === 'format2' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors duration-200 overflow-hidden">
               <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-amber-400" />
@@ -1507,7 +1528,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           {/* FORMAT 1 ON-SCREEN LIVE SUMMARY TABLE (DOUBLE ENTRY)     */}
           {/* ======================================================== */}
           {viewFormat === 'format1' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors duration-200 overflow-hidden">
               <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-400" />
@@ -1547,7 +1568,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     {activeDayBookLedgers.map((ledger) => {
                       const f1 = getLedgerFormat1Columns(ledger);
                       return (
-                        <tr key={ledger.id || ledger.code} className="hover:bg-slate-50 transition">
+                        <tr key={ledger.id || ledger.code} className="fintech-table-row">
                           <td className="py-2.5 px-2.5 font-bold text-[#3c8dbc]">
                             <button
                               type="button"
@@ -1620,10 +1641,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* 1. कुल आया (Total Banking Inflow) */}
-            <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 border border-emerald-300 rounded-2xl p-4 shadow-sm">
+            <div className="crm-interactive-box group bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 border border-emerald-300 hover:border-emerald-400 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
                 <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                  <ArrowDownLeft className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform duration-200" />
                   कुल आया (Total Inflow)
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
@@ -1639,10 +1660,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* 2. कुल गया (Total Banking Outflow) */}
-            <div className="bg-gradient-to-br from-rose-50 via-white to-rose-50/30 border border-rose-300 rounded-2xl p-4 shadow-sm">
+            <div className="crm-interactive-box group bg-gradient-to-br from-rose-50 via-white to-rose-50/30 border border-rose-300 hover:border-rose-400 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between pb-2 border-b border-rose-100">
                 <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowUpRight className="w-4 h-4 text-rose-600" />
+                  <ArrowUpRight className="w-4 h-4 text-rose-600 group-hover:scale-110 transition-transform duration-200" />
                   कुल गया (Total Outflow)
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
@@ -1658,10 +1679,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* 3. शुद्ध बैंकिंग तरलता (Net Banking Flow) */}
-            <div className="bg-gradient-to-br from-indigo-50 via-white to-indigo-50/30 border border-indigo-200 rounded-2xl p-4 shadow-sm">
+            <div className="crm-interactive-box group bg-gradient-to-br from-indigo-50 via-white to-indigo-50/30 border border-indigo-200 hover:border-indigo-400 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
                 <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Scale className="w-4 h-4 text-indigo-600" />
+                  <Scale className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform duration-200" />
                   शुद्ध तरलता (Net Flow)
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1681,10 +1702,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
             </div>
 
             {/* 4. कुल नए खाते (Total New Accounts Opened) */}
-            <div className="bg-gradient-to-br from-amber-50 via-white to-amber-50/30 border border-amber-300 rounded-2xl p-4 shadow-sm">
+            <div className="crm-interactive-box group bg-gradient-to-br from-amber-50 via-white to-amber-50/30 border border-amber-300 hover:border-amber-400 rounded-2xl p-4 shadow-sm">
               <div className="flex items-center justify-between pb-2 border-b border-amber-100">
                 <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <Sparkles className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform duration-200" />
                   कुल नए खाते (New Accounts)
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
@@ -1705,10 +1726,10 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* FD Box */}
-            <div className="bg-white rounded-2xl p-4 border border-indigo-200 shadow-xs space-y-2">
+            <div className="crm-interactive-box group bg-white rounded-2xl p-4 border border-indigo-200 hover:border-indigo-400 shadow-xs space-y-2">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform duration-200">
                     FD
                   </div>
                   <h4 className="font-bold text-slate-900 text-xs">Fixed Deposit (सावधि)</h4>
@@ -1721,23 +1742,23 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <div className="flex justify-between">
                   <span className="text-slate-500">नई FD जमा:</span>
                   <strong className="font-mono text-emerald-700 font-bold">
-                    +₹{(data?.banking?.summary?.fd?.opened_amount || 0).toLocaleString('en-IN')}
+                    +₹{(data?.banking?.summary?.fd?.opened_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </strong>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">परिपक्व / बंदी:</span>
                   <strong className="font-mono text-slate-700">
-                    {data?.banking?.summary?.fd?.closed_count || 0} (₹{(data?.banking?.summary?.fd?.closed_amount || 0).toLocaleString('en-IN')})
+                    {data?.banking?.summary?.fd?.closed_count || 0} (₹{(data?.banking?.summary?.fd?.closed_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                   </strong>
                 </div>
               </div>
             </div>
 
             {/* RD Box */}
-            <div className="bg-white rounded-2xl p-4 border border-teal-200 shadow-xs space-y-2">
+            <div className="crm-interactive-box group bg-white rounded-2xl p-4 border border-teal-200 hover:border-teal-400 shadow-xs space-y-2">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform duration-200">
                     RD
                   </div>
                   <h4 className="font-bold text-slate-900 text-xs">Recurring (आवर्ती जमा)</h4>
@@ -1750,23 +1771,23 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <div className="flex justify-between">
                   <span className="text-slate-500">मासिक किश्त कमिटमेंट:</span>
                   <strong className="font-mono text-slate-800 font-bold">
-                    ₹{(data?.banking?.summary?.rd?.opened_installment || 0).toLocaleString('en-IN')}/mo
+                    ₹{(data?.banking?.summary?.rd?.opened_installment || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
                   </strong>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">किश्तें वसूली:</span>
                   <strong className="font-mono text-emerald-700 font-bold">
-                    {data?.banking?.summary?.rd?.installments_paid_count || 0} Paid (+₹{(data?.banking?.summary?.rd?.installments_paid_amount || 0).toLocaleString('en-IN')})
+                    {data?.banking?.summary?.rd?.installments_paid_count || 0} Paid (+₹{(data?.banking?.summary?.rd?.installments_paid_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                   </strong>
                 </div>
               </div>
             </div>
 
             {/* MIS Box */}
-            <div className="bg-white rounded-2xl p-4 border border-blue-200 shadow-xs space-y-2">
+            <div className="crm-interactive-box group bg-white rounded-2xl p-4 border border-blue-200 hover:border-blue-400 shadow-xs space-y-2">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform duration-200">
                     MIS
                   </div>
                   <h4 className="font-bold text-slate-900 text-xs">Monthly Income (मासिक आय)</h4>
@@ -1779,23 +1800,23 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <div className="flex justify-between">
                   <span className="text-slate-500">नया MIS जमा:</span>
                   <strong className="font-mono text-emerald-700 font-bold">
-                    +₹{(data?.banking?.summary?.mis?.opened_amount || 0).toLocaleString('en-IN')}
+                    +₹{(data?.banking?.summary?.mis?.opened_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </strong>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">मासिक ब्याज भुगतान:</span>
                   <strong className="font-mono text-rose-700 font-bold">
-                    {data?.banking?.summary?.mis?.payouts_count || 0} Payouts (-₹{(data?.banking?.summary?.mis?.payouts_amount || 0).toLocaleString('en-IN')})
+                    {data?.banking?.summary?.mis?.payouts_count || 0} Payouts (-₹{(data?.banking?.summary?.mis?.payouts_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                   </strong>
                 </div>
               </div>
             </div>
 
             {/* Savings Box */}
-            <div className="bg-white rounded-2xl p-4 border border-amber-200 shadow-xs space-y-2">
+            <div className="crm-interactive-box group bg-white rounded-2xl p-4 border border-amber-200 hover:border-amber-400 shadow-xs space-y-2">
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform duration-200">
                     SB
                   </div>
                   <h4 className="font-bold text-slate-900 text-xs">Savings (बचत खाता)</h4>
@@ -1808,13 +1829,13 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                 <div className="flex justify-between">
                   <span className="text-slate-500">बचत खाते में नकद जमा:</span>
                   <strong className="font-mono text-emerald-700 font-bold">
-                    +₹{(data?.banking?.summary?.savings?.total_deposits || 0).toLocaleString('en-IN')}
+                    +₹{(data?.banking?.summary?.savings?.total_deposits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </strong>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">बचत खाते से निकासी:</span>
                   <strong className="font-mono text-rose-700 font-bold">
-                    -₹{(data?.banking?.summary?.savings?.total_withdrawals || 0).toLocaleString('en-IN')}
+                    -₹{(data?.banking?.summary?.savings?.total_withdrawals || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </strong>
                 </div>
               </div>
@@ -1823,7 +1844,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
           </div>
 
           {/* Granular Banking Transactions Ledger Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-slate-300 transition-colors duration-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -1866,7 +1887,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     filteredBankingTxns.map((t) => {
                       const isInflow = (t.inflow_amount || 0) > 0;
                       return (
-                        <tr key={t.id} className={`hover:bg-slate-50 transition ${isInflow ? 'bg-emerald-50/15' : 'bg-rose-50/15'}`}>
+                        <tr key={t.id} className={`fintech-table-row ${isInflow ? 'bg-emerald-50/15' : 'bg-rose-50/15'}`}>
                           <td className="py-3 px-4 whitespace-nowrap">
                             <div className="font-semibold text-slate-900">{t.date ? t.date.split('-').reverse().join('/') : ''}</div>
                             <div className="text-[10px] text-slate-400">{t.time || '11:00 AM'}</div>
@@ -2185,7 +2206,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
       {/* 3C. VIEW 3: LEDGER ACCOUNTS INDEX (1:1 /accounting/accounts) */}
       {/* ======================================================== */}
       {dayBookOption === 'LEDGERS' && (
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden animate-fadeIn">
+        <div className="bg-white rounded-xl shadow-xs border border-slate-200 hover:border-slate-300 transition-colors duration-200 overflow-hidden animate-fadeIn">
           <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-normal text-slate-800">LEDGER ACCOUNTS</h2>
@@ -2271,7 +2292,7 @@ export default function DayBook({ onOpenJournalEntry, onOpenCustomerProfile }) {
                     );
                   })
                   .map((l) => (
-                    <tr key={l.code} className="hover:bg-slate-50 transition">
+                    <tr key={l.code} className="fintech-table-row">
                       <td className="py-2.5 px-4 font-mono font-bold text-slate-700">{l.code}</td>
                       <td className="py-2.5 px-4 font-bold text-[#3c8dbc]">
                         <button type="button" onClick={() => handleOpenLedgerStatement(l)} className="hover:underline cursor-pointer">

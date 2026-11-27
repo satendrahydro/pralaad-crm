@@ -87,11 +87,14 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
 
   if (!isOpen) return null;
 
-  const P = parseFloat(depositAmount) || 0;
-  const n = parseInt(tenureMonths) || 60;
-  const r = parseFloat(annualRate) || 0;
-  const monthlyPayoutEst = Math.round(((P * (r / 100)) / 12) * 100) / 100;
-  const totalPayoutEst = Math.round((monthlyPayoutEst * n) * 100) / 100;
+  const selectedCustomer = customers.find(c => String(c.id) === String(customerId));
+  const isSenior = Boolean(selectedCustomer?.is_senior_citizen);
+  const effectiveRateNum = Math.round((((parseFloat(annualRate) || 0) + (isSenior ? 0.5 : 0)) + Number.EPSILON) * 10000) / 10000;
+  const P = Math.round(((parseFloat(depositAmount) || 0) + Number.EPSILON) * 100) / 100;
+  const n = Math.max(1, parseInt(tenureMonths, 10) || 60);
+  const r = effectiveRateNum;
+  const monthlyPayoutEst = Math.round((((P * (r / 100)) / 12) + Number.EPSILON) * 100) / 100;
+  const totalPayoutEst = Math.round(((monthlyPayoutEst * n) + Number.EPSILON) * 100) / 100;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -337,7 +340,12 @@ export default function NewMISModal({ isOpen, onClose, onSuccess, initialCustome
           </div>
 
           {/* Monthly Payout Metric Box */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1 text-xs">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1 text-xs crm-interactive-box hover:border-blue-400">
+            {isSenior && (
+              <div className="text-[10px] font-bold text-amber-800 bg-amber-100/80 border border-amber-300 px-2 py-0.5 rounded-full inline-block mb-1">
+                ★ Senior Citizen +0.50% Bonus Applied ({effectiveRateNum}% p.a.)
+              </div>
+            )}
             <div className="flex justify-between text-blue-900">
               <span>Guaranteed Monthly Pension Payout:</span>
               <span className="text-sm font-black text-blue-950">{formatINR(monthlyPayoutEst)}/month</span>

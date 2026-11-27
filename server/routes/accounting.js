@@ -1274,45 +1274,45 @@ router.post('/collect-payment', authenticateToken, (req, res) => {
     const receipt_no = `REC-${Date.now().toString().slice(-6)}`;
     const idStr = String(item_id || '');
 
-    if (idStr.startsWith('rd-')) {
-      const instId = parseInt(idStr.replace('rd-', ''), 10);
-      const inst = db.prepare('SELECT * FROM rd_installments WHERE id = ?').get(instId);
-      if (inst && inst.status === 'PENDING') {
-        db.prepare(`
-          UPDATE rd_installments
-          SET status = 'COLLECTED', paid_date = ?, total_collected = ?, payment_mode = ?, transaction_ref = ?, collector_user_id = ?
-          WHERE id = ?
-        `).run(effectiveDate, numAmt, payment_mode, receipt_no, req.user?.id || 1, instId);
-        db.prepare(`
-          UPDATE recurring_deposits
-          SET installments_paid = installments_paid + 1, amount_deposited = amount_deposited + ?
-          WHERE id = ?
-        `).run(numAmt, inst.rd_id);
+    db.transaction(() => {
+      if (idStr.startsWith('rd-')) {
+        const instId = parseInt(idStr.replace('rd-', ''), 10);
+        const inst = db.prepare('SELECT * FROM rd_installments WHERE id = ?').get(instId);
+        if (inst && inst.status === 'PENDING') {
+          db.prepare(`
+            UPDATE rd_installments
+            SET status = 'COLLECTED', paid_date = ?, total_collected = ?, payment_mode = ?, transaction_ref = ?, collector_user_id = ?
+            WHERE id = ?
+          `).run(effectiveDate, numAmt, payment_mode, receipt_no, req.user?.id || 1, instId);
+          db.prepare(`
+            UPDATE recurring_deposits
+            SET installments_paid = installments_paid + 1, amount_deposited = amount_deposited + ?
+            WHERE id = ?
+          `).run(numAmt, inst.rd_id);
+        }
+      } else if (idStr.startsWith('lad-')) {
+        const loanId = parseInt(idStr.replace('lad-', ''), 10);
+        const loan = db.prepare('SELECT * FROM loans_against_deposit WHERE id = ?').get(loanId);
+        if (loan) {
+          const nextOut = Math.max(0, (loan.outstanding_principal || 0) - numAmt);
+          db.prepare(`
+            UPDATE loans_against_deposit
+            SET total_recovered = total_recovered + ?, outstanding_principal = ?, status = ?
+            WHERE id = ?
+          `).run(numAmt, nextOut, nextOut <= 0 ? 'REPAID' : 'ACTIVE', loanId);
+        }
       }
-    } else if (idStr.startsWith('lad-')) {
-      const loanId = parseInt(idStr.replace('lad-', ''), 10);
-      const loan = db.prepare('SELECT * FROM loans_against_deposit WHERE id = ?').get(loanId);
-      if (loan) {
-        const nextOut = Math.max(0, (loan.outstanding_principal || 0) - numAmt);
-        db.prepare(`
-          UPDATE loans_against_deposit
-          SET total_recovered = total_recovered + ?, outstanding_principal = ?, status = ?
-          WHERE id = ?
-        `).run(numAmt, nextOut, nextOut <= 0 ? 'REPAID' : 'ACTIVE', loanId);
-      }
-    }
 
-    // Record cash inflow voucher if not already an RD paid row (RD paid rows already sync via rd_installments)
-    if (!idStr.startsWith('rd-')) {
-      try {
+      // Record cash inflow voucher if not already an RD paid row (RD paid rows already sync via rd_installments)
+      if (!idStr.startsWith('rd-')) {
         db.prepare(`
           INSERT INTO day_book_cash_entries (
             voucher_no, entry_type, entry_date, category, category_name,
             amount, payment_mode, party_name, reference_no, narration, branch_code, created_by_user_id
           ) VALUES (?, 'INFLOW', ?, 'DAILY_COLLECTION', 'Field Payment Collection', ?, ?, ?, ?, ?, 'BHR001', ?)
-        `).run(receipt_no, today, numAmt, payment_mode, `${customer_name || 'Member'} (${account_no})`, receipt_no, `Payment collected for ${account_no}`, req.user?.id || 1);
-      } catch (e) {}
-    }
+        `).run(receipt_no, effectiveDate, numAmt, payment_mode, `${customer_name || 'Member'} (${account_no})`, receipt_no, `Payment collected for ${account_no}`, req.user?.id || 1);
+      }
+    })();
 
     res.json({
       success: true,
@@ -2174,7 +2174,7 @@ router.get('/transaction-background', authenticateToken, (req, res) => {
             voucher_no: ri.transaction_ref || `#${ri.installment_no}`,
             description: `Installment #${ri.installment_no} (${ri.status})`,
             payment_mode: ri.payment_mode || '-',
-            amount: ri.status === 'PAID' ? (ri.total_collected || ri.installment_amount) : ri.installment_amount,
+            amount: (ri.status === 'PAID' || ri.status === 'COLLECTED') ? (ri.total_collected || ri.installment_amount) : ri.installment_amount,
             flow: ri.status
           }))
         };

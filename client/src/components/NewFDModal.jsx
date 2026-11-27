@@ -108,6 +108,9 @@ export default function NewFDModal({
     }
   }, [isOpen, initialData]);
 
+  const selectedCustomer = customers.find(c => String(c.id) === String(selectedCustomerId));
+  const isSelectedSenior = Boolean(selectedCustomer?.is_senior_citizen);
+
   // Live preview calculation
   useEffect(() => {
     if (!isOpen) return;
@@ -120,7 +123,8 @@ export default function NewFDModal({
             annualRate: parseFloat(annualRate) || 0,
             tenureMonths: parseInt(tenureMonths) || 12,
             compoundingFrequency,
-            startDate
+            startDate,
+            isSeniorCitizen: isSelectedSenior
           })
         });
         setPreview(res.result);
@@ -131,7 +135,7 @@ export default function NewFDModal({
 
     const timer = setTimeout(fetchPreview, 150);
     return () => clearTimeout(timer);
-  }, [principal, annualRate, tenureMonths, compoundingFrequency, startDate, isOpen]);
+  }, [principal, annualRate, tenureMonths, compoundingFrequency, startDate, isSelectedSenior, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -197,8 +201,6 @@ export default function NewFDModal({
 
   if (!isOpen) return null;
 
-  const selectedCustomer = customers.find(c => String(c.id) === String(selectedCustomerId));
-  
   const searchLower = customerSearch.trim().toLowerCase();
   let filteredCustomers = customers.filter(c => {
     if (!searchLower) return true;
@@ -487,7 +489,12 @@ export default function NewFDModal({
 
           {/* Live Preview Card */}
           {preview && (
-            <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 text-white rounded-2xl p-4 shadow-md">
+            <div className="bg-gradient-to-r from-indigo-900 to-indigo-800 text-white rounded-2xl p-4 shadow-md crm-interactive-box hover:shadow-xl">
+              {isSelectedSenior && (
+                <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-200 text-[10px] font-bold">
+                  ★ Senior Citizen +0.50% Bonus Applied ({preview.annualRate}% p.a.)
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <span className="text-indigo-200 block text-[10px]">Maturity Amount</span>

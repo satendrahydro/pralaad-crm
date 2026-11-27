@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { calculateRD, calculateRDPrematureClosure } = require('../calculator');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { calculateRD } = require('../calculator');
+const { authenticateToken } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 
 // GET /api/rd - List Recurring Deposits with filters
@@ -151,32 +151,38 @@ router.post('/', authenticateToken, requirePermission('rd_creation'), (req, res)
       });
     }
 
-    // Direct Admin Execution
-    const countRow = db.prepare("SELECT count(*) as count FROM recurring_deposits").get();
-    const rdNumber = `RD-${new Date().getFullYear()}-${String(countRow.count + 1).padStart(3, '0')}`;
+    // Direct Admin Execution (atomic transaction)
+    const createRdTx = db.transaction(() => {
+      const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM recurring_deposits').get()?.nextId) || 1;
+      const rdNumber = `RD-${new Date().getFullYear()}-${String(nextSeq).padStart(3, '0')}`;
 
-    const insRd = db.prepare(`
-      INSERT INTO recurring_deposits (
-        rd_number, customer_id, branch_id, monthly_installment, annual_rate,
-        tenure_months, start_date, maturity_date, total_principal, total_interest,
-        maturity_amount, installments_paid, amount_deposited, status, remarks
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'ACTIVE', ?)
-    `).run(
-      rdNumber, customer_id, customer.branch_id || null, parseFloat(monthly_installment),
-      calc.annualRate, parseInt(tenure_months), calc.startDate, calc.maturityDate,
-      calc.totalPrincipal, calc.totalInterest, calc.maturityAmount, remarks || 'RD Booked'
-    );
+      const insRd = db.prepare(`
+        INSERT INTO recurring_deposits (
+          rd_number, customer_id, branch_id, monthly_installment, annual_rate,
+          tenure_months, start_date, maturity_date, total_principal, total_interest,
+          maturity_amount, installments_paid, amount_deposited, status, remarks
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'ACTIVE', ?)
+      `).run(
+        rdNumber, customer_id, customer.branch_id || null, parseFloat(monthly_installment),
+        calc.annualRate, parseInt(tenure_months), calc.startDate, calc.maturityDate,
+        calc.totalPrincipal, calc.totalInterest, calc.maturityAmount, remarks || 'RD Booked'
+      );
 
-    const rdId = insRd.lastInsertRowid;
-    const instInsert = db.prepare(`
-      INSERT INTO rd_installments (
-        rd_id, installment_no, due_date, installment_amount, status
-      ) VALUES (?, ?, ?, ?, 'PENDING')
-    `);
+      const rdId = insRd.lastInsertRowid;
+      const instInsert = db.prepare(`
+        INSERT INTO rd_installments (
+          rd_id, installment_no, due_date, installment_amount, status
+        ) VALUES (?, ?, ?, ?, 'PENDING')
+      `);
 
-    calc.schedule.forEach(s => {
-      instInsert.run(rdId, s.installmentNo, s.dueDate, s.installmentAmount);
+      calc.schedule.forEach(s => {
+        instInsert.run(rdId, s.installmentNo, s.dueDate, s.installmentAmount);
+      });
+
+      return { rdId, rdNumber };
     });
+
+    const { rdId, rdNumber } = createRdTx();
 
     res.status(201).json({
       success: true,

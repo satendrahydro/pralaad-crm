@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/loans/against-deposit - List LAD loans
 router.get('/against-deposit', authenticateToken, (req, res) => {
@@ -71,10 +71,15 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
       interest_rate = 14.0,
       tenure_months = 36,
       collateral_type = 'FD'
-    } = req.body;
+    } = req.body || {};
 
-    if (!customer_id || !collateral_fd_number || !sanctioned_amount) {
-      return res.status(400).json({ success: false, message: 'Customer, Collateral details, and Loan Amount are required' });
+    const numCollateralVal = parseFloat(fd_deposit_amount);
+    const numSanctioned = parseFloat(sanctioned_amount);
+    const numRate = parseFloat(interest_rate);
+    const numTenure = parseInt(tenure_months, 10);
+
+    if (!customer_id || !collateral_fd_number || isNaN(numCollateralVal) || numCollateralVal <= 0 || isNaN(numSanctioned) || numSanctioned <= 0 || isNaN(numTenure) || numTenure <= 0 || isNaN(numRate) || numRate < 0) {
+      return res.status(400).json({ success: false, message: 'Customer, valid Collateral Amount, Sanctioned Loan Amount (> 0), and Tenure (> 0) are required' });
     }
 
     const customer = db.prepare('SELECT full_name, phone FROM customers WHERE id = ?').get(customer_id);
@@ -86,29 +91,37 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
     const ltvRatio = (collateral_type === 'MORTGAGE' || collateral_type === 'PROPERTY') ? 0.70 
       : collateral_type === 'BUSINESS' ? 0.60 
       : 0.85;
-    const maxAllowed = Math.round(fd_deposit_amount * ltvRatio);
-    if (sanctioned_amount > maxAllowed) {
+    const maxAllowed = Math.round(numCollateralVal * ltvRatio);
+    if (numSanctioned > maxAllowed) {
       return res.status(400).json({ 
         success: false, 
         message: `Sanction amount exceeds maximum allowable ${(ltvRatio * 100).toFixed(0)}% LTV limit (Max: ₹${maxAllowed.toLocaleString('en-IN')})` 
       });
     }
 
-    const count = db.prepare('SELECT count(*) as count FROM loans_against_deposit').get().count;
+    const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM loans_against_deposit').get()?.nextId) || 1;
     const prefix = (collateral_type === 'MORTGAGE' || collateral_type === 'PROPERTY') ? 'LAP'
       : collateral_type === 'BUSINESS' ? 'BL'
       : 'LAD';
-    const loan_number = `${prefix}-2026-${String(count + 1).padStart(3, '0')}`;
+    const loan_number = `${prefix}-${new Date().getFullYear()}-${String(nextSeq).padStart(3, '0')}`;
 
-    // Standard reducing balance monthly EMI calculation
-    const monthlyRate = (interest_rate / 12) / 100;
-    const emi = (sanctioned_amount * monthlyRate * Math.pow(1 + monthlyRate, tenure_months)) / (Math.pow(1 + monthlyRate, tenure_months) - 1);
+    // Standard reducing balance monthly EMI calculation (zero-interest fallback avoids 0/0 NaN)
+    const monthlyRate = (numRate / 12) / 100;
+    const emiRaw = monthlyRate === 0
+      ? (numSanctioned / numTenure)
+      : (numSanctioned * monthlyRate * Math.pow(1 + monthlyRate, numTenure)) / (Math.pow(1 + monthlyRate, numTenure) - 1);
+    const emi = Math.round((emiRaw + Number.EPSILON) * 100) / 100;
 
     const today = new Date().toISOString().split('T')[0];
-    const effectiveDisbursalDate = req.body.disbursal_date || today;
-    const matDate = new Date(effectiveDisbursalDate);
-    matDate.setMonth(matDate.getMonth() + parseInt(tenure_months));
-    const maturity_date = req.body.maturity_date || matDate.toISOString().split('T')[0];
+    const parsedDisb = req.body.disbursal_date ? new Date(req.body.disbursal_date) : new Date();
+    const safeDisbObj = Number.isNaN(parsedDisb.getTime()) ? new Date() : parsedDisb;
+    const effectiveDisbursalDate = safeDisbObj.toISOString().split('T')[0];
+    const matDate = new Date(safeDisbObj);
+    matDate.setMonth(matDate.getMonth() + numTenure);
+    const parsedMat = req.body.maturity_date ? new Date(req.body.maturity_date) : null;
+    const maturity_date = (parsedMat && !Number.isNaN(parsedMat.getTime()))
+      ? parsedMat.toISOString().split('T')[0]
+      : matDate.toISOString().split('T')[0];
 
     const info = db.prepare(`
       INSERT INTO loans_against_deposit (
@@ -129,7 +142,7 @@ router.post('/against-deposit', authenticateToken, (req, res) => {
       parseFloat(sanctioned_amount),
       parseFloat(interest_rate),
       parseInt(tenure_months),
-      Math.round(emi),
+      emi,
       effectiveDisbursalDate,
       maturity_date,
       parseFloat(sanctioned_amount)
@@ -310,9 +323,14 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
 
     const netWeight = parseFloat(net_weight_grams);
     const ratePerGram = parseFloat(valuation_rate_per_gram);
+    const numSanction = parseFloat(sanctioned_amount);
+    const numRate = parseFloat(interest_rate);
+    const numTenure = parseInt(tenure_months, 10);
+    if (isNaN(netWeight) || netWeight <= 0 || isNaN(ratePerGram) || ratePerGram <= 0 || isNaN(numSanction) || numSanction <= 0 || isNaN(numTenure) || numTenure <= 0 || isNaN(numRate) || numRate < 0) {
+      return res.status(400).json({ success: false, message: 'Valid positive Net Weight, Valuation Rate, Loan Amount, and Tenure are required.' });
+    }
     const totalValuation = netWeight * ratePerGram;
     const maxSanctionAllowed = totalValuation * 0.75; // RBI standard 75% max LTV
-    const numSanction = parseFloat(sanctioned_amount);
 
     if (numSanction > maxSanctionAllowed) {
       return res.status(400).json({ 
@@ -321,17 +339,21 @@ router.post('/gold-loans', authenticateToken, (req, res) => {
       });
     }
 
-    const count = db.prepare('SELECT count(*) as count FROM gold_loans').get().count;
-    const loan_number = `GL-2026-${String(count + 1).padStart(3, '0')}`;
+    const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM gold_loans').get()?.nextId) || 1;
+    const loan_number = `GL-${new Date().getFullYear()}-${String(nextSeq).padStart(3, '0')}`;
     const pouch = pouch_number || `POUCH-${loan_number}`;
 
-    const monthlyInterest = (numSanction * (parseFloat(interest_rate) / 100)) / 12;
+    const monthlyInterest = Math.round((((numSanction * (numRate / 100)) / 12) + Number.EPSILON) * 100) / 100;
 
-    const today = new Date().toISOString().split('T')[0];
-    const effectiveDisbursalDate = req.body.disbursal_date || today;
-    const matDate = new Date(effectiveDisbursalDate);
-    matDate.setMonth(matDate.getMonth() + parseInt(tenure_months));
-    const maturity_date = req.body.maturity_date || matDate.toISOString().split('T')[0];
+    const parsedDisb = req.body.disbursal_date ? new Date(req.body.disbursal_date) : new Date();
+    const safeDisbObj = Number.isNaN(parsedDisb.getTime()) ? new Date() : parsedDisb;
+    const effectiveDisbursalDate = safeDisbObj.toISOString().split('T')[0];
+    const matDate = new Date(safeDisbObj);
+    matDate.setMonth(matDate.getMonth() + numTenure);
+    const parsedMat = req.body.maturity_date ? new Date(req.body.maturity_date) : null;
+    const maturity_date = (parsedMat && !Number.isNaN(parsedMat.getTime()))
+      ? parsedMat.toISOString().split('T')[0]
+      : matDate.toISOString().split('T')[0];
 
     const stmt = db.prepare(`
       INSERT INTO gold_loans (
@@ -505,8 +527,8 @@ router.post('/udhar', authenticateToken, (req, res) => {
 
     const today = new Date().toISOString().split('T')[0];
     const numAmount = parseFloat(amount);
-    const count = db.prepare('SELECT count(*) as count FROM borrowings_udhar').get().count;
-    const voucher_no = `UDHAR-2026-${String(count + 1).padStart(3, '0')}`;
+    const nextSeq = (db.prepare('SELECT COALESCE(MAX(id), 0) + 1 AS nextId FROM borrowings_udhar').get()?.nextId) || 1;
+    const voucher_no = `UDHAR-${new Date().getFullYear()}-${String(nextSeq).padStart(3, '0')}`;
 
     db.prepare(`
       INSERT INTO borrowings_udhar (

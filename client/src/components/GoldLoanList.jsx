@@ -114,9 +114,9 @@ export default function GoldLoanList() {
   const netWeightNum = parseFloat(newLoan.net_weight_grams) || 0;
   const rateNum = parseFloat(newLoan.valuation_rate_per_gram) || 6800;
   const totalValuation = netWeightNum * rateNum;
-  const maxSanctionAllowed = Math.round(totalValuation * 0.75); // 75% LTV
+  const maxSanctionAllowed = Math.round(((totalValuation * 0.75) + Number.EPSILON) * 100) / 100; // 75% LTV
   const sanctionedNum = parseFloat(newLoan.sanctioned_amount) || 0;
-  const calculatedMonthlyInterest = Math.round((sanctionedNum * (parseFloat(newLoan.interest_rate) / 100)) / 12);
+  const calculatedMonthlyInterest = Math.round((((sanctionedNum * ((parseFloat(newLoan.interest_rate) || 0) / 100)) / 12) + Number.EPSILON) * 100) / 100;
 
   const handleQuickAddCustomer = async (e) => {
     if (e) e.preventDefault();
